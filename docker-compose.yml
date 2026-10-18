@@ -1,0 +1,25 @@
+# Self-host Grimo:
+#   1. create a `.env` next to this file with BETTER_AUTH_SECRET (openssl rand -base64 32)
+#   2. docker compose up -d
+#   3. open http://localhost:3000 and create your account
+# All options: docs/self-hosting.md
+services:
+  grimo:
+    image: ghcr.io/diegorezm/grimo:latest
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GRIMO_MODE: ${GRIMO_MODE:-personal}
+      GRIMO_REGISTRATION: ${GRIMO_REGISTRATION:-closed}
+      GRIMO_INSTANCE_NAME: ${GRIMO_INSTANCE_NAME:-Grimo}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?defina BETTER_AUTH_SECRET no .env}
+      # Public URL people (and the mobile app) use to reach this server.
+      BETTER_AUTH_URL: ${GRIMO_URL:-http://localhost:3000}
+      TRUSTED_ORIGINS: grimo://
+    volumes:
+      - grimo-data:/data
+
+volumes:
+  grimo-data:

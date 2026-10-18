@@ -1,3 +1,5 @@
+import { queryKeys, useInstance } from "@grimo/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +9,13 @@ import { authClient } from "@/lib/auth-client";
 
 export function AuthForm() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const queryClient = useQueryClient();
+  const { data: instance } = useInstance();
+  const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  // Personal instance without an account yet → this form creates the owner account.
+  const isSetup = instance?.mode === "personal" && instance.registrationOpen;
+  const canSignUp = instance?.registrationOpen ?? false;
+  const mode = isSetup ? "sign-up" : canSignUp ? chosenMode : "sign-in";
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -31,13 +39,18 @@ export function AuthForm() {
 
     setPending(false);
     if (error) return setError(error.message ?? "Algo deu errado");
+    await queryClient.invalidateQueries({ queryKey: queryKeys.instance });
     await navigate({ to: "/" });
   }
 
   return (
     <Card className="mx-auto w-full max-w-sm p-6">
-      <h1 className="mb-1 text-3xl font-bold">Grimo</h1>
-      <p className="mb-6 text-sm text-text-muted">O que cada livro deixou em você.</p>
+      <h1 className="mb-1 text-3xl font-bold">{instance?.name ?? "Grimo"}</h1>
+      <p className="mb-6 text-sm text-text-muted">
+        {isSetup
+          ? "Crie a sua conta. Este Grimo é só seu: o cadastro fecha depois dela."
+          : "O que cada livro deixou em você."}
+      </p>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         {mode === "sign-up" && (
           <>
@@ -52,13 +65,15 @@ export function AuthForm() {
           {mode === "sign-in" ? "Entrar" : "Criar conta"}
         </Button>
       </form>
-      <Button
-        variant="ghost"
-        className="mt-3 w-full"
-        onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-      >
-        {mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
-      </Button>
+      {canSignUp && !isSetup && (
+        <Button
+          variant="ghost"
+          className="mt-3 w-full"
+          onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
+        >
+          {mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
+        </Button>
+      )}
     </Card>
   );
 }

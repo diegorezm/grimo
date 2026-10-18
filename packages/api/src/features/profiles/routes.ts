@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { AppEnv } from "../../env";
-import { requireUser } from "../../lib/context";
+import { requireSocial, requireUser } from "../../lib/context";
 import { notFound } from "../../lib/errors";
 import { getYearOverview } from "../stats/service";
 import { getProfile } from "./service";
@@ -70,6 +70,7 @@ export const usersRoutes = new Hono<AppEnv>()
     return c.json({ profile: profile!, stats, isFollowing: Boolean(following) });
   })
   .post("/:id/follow", async (c) => {
+    requireSocial(c);
     const viewer = requireUser(c);
     const targetId = c.req.param("id");
     if (targetId === viewer.id) return c.json({ error: "Você não pode seguir a si mesmo" }, 400);

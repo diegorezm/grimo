@@ -9,3 +9,6 @@ dist/
 .DS_Store
 worker-configuration.d.ts
 routeTree.gen.ts
+
+# Self-hosted server data (SQLite + uploads)
+data/

@@ -10,6 +10,7 @@
     "dev": "pnpm --filter @grimo/web dev",
     "dev:api": "pnpm --filter @grimo/api-worker dev",
     "dev:mobile": "pnpm --filter @grimo/mobile start",
+    "dev:server": "pnpm --filter @grimo/web build:static && pnpm --filter @grimo/server dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

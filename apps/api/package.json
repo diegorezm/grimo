@@ -14,7 +14,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply grimo-db --remote"
   },
   "dependencies": {
-    "@grimo/api": "workspace:*"
+    "@grimo/api": "workspace:*",
+    "@grimo/db": "workspace:*"
   },
   "devDependencies": {
     "@grimo/tsconfig": "workspace:*",

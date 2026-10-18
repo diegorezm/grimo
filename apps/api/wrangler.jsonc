@@ -6,7 +6,11 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "dev": { "port": 8787 },
+  // Instance config — same variables as the self-hosted server (docs/self-hosting.md).
   "vars": {
+    "GRIMO_INSTANCE_NAME": "Grimo",
+    "GRIMO_MODE": "community",
+    "GRIMO_REGISTRATION": "open",
     "BETTER_AUTH_URL": "http://localhost:8787",
     // web (vite) + Expo web + mobile deep-link scheme
     "TRUSTED_ORIGINS": "http://localhost:5173,http://localhost:8081,grimo://"

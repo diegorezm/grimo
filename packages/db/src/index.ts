@@ -1,12 +1,12 @@
-import type { D1Database } from "@cloudflare/workers-types";
-import { drizzle } from "drizzle-orm/d1";
+import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import * as schema from "./schema";
 
-export function createDb(d1: D1Database) {
-  return drizzle(d1, { schema });
-}
-
-export type Database = ReturnType<typeof createDb>;
+/**
+ * Runtime-agnostic database type. Both drivers (D1 on Cloudflare, libSQL/SQLite on
+ * self-hosted Node) produce it, so API code never knows where it runs.
+ * Drivers live in `@grimo/db/d1` and `@grimo/db/libsql` so each runtime only bundles its own.
+ */
+export type Database = BaseSQLiteDatabase<"async", unknown, typeof schema>;
 
 export * from "./schema";
 export { schema };

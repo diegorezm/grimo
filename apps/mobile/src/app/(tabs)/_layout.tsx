@@ -1,8 +1,10 @@
+import { useInstance } from "@grimo/client";
 import { NativeTabs } from "expo-router/native-tabs";
 import { useTheme } from "@/hooks/use-theme";
 
 export default function TabsLayout() {
   const theme = useTheme();
+  const personal = useInstance().data?.mode === "personal";
   return (
     <NativeTabs
       backgroundColor={theme.background}
@@ -10,7 +12,7 @@ export default function TabsLayout() {
       labelStyle={{ selected: { color: theme.primary } }}
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{personal ? "Diário" : "Feed"}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="house" md="home" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="search">

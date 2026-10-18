@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "deploy": "wrangler deploy",
     "typecheck": "tsr generate && tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "build:static": "vite build --mode self-host"
   },
   "dependencies": {
     "@grimo/auth": "workspace:*",

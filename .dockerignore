@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.turbo
+**/.wrangler
+**/.expo
+**/data
+**/.env
+**/.env*.local
+**/.dev.vars
+.git
+EOS Fit*

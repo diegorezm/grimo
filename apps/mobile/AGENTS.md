@@ -27,4 +27,6 @@ pnpm --filter @grimo/mobile exec expo-doctor
 - Styling: `StyleSheet` + tokens from `@/constants/theme` (re-exported from `@grimo/tokens`). No hard-coded colors.
 - `ios/` and `android/` are generated (CNG). Never edit by hand — use `app.json` + config plugins.
 - Native modules need a development build (`expo run:android|ios` or EAS); Expo Go only has bundled modules.
-- The API URL comes from `EXPO_PUBLIC_API_URL` (see `.env.example`).
+- The server is chosen by the user (self-hosting!): `src/lib/server.ts` stores it, `src/lib/clients.ts`
+  builds auth/API clients per server. Use `useAuthClient()` — never create clients in screens.
+  `EXPO_PUBLIC_API_URL` is only the default server.

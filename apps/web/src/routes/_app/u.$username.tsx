@@ -1,4 +1,4 @@
-import { useReader, useToggleFollow } from "@grimo/client";
+import { useInstance, useReader, useToggleFollow } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ function ReaderPage() {
   const { session } = Route.useRouteContext();
   const reader = useReader(username);
   const toggleFollow = useToggleFollow(username);
+  const social = useInstance().data?.social ?? false;
 
   if (!reader.data) return <Spinner />;
   const { profile, stats, isFollowing } = reader.data;
@@ -22,6 +23,7 @@ function ReaderPage() {
       <ProfileHeader
         profile={profile}
         actions={
+          social &&
           profile.id !== session.user.id && (
             <Button
               variant={isFollowing ? "secondary" : "primary"}

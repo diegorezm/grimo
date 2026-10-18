@@ -2,8 +2,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { authClient } from "@/lib/auth-client";
-import { AppProviders } from "@/providers/app-providers";
+import { AppProviders, useAuthClient } from "@/providers/app-providers";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,7 +19,7 @@ export default function RootLayout() {
 
 /** Auth gate: signed-in users see the tabs, everyone else the sign-in screen. */
 function RootNavigator() {
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending } = useAuthClient().useSession();
 
   useEffect(() => {
     if (!isPending) SplashScreen.hideAsync();

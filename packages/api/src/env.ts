@@ -1,22 +1,9 @@
-import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import type { Auth, AuthSession, AuthUser } from "@grimo/auth";
-import type { Database } from "@grimo/db";
+import type { AuthSession, AuthUser } from "@grimo/auth";
+import type { AppServices } from "./services";
 
-/** Worker bindings. Keep in sync with apps/api/wrangler.jsonc. */
-export interface Bindings {
-  DB: D1Database;
-  MEDIA: R2Bucket;
-  BETTER_AUTH_SECRET: string;
-  BETTER_AUTH_URL: string;
-  /** Comma-separated list of allowed origins (web + mobile scheme). */
-  TRUSTED_ORIGINS: string;
-}
-
+/** Hono env. Note: no runtime bindings here — the API is runtime-agnostic. */
 export interface AppEnv {
-  Bindings: Bindings;
-  Variables: {
-    db: Database;
-    auth: Auth;
+  Variables: AppServices & {
     user: AuthUser | null;
     session: AuthSession["session"] | null;
   };

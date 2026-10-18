@@ -20,6 +20,7 @@ export function isUnauthorized(error: unknown) {
 
 /** Single place for cache keys — invalidate by prefix (e.g. `["shelves"]`). */
 export const queryKeys = {
+  instance: ["instance"] as const,
   me: ["me"] as const,
   reader: (username: string) => ["readers", username] as const,
   bookSearch: (q: string) => ["books", "search", q] as const,

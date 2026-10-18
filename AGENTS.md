@@ -15,7 +15,27 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Config de auth                           | `packages/auth/src/server.ts` (servidor), `client.ts` (compartilhado) |
 | Tela web                                 | `apps/web/src/routes/` (fina) → `apps/web/src/features/` |
 | Tela mobile                              | `apps/mobile/src/app/` (fina) → `apps/mobile/src/features/` |
-| Bindings / deploy                        | `apps/*/wrangler.jsonc`                      |
+| Bindings / deploy Cloudflare             | `apps/api`, `apps/web` (`wrangler.jsonc`)   |
+| Runtime self-host (Node, Docker)         | `apps/server`, `Dockerfile`, `docker-compose.yml` |
+| Variável de configuração da instância    | `packages/api/src/config.ts` + `docs/self-hosting.md` + `apps/api/wrangler.jsonc` |
+
+## Self-hosting é requisito, não extra
+
+O Grimo roda em **dois runtimes com o mesmo código**: Cloudflare (`apps/api`, D1, R2) e Node/Docker
+(`apps/server`, SQLite/libSQL, disco). Toda mudança precisa funcionar nos dois.
+
+- `packages/api` **não pode** importar nada de runtime: nada de bindings, `node:*`, `process.env`
+  ou APIs da Cloudflare. Ele recebe `db`, `storage` e `config` prontos (`createServices`).
+- Precisa de algo novo do runtime (fila, cache, e-mail…)? Defina uma interface em `packages/api`
+  (como `Storage` em `src/storage.ts`) e implemente em `apps/api` **e** em `apps/server`.
+- SQL: o banco é SQLite nos dois. Use só o que D1 e libSQL suportam; nada de `db.batch` sem
+  checar os dois drivers. As migrações em `packages/db/migrations` são aplicadas pelo wrangler (D1)
+  e pelo `migrate()` do libSQL na inicialização do servidor.
+- Configuração nova da instância: adicione em `instanceConfigSchema` (`packages/api/src/config.ts`),
+  em `apps/api/wrangler.jsonc`, no `docker-compose.yml` (se relevante) e em `docs/self-hosting.md`.
+- Modos: `personal` (uma conta, sem social) e `community`. Recurso social novo? Proteja a rota com
+  `requireSocial(c)` e esconda a UI com `useInstance().data?.social`.
+- Clientes nunca assumem um servidor fixo: o mobile escolhe o servidor em runtime (`apps/mobile/src/lib/server.ts`).
 
 ## Regra de ouro: compartilhar o máximo possível
 
@@ -33,14 +53,16 @@ Se você está duplicando algo entre web e mobile que não é JSX, pare e mova p
 ```
 apps/web|mobile  →  @grimo/client (hooks TanStack Query)  →  hc<AppType> (Hono RPC)
                                                                    │
-apps/api (Worker) → @grimo/api (Hono) → features/*/routes.ts → service.ts → @grimo/db (Drizzle/D1)
-                                    ↘ @grimo/core (Zod + regras puras)
+apps/api    (Worker: D1 + R2)       ┐
+                                    ├→ createApp() @grimo/api (Hono) → features/*/routes.ts → service.ts
+apps/server (Node: libSQL + disco)  ┘        → @grimo/db (Drizzle, SQLite)   ↘ @grimo/core (Zod + regras)
 ```
 
 - Os tipos fluem da API para os clientes via `AppType`. **Não** crie tipos de resposta à mão:
   use `InferResponseType` (veja `packages/client/src/features/*/hooks.ts`).
-- Web: mesma origem; o Worker da web repassa `/api/*` para a API por service binding.
-- Mobile: chama a API direto (`EXPO_PUBLIC_API_URL`) e envia o cookie do Better Auth no header.
+- Web: mesma origem. Na Cloudflare, o Worker da web repassa `/api/*` para a API por service binding;
+  no self-host, `apps/server` serve a web estática e a API no mesmo processo.
+- Mobile: chama o servidor escolhido pelo usuário e envia o cookie do Better Auth no header.
 
 ## Convenções
 
@@ -59,10 +81,11 @@ apps/api (Worker) → @grimo/api (Hono) → features/*/routes.ts → service.ts 
   e uma linha `.route()` em `src/app.ts`. Se quebrar a cadeia, o cliente perde os tipos.
 - Valide entrada com `zValidator` + schema de `@grimo/core`. Defina o schema no core, não na rota.
 - Rotas protegidas: `const user = requireUser(c)` na primeira linha do handler.
+- Serviços (`db`, `auth`, `storage`, `config`) vêm de `c.get(...)`. Nunca de `c.env`.
 - Erros: lance `HTTPException` (ou `notFound()`); o `errorHandler` formata `{ error }`.
 - D1 não tem transações interativas. Use `db.batch([...])` quando precisar de atomicidade.
-- Importe tipos da Cloudflare explicitamente (`import type { D1Database } from "@cloudflare/workers-types"`),
-  nunca via globais — os packages são checados também pelos apps.
+- Tipos da Cloudflare só em `packages/db/src/d1.ts` e em `apps/api`, importados explicitamente
+  (`import type { D1Database } from "@cloudflare/workers-types"`), nunca via globais.
 
 ### Banco (`packages/db`)
 
@@ -103,6 +126,7 @@ pnpm check        # biome + typecheck (todos os workspaces) + vitest
 - Mudou `wrangler.jsonc`? `pnpm cf-typegen`.
 - Mudou tokens? `pnpm tokens:generate`.
 - Mudou regra no core? Adicione/ajuste teste `*.test.ts` ao lado.
+- Mudou API, banco ou auth? Teste também o runtime self-host: `pnpm dev:server` (Node + SQLite).
 - Mudou algo no mobile? `pnpm --filter @grimo/mobile exec expo-doctor`. Leia também `apps/mobile/AGENTS.md`.
 - Mudou UI web? Rode `pnpm dev` e confira no navegador.
 
@@ -112,3 +136,6 @@ pnpm check        # biome + typecheck (todos os workspaces) + vitest
 - React é fixado em uma versão (`catalog`) igual à exigida pelo Expo; web e mobile precisam da mesma.
 - `routeTree.gen.ts` (web) e `worker-configuration.d.ts` são gerados — não edite.
 - O dev da web roda a API como worker auxiliar e compartilha o estado local em `apps/api/.wrangler`.
+- `apps/server` é empacotado com esbuild (`scripts/build.mjs`). Só `@libsql/client` (nativo) fica
+  fora do bundle; nova dependência nativa no servidor? Adicione-a em `external` e em `dependencies`.
+- A web tem dois builds: `build` (Cloudflare) e `build:static` (SPA servida pelo `apps/server`).
