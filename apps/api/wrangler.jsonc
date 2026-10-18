@@ -1,0 +1,24 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "grimo-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "dev": { "port": 8787 },
+  "vars": {
+    "BETTER_AUTH_URL": "http://localhost:8787",
+    // web (vite) + Expo web + mobile deep-link scheme
+    "TRUSTED_ORIGINS": "http://localhost:5173,http://localhost:8081,grimo://"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "grimo-db",
+      // `wrangler d1 create grimo-db` and paste the id here before the first deploy.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../packages/db/migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "grimo-media" }]
+}

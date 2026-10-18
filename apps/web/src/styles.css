@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@grimo/tokens/theme.css";
+
+/* Global base only — component styles live next to components (Tailwind classes). */
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-background text-text font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-serif;
+  }
+}

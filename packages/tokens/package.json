@@ -1,0 +1,18 @@
+{
+  "name": "@grimo/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme.css": "./theme.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate": "node scripts/generate-css.ts"
+  },
+  "devDependencies": {
+    "@grimo/tsconfig": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

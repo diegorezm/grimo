@@ -1,0 +1,26 @@
+{
+  "name": "@grimo/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@grimo/auth": "workspace:*",
+    "@grimo/core": "workspace:*",
+    "@grimo/db": "workspace:*",
+    "@hono/zod-validator": "catalog:",
+    "drizzle-orm": "catalog:",
+    "hono": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@grimo/tsconfig": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.turbo/
+.wrangler/
+.dev.vars
+.env
+.env*.local
+*.tsbuildinfo
+.DS_Store
+worker-configuration.d.ts
+routeTree.gen.ts

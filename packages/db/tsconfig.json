@@ -1,0 +1,4 @@
+{
+  "extends": "@grimo/tsconfig/base.json",
+  "include": ["src", "drizzle.config.ts"]
+}
