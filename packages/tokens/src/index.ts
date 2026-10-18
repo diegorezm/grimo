@@ -90,14 +90,18 @@ export const spacing = {
   12: 48,
 } as const;
 
-export const radius = { sm: 6, md: 10, lg: 16, xl: 24, full: 9999 } as const;
+/** Tight corners: catalog cards, not bubbles. */
+export const radius = { sm: 2, md: 4, lg: 6, xl: 8, full: 9999 } as const;
 
 export const fontSize = { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, "2xl": 28, "3xl": 36 } as const;
 
 export const fonts = {
   /** Headings / book titles — literary feel. */
   serif: "Fraunces",
+  /** Long-form reading text (reviews, notes). */
   sans: "Inter",
+  /** UI chrome: labels, numbers, dates, buttons, nav — the "archive card" voice. */
+  mono: "IBM Plex Mono",
 } as const;
 
 /** Instagram Stories canvas for the shareable monthly card. */

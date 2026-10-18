@@ -28,11 +28,7 @@ export function Button({
       ]}
       {...props}
     >
-      <Text
-        variant="small"
-        style={styles.label}
-        color={variant === "primary" ? "primaryForeground" : "text"}
-      >
+      <Text variant="label" color={variant === "primary" ? "primaryForeground" : "text"}>
         {title}
       </Text>
     </Pressable>
@@ -46,5 +42,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
   },
-  label: { fontWeight: "600" },
 });

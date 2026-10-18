@@ -18,7 +18,7 @@ export function Button({
     <button
       type="button"
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition disabled:opacity-50",
+        "inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2 font-mono text-xs font-medium uppercase tracking-wider transition disabled:opacity-50",
         variants[variant],
         className,
       )}

@@ -21,7 +21,7 @@ export function YearStats() {
       </View>
       {goal && (
         <View style={styles.goal}>
-          <Text variant="small" color="textMuted">
+          <Text variant="label" color="textMuted">
             Meta {data.year}: {goal.done}/{goal.target} livros
           </Text>
           <View style={[styles.track, { backgroundColor: theme.surfaceMuted }]}>
@@ -38,10 +38,10 @@ export function YearStats() {
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <View style={styles.stat}>
-      <Text variant="heading" numberOfLines={1}>
+      <Text variant="number" numberOfLines={1}>
         {value}
       </Text>
-      <Text variant="small" color="textMuted">
+      <Text variant="label" color="textMuted">
         {label}
       </Text>
     </View>

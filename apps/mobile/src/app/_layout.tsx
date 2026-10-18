@@ -1,7 +1,10 @@
+import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useThemeStore } from "@/lib/theme";
 import { AppProviders, useAuthClient } from "@/providers/app-providers";
 
 SplashScreen.preventAutoHideAsync();
@@ -20,12 +23,15 @@ export default function RootLayout() {
 /** Auth gate: signed-in users see the tabs, everyone else the sign-in screen. */
 function RootNavigator() {
   const { data: session, isPending } = useAuthClient().useSession();
+  const [fontsLoaded] = useFonts(fontAssets);
+  useThemeStore(); // subscribes so the saved appearance is applied on startup
+  const ready = fontsLoaded && !isPending;
 
   useEffect(() => {
-    if (!isPending) SplashScreen.hideAsync();
-  }, [isPending]);
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
 
-  if (isPending) return null;
+  if (!ready) return null;
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={Boolean(session)}>

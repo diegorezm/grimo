@@ -3,7 +3,8 @@ import { Fonts, fontSize, type ThemeColor } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
 export type TextProps = RNTextProps & {
-  variant?: "body" | "small" | "title" | "heading" | "display";
+  /** `label` / `number` use the mono "archive" voice; titles use the serif. */
+  variant?: "body" | "small" | "label" | "number" | "title" | "heading" | "display";
   color?: ThemeColor;
 };
 
@@ -15,7 +16,14 @@ export function Text({ style, variant = "body", color = "text", ...rest }: TextP
 const styles = StyleSheet.create({
   body: { fontSize: fontSize.md, lineHeight: 22 },
   small: { fontSize: fontSize.sm, lineHeight: 18 },
-  title: { fontSize: fontSize.lg, fontFamily: Fonts?.serif, fontWeight: "600" },
-  heading: { fontSize: fontSize["2xl"], fontFamily: Fonts?.serif, fontWeight: "700" },
-  display: { fontSize: fontSize["3xl"], fontFamily: Fonts?.serif, fontWeight: "700" },
+  label: {
+    fontFamily: Fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  number: { fontFamily: Fonts.monoBold, fontSize: fontSize["2xl"] },
+  title: { fontSize: fontSize.lg, fontFamily: Fonts.serif },
+  heading: { fontSize: fontSize["2xl"], fontFamily: Fonts.serifBold },
+  display: { fontSize: fontSize["3xl"], fontFamily: Fonts.serifBold },
 });

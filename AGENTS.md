@@ -107,6 +107,11 @@ apps/server (Node: libSQL + disco)  ┘        → @grimo/db (Drizzle, SQLite)  
 
 - Cores e medidas só via tokens. Web: classes Tailwind (`bg-surface`, `text-text-muted`,
   `bg-primary`…). Mobile: `useTheme()` + `spacing`/`radius` de `@/constants/theme`.
+- Visual "arquivo": papel + tinta carvão, bordas finas, cantos retos, um único acento oliva.
+  Tipografia: serif (Fraunces) em títulos, **mono (IBM Plex Mono) em rótulos, números, botões e
+  navegação** (web: `font-mono`; mobile: `<Text variant="label" | "number">`), sans no texto corrido.
+- Claro e escuro são obrigatórios: use só tokens (nunca cor fixa) e confira os dois temas.
+  Preferência do usuário (Sistema/Claro/Escuro): `apps/web/src/lib/theme.ts` e `apps/mobile/src/lib/theme.ts`.
 - Textos de UI em português (pt-BR). Código, nomes e comentários em inglês.
 - Biome formata tudo (`pnpm format`). Aspas duplas, ponto e vírgula, 2 espaços, 100 colunas.
 

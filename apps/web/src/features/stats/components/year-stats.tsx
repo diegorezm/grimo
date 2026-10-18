@@ -17,7 +17,7 @@ export function YearStats() {
       />
       {goal && (
         <div className="col-span-3 flex flex-col gap-1 text-left">
-          <p className="text-xs text-text-muted">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
             Meta {data.year}: {goal.done}/{goal.target} livros
           </p>
           <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
@@ -32,8 +32,8 @@ export function YearStats() {
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <p className="truncate font-serif text-2xl font-bold">{value}</p>
-      <p className="text-xs text-text-muted">{label}</p>
+      <p className="truncate font-mono text-2xl font-semibold">{value}</p>
+      <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">{label}</p>
     </div>
   );
 }
