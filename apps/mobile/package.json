@@ -50,5 +50,6 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"
   },
-  "private": true
+  "private": true,
+  "license": "AGPL-3.0-only"
 }

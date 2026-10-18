@@ -114,3 +114,11 @@ domínio, então os cookies de sessão são first-party. O mobile pode apontar p
 - Editar perfil (gêneros favoritos, bio, meta anual) — API e `useUpdateMe` já existem
 - Descoberta de leitores com gostos parecidos
 - Fontes (Fraunces/Inter) no mobile via `expo-font`
+
+## Licença
+
+[GNU AGPL-3.0](LICENSE). Você pode usar, modificar e redistribuir o Grimo, inclusive
+comercialmente, desde que qualquer versão modificada — **inclusive hospedada como serviço** —
+tenha o código-fonte disponibilizado sob a mesma licença.
+
+O nome "Grimo" e a identidade visual não estão cobertos pela licença do código.
