@@ -48,7 +48,7 @@ export function MonthlyCard({ month }: { month?: string }) {
             transform: `scale(${SCALE})`,
             transformOrigin: "top left",
           }}
-          className="flex flex-col justify-between bg-primary p-24 text-primary-foreground"
+          className="flex flex-col justify-between bg-inverse p-24 text-inverse-foreground"
         >
           <div>
             <p className="text-5xl opacity-80">Meu mês de leitura</p>

@@ -5,51 +5,64 @@
  * Mobile: import these objects directly into StyleSheets.
  */
 
+/**
+ * "Archive" palette: aged paper, carbon ink, hairline borders and a single olive accent,
+ * like a personal archive / catalog card. Color is rare: ink does the work, olive marks
+ * state (reading, active, success). Dark mode is the carbon panel with paper ink.
+ */
 const palette = {
-  paper: "#FBF7F0",
-  paperDeep: "#F2ECE2",
-  ink: "#1F1B16",
-  inkSoft: "#6B6257",
-  line: "#E5DDD0",
-  terracotta: "#B4532A",
-  terracottaLight: "#E07A4B",
-  moss: "#2F7D5B",
-  plum: "#6E3D6B",
-  ochre: "#C08A1E",
-  night: "#14110E",
-  nightRaised: "#1E1A16",
-  nightDeep: "#2A241F",
-  nightLine: "#3A322B",
-  parchment: "#F5EFE6",
-  dust: "#A89D90",
-  white: "#FFFFFF",
-  danger: "#B42318",
+  paper: "#E9E4D6",
+  paperLight: "#F1EDE3",
+  paperDeep: "#DFD8C7",
+  ink: "#1C1B18",
+  inkSoft: "#6A655A",
+  line: "#C7BFAE",
+  carbon: "#1B1A17",
+  carbonRaised: "#242320",
+  carbonDeep: "#2E2C28",
+  carbonLine: "#3D3A34",
+  parchment: "#E8E3D5",
+  dust: "#9C968A",
+  olive: "#5B7A3A",
+  oliveLight: "#8BA866",
+  ochre: "#A8853F",
+  rust: "#9A5A3A",
+  slate: "#4F6272",
+  danger: "#A3362A",
+  dangerLight: "#E07A6A",
 } as const;
 
 export const colors = {
   light: {
     background: palette.paper,
-    surface: palette.white,
+    surface: palette.paperLight,
     surfaceMuted: palette.paperDeep,
     text: palette.ink,
     textMuted: palette.inkSoft,
     border: palette.line,
-    primary: palette.terracotta,
-    primaryForeground: palette.white,
-    success: palette.moss,
+    primary: palette.ink,
+    primaryForeground: palette.paperLight,
+    /** Dark panels on paper (sidebar, highlighted cards, the monthly card). */
+    inverse: palette.carbon,
+    inverseForeground: palette.parchment,
+    accent: palette.olive,
+    success: palette.olive,
     danger: palette.danger,
   },
   dark: {
-    background: palette.night,
-    surface: palette.nightRaised,
-    surfaceMuted: palette.nightDeep,
+    background: palette.carbon,
+    surface: palette.carbonRaised,
+    surfaceMuted: palette.carbonDeep,
     text: palette.parchment,
     textMuted: palette.dust,
-    border: palette.nightLine,
-    primary: palette.terracottaLight,
-    primaryForeground: palette.night,
-    success: "#4FA683",
-    danger: "#F97066",
+    border: palette.carbonLine,
+    primary: palette.parchment,
+    primaryForeground: palette.carbon,
+    inverse: palette.paper,
+    inverseForeground: palette.ink,
+    accent: palette.oliveLight,
+    success: palette.oliveLight,
+    danger: palette.dangerLight,
   },
 } as const;
 
@@ -59,9 +72,9 @@ export type ColorToken = keyof typeof colors.light;
 /** One color per shelf — used for badges, charts and the monthly card. */
 export const shelfColors = {
   want_to_read: palette.ochre,
-  reading: palette.terracotta,
-  read: palette.moss,
-  abandoned: palette.plum,
+  reading: palette.olive,
+  read: palette.slate,
+  abandoned: palette.rust,
 } as const;
 
 export const spacing = {

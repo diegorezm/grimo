@@ -30,11 +30,11 @@ export function MonthlyCard({ month }: { month?: string }) {
   }
 
   const genre = data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—";
-  const fg = "primaryForeground" as const;
+  const fg = "inverseForeground" as const;
 
   return (
     <View style={styles.root}>
-      <View ref={ref} collapsable={false} style={[styles.card, { backgroundColor: theme.primary }]}>
+      <View ref={ref} collapsable={false} style={[styles.card, { backgroundColor: theme.inverse }]}>
         <View>
           <Text variant="small" color={fg}>
             Meu mês de leitura
@@ -71,10 +71,10 @@ export function MonthlyCard({ month }: { month?: string }) {
 function Big({ value, label }: { value: string | number; label: string }) {
   return (
     <View style={styles.cell}>
-      <Text variant="heading" color="primaryForeground" numberOfLines={1}>
+      <Text variant="heading" color="inverseForeground" numberOfLines={1}>
         {value}
       </Text>
-      <Text variant="small" color="primaryForeground">
+      <Text variant="small" color="inverseForeground">
         {label}
       </Text>
     </View>

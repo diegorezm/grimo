@@ -26,7 +26,7 @@ export function YearStats() {
           </Text>
           <View style={[styles.track, { backgroundColor: theme.surfaceMuted }]}>
             <View
-              style={[styles.bar, { width: `${goal.percent}%`, backgroundColor: theme.primary }]}
+              style={[styles.bar, { width: `${goal.percent}%`, backgroundColor: theme.accent }]}
             />
           </View>
         </View>

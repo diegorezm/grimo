@@ -21,7 +21,7 @@ export function YearStats() {
             Meta {data.year}: {goal.done}/{goal.target} livros
           </p>
           <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div className="h-full bg-primary" style={{ width: `${goal.percent}%` }} />
+            <div className="h-full bg-accent" style={{ width: `${goal.percent}%` }} />
           </div>
         </div>
       )}
