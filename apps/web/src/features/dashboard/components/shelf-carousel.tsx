@@ -1,9 +1,11 @@
 import type { ShelfItem } from "@grimo/client";
 import { readingPercent, SHELF_LABELS, type ShelfStatus } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
-import { useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
-import { Book3D } from "@/features/books";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { Stars } from "@/components/ui/stars";
+import { BookCard } from "@/features/books";
 
 /** Horizontal row of standing books from one shelf, with progress or rating under each. */
 export function ShelfCarousel({ status, items }: { status: ShelfStatus; items: ShelfItem[] }) {
@@ -48,22 +50,21 @@ export function ShelfCarousel({ status, items }: { status: ShelfStatus; items: S
           ref={track}
           className="-mx-1 flex snap-x gap-7 overflow-x-auto px-1 pt-1 pb-5 [scrollbar-width:none]"
         >
-          {items.map(({ entry, book }) => (
-            <li key={entry.id} className="flex w-36 shrink-0 snap-start flex-col">
-              <Book3D
-                src={book.coverUrl}
-                title={book.title}
-                ribbon={status === "reading"}
-                className="w-full"
-              />
-              <p className="mt-5 line-clamp-2 font-serif font-medium leading-snug">{book.title}</p>
-              <p className="truncate text-sm text-accent italic">{book.authors.join(", ")}</p>
-              {status === "reading" && (
-                <Progress percent={readingPercent(entry.currentPage, book.pageCount)} />
-              )}
-              {status === "read" && entry.rating && <Stars rating={entry.rating} />}
-            </li>
-          ))}
+          {items.map(({ entry, book }) => {
+            const percent = readingPercent(entry.currentPage, book.pageCount);
+            return (
+              <li key={entry.id} className="w-36 shrink-0 snap-start">
+                <BookCard book={book} ribbon={status === "reading"}>
+                  {status === "reading" && percent !== null && (
+                    <ProgressBar percent={percent} className="mt-2" />
+                  )}
+                  {status === "read" && entry.rating && (
+                    <Stars rating={entry.rating} className="mt-1.5" />
+                  )}
+                </BookCard>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
@@ -77,7 +78,7 @@ function CarouselButton({
 }: {
   label: string;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
@@ -88,29 +89,5 @@ function CarouselButton({
     >
       {children}
     </button>
-  );
-}
-
-function Progress({ percent }: { percent: number | null }) {
-  if (percent === null) return null;
-  return (
-    <div className="mt-2 flex items-center gap-2">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
-        <div className="bg-accent-gradient h-full rounded-full" style={{ width: `${percent}%` }} />
-      </div>
-      <span className="font-mono text-[11px] font-semibold text-accent">{percent}%</span>
-    </div>
-  );
-}
-
-function Stars({ rating }: { rating: number }) {
-  return (
-    <p className="mt-1.5 text-sm tracking-wider text-gold">
-      <span className="sr-only">Nota {rating} de 5</span>
-      <span aria-hidden="true">
-        {"★".repeat(rating)}
-        <span className="text-border">{"★".repeat(5 - rating)}</span>
-      </span>
-    </p>
   );
 }

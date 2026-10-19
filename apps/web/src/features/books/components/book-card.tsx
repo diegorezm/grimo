@@ -1,0 +1,26 @@
+import type { ReactNode } from "react";
+import { cn } from "@/utils/cn";
+import { Book3D } from "./book-3d";
+
+/** Standing book with title and author below; `children` adds shelf-specific details. */
+export function BookCard({
+  book,
+  ribbon,
+  className,
+  children,
+}: {
+  book: { title: string; authors: string[]; coverUrl: string | null };
+  ribbon?: boolean;
+  className?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className={cn("flex h-full min-w-0 flex-col", className)}>
+      <Book3D src={book.coverUrl} title={book.title} ribbon={ribbon} className="w-full" />
+      <p className="mt-5 line-clamp-2 font-serif font-medium leading-snug">{book.title}</p>
+      <p className="truncate text-sm text-accent italic">{book.authors.join(", ")}</p>
+      {/* Pinned to the bottom so controls line up across a row of uneven titles. */}
+      {children && <div className="mt-auto flex flex-col">{children}</div>}
+    </div>
+  );
+}

@@ -1,8 +1,8 @@
 import { SHELF_LABELS, SHELF_STATUSES, type ShelfStatus } from "@grimo/core";
-import { SHELF_BADGE } from "@/features/shelves";
 import { cn } from "@/utils/cn";
+import { SHELF_BADGE } from "../shelf-badge";
 
-/** Shelf "categories": pick which shelf the carousel below shows. */
+/** Shelf "categories" with counts; pick which shelf the books below show. */
 export function ShelfTiles({
   counts,
   selected,

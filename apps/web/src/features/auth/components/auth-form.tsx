@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 
@@ -44,14 +43,23 @@ export function AuthForm() {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-sm p-6">
-      <h1 className="mb-1 text-3xl font-bold">{instance?.name ?? "Grimo"}</h1>
-      <p className="mb-6 text-sm text-text-muted">
+    <div className="mx-auto w-full max-w-sm">
+      <span className="mb-8 flex size-12 items-center justify-center rounded-full border border-ornament bg-surface">
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6 fill-none stroke-ornament">
+          <path strokeWidth="1.5" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+        </svg>
+      </span>
+      <h1 className="text-4xl font-medium italic">
+        {mode === "sign-in" ? `Bem-vindo ao ${instance?.name ?? "Grimo"}` : "Crie sua conta"}
+      </h1>
+      <p className="mt-2 mb-8 text-text-muted">
         {isSetup
           ? "Crie a sua conta. Este Grimo é só seu: o cadastro fecha depois dela."
-          : "O que cada livro deixou em você."}
+          : mode === "sign-in"
+            ? "Entre para continuar de onde parou."
+            : "Seu grimório começa aqui."}
       </p>
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+      <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
         {mode === "sign-up" && (
           <>
             <Input name="name" placeholder="Seu nome" required />
@@ -61,7 +69,7 @@ export function AuthForm() {
         <Input name="email" type="email" placeholder="email@exemplo.com" required />
         <Input name="password" type="password" placeholder="Senha" minLength={8} required />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending} className="mt-2 py-3">
           {mode === "sign-in" ? "Entrar" : "Criar conta"}
         </Button>
       </form>
@@ -74,6 +82,6 @@ export function AuthForm() {
           {mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
         </Button>
       )}
-    </Card>
+    </div>
   );
 }

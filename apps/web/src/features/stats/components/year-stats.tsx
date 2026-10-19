@@ -1,39 +1,72 @@
 import { useYearOverview } from "@grimo/client";
 import { GENRE_LABELS, type Genre, goalProgress } from "@grimo/core";
-import { Card } from "@/components/ui/card";
+import type { ReactNode } from "react";
+import { BookOpenIcon, HeartIcon, PagesIcon } from "@/components/ui/icons";
+import { Sparkle } from "@/components/ui/sparkle";
 
-export function YearStats() {
-  const { data } = useYearOverview();
+export type YearOverview = NonNullable<ReturnType<typeof useYearOverview>["data"]>;
+
+/** The year in four tiles. Pass `stats` to show someone else's; defaults to the signed-in reader. */
+export function YearStats({ stats }: { stats?: YearOverview }) {
+  const own = useYearOverview();
+  const data = stats ?? own.data;
   if (!data) return null;
   const goal = data.goal ? goalProgress(data.goal.target, data.goal.done) : null;
+  const genre = data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—";
 
   return (
-    <Card className="grid grid-cols-3 gap-4 text-center">
-      <Stat label="livros lidos" value={data.booksRead} />
-      <Stat label="páginas" value={data.pagesRead} />
-      <Stat
-        label="gênero favorito"
-        value={data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—"}
+    <section
+      aria-label={`Leituras de ${data.year}`}
+      className="grid grid-cols-2 gap-3 xl:grid-cols-4"
+    >
+      <Tile
+        icon={<BookOpenIcon />}
+        tint="bg-shelf-read-bg text-shelf-read-fg"
+        value={data.booksRead}
+        label={`livros em ${data.year}`}
       />
-      {goal && (
-        <div className="col-span-3 flex flex-col gap-1 text-left">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-            Meta {data.year}: {goal.done}/{goal.target} livros
-          </p>
-          <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div className="h-full bg-accent" style={{ width: `${goal.percent}%` }} />
-          </div>
-        </div>
-      )}
-    </Card>
+      <Tile
+        icon={<PagesIcon />}
+        tint="bg-shelf-want-to-read-bg text-shelf-want-to-read-fg"
+        value={data.pagesRead.toLocaleString("pt-BR")}
+        label="páginas lidas"
+      />
+      <Tile
+        icon={<HeartIcon />}
+        tint="bg-shelf-reading-bg text-shelf-reading-fg"
+        value={genre}
+        label="gênero favorito"
+      />
+      <Tile
+        icon={<Sparkle className="size-5" />}
+        tint="bg-surface text-gold"
+        value={goal ? `${goal.percent}%` : "—"}
+        label={goal ? `da meta de ${goal.target}` : "sem meta"}
+      />
+    </section>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Tile({
+  icon,
+  tint,
+  value,
+  label,
+}: {
+  icon: ReactNode;
+  tint: string;
+  value: ReactNode;
+  label: string;
+}) {
   return (
-    <div>
-      <p className="truncate font-mono text-2xl font-semibold">{value}</p>
-      <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">{label}</p>
+    <div className="flex items-center gap-3.5 rounded-lg border border-border p-4">
+      <span className={`grid size-11 shrink-0 place-items-center rounded-md ${tint}`}>{icon}</span>
+      <span className="min-w-0">
+        <span className="block truncate font-serif text-xl font-medium">{value}</span>
+        <span className="block truncate font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          {label}
+        </span>
+      </span>
     </div>
   );
 }

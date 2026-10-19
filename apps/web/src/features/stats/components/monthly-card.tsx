@@ -4,8 +4,11 @@ import { storyCard } from "@grimo/tokens";
 import { toBlob } from "html-to-image";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Sparkle } from "@/components/ui/sparkle";
 
 const SCALE = 0.3;
+
+const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 
 /**
  * "Resumo do mês" card at Instagram Stories size (1080×1920), shown scaled down.
@@ -48,11 +51,17 @@ export function MonthlyCard({ month }: { month?: string }) {
             transform: `scale(${SCALE})`,
             transformOrigin: "top left",
           }}
-          className="flex flex-col justify-between bg-inverse p-24 text-inverse-foreground"
+          className="relative flex flex-col justify-between overflow-hidden bg-surface p-24 text-text [background-image:radial-gradient(70rem_50rem_at_100%_0%,var(--color-glow-a),transparent_70%),radial-gradient(70rem_50rem_at_0%_100%,var(--color-glow-b),transparent_70%)]"
         >
+          <Sparkle className="absolute top-28 right-28 size-20" />
+          <Sparkle className="absolute top-[52%] right-40 size-10 fill-accent" />
           <div>
-            <p className="text-5xl opacity-80">Meu mês de leitura</p>
-            <p className="font-serif text-8xl font-bold">{data.month}</p>
+            <p className="font-mono text-4xl uppercase tracking-[0.2em] text-text-muted">
+              Meu mês de leitura
+            </p>
+            <p className="mt-6 font-serif text-9xl font-medium italic first-letter:uppercase">
+              {monthLabel.format(new Date(`${data.month}-15T12:00:00`))}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-12">
             <Big value={data.booksRead} label="livros" />
@@ -67,16 +76,20 @@ export function MonthlyCard({ month }: { month?: string }) {
                   src={data.favoriteBook.coverUrl}
                   alt=""
                   crossOrigin="anonymous"
-                  className="h-96 rounded-lg"
+                  className="h-96 rounded-lg shadow-2xl shadow-shadow"
                 />
               )}
               <div>
-                <p className="text-4xl opacity-80">Livro favorito</p>
-                <p className="font-serif text-6xl font-bold">{data.favoriteBook.title}</p>
+                <p className="font-mono text-3xl uppercase tracking-[0.2em] text-text-muted">
+                  Livro favorito
+                </p>
+                <p className="mt-3 font-serif text-7xl font-medium italic">
+                  {data.favoriteBook.title}
+                </p>
               </div>
             </div>
           )}
-          <p className="font-serif text-5xl">grimo</p>
+          <p className="font-serif text-6xl italic">✦ grimo</p>
         </div>
       </div>
       <Button onClick={share}>Compartilhar card</Button>
@@ -87,8 +100,8 @@ export function MonthlyCard({ month }: { month?: string }) {
 function Big({ value, label }: { value: string | number; label: string }) {
   return (
     <div>
-      <p className="font-serif text-9xl font-bold">{value}</p>
-      <p className="text-4xl opacity-80">{label}</p>
+      <p className="font-serif text-9xl font-medium text-accent">{value}</p>
+      <p className="mt-2 font-mono text-3xl uppercase tracking-[0.15em] text-text-muted">{label}</p>
     </div>
   );
 }

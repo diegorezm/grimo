@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
-import { ProfileHeader } from "@/features/profile";
+import { ProfileEditor, ProfileHeader } from "@/features/profile";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { queryClient } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -25,18 +25,31 @@ function MePage() {
   if (!me.data) return <Spinner />;
   return (
     <Screen>
-      <div className="flex flex-col gap-6">
-        <ProfileHeader
-          profile={me.data}
-          actions={
-            <Button variant="ghost" onClick={signOut}>
-              Sair
-            </Button>
-          }
-        />
-        <YearStats />
-        <h2 className="text-xl font-bold">Resumo do mês</h2>
-        <MonthlyCard />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6">
+        <div className="flex min-w-0 flex-col gap-8">
+          <ProfileHeader
+            profile={me.data}
+            actions={
+              <Button variant="secondary" onClick={signOut}>
+                Sair
+              </Button>
+            }
+          />
+          <YearStats />
+          <ProfileEditor key={me.data.id} profile={me.data} />
+        </div>
+        <aside
+          aria-labelledby="monthly-title"
+          className="flex flex-col items-center gap-4 rounded-xl bg-surface-muted/70 p-5 lg:sticky lg:top-6 lg:self-start"
+        >
+          <div className="w-full">
+            <h2 id="monthly-title" className="text-xl font-medium italic">
+              Resumo do mês
+            </h2>
+            <p className="text-sm text-text-muted">Pronto para os Stories.</p>
+          </div>
+          <MonthlyCard />
+        </aside>
       </div>
     </Screen>
   );

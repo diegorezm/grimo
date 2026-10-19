@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_app/search")({
 function SearchPage() {
   const { q } = Route.useSearch();
   return (
-    <Screen title="Buscar livros">
+    <Screen title="Buscar livros" subtitle="Encontre o próximo livro no catálogo do Open Library.">
       <BookSearch key={q} initialQuery={q} />
     </Screen>
   );

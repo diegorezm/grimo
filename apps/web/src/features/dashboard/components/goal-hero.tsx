@@ -1,18 +1,8 @@
 import { useYearOverview } from "@grimo/client";
 import { goalProgress } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
+import { BookStack } from "@/components/ui/book-stack";
 import { Sparkle } from "@/components/ui/sparkle";
-import { cn } from "@/utils/cn";
-
-/** Stack of lying books for the illustration (width, color). */
-const stack = [
-  ["w-36", "bg-shelf-read-fg"],
-  ["w-40", "bg-accent"],
-  ["w-32", "bg-shelf-want-to-read-fg"],
-  ["w-38", "bg-shelf-reading-fg"],
-  ["w-34", "bg-accent-start"],
-  ["w-40", "bg-shelf-abandoned-fg"],
-] as const;
 
 /** Hero card: the yearly goal next to a pile of books. */
 export function GoalHero() {
@@ -22,21 +12,7 @@ export function GoalHero() {
 
   return (
     <section className="relative flex flex-col gap-6 overflow-hidden rounded-xl bg-surface-muted p-6 sm:flex-row sm:items-center sm:gap-10 sm:p-8">
-      <div aria-hidden="true" className="relative flex shrink-0 flex-col items-center">
-        <Sparkle className="absolute -top-2 -right-3 size-5" />
-        {stack.map(([width, color], i) => (
-          <span
-            key={color}
-            className={cn(
-              "h-7 rounded-[3px] border-r-[6px] border-surface shadow-sm shadow-shadow",
-              width,
-              color,
-              i % 2 === 1 ? "translate-x-2" : "-translate-x-1",
-            )}
-          />
-        ))}
-        <span className="ribbon absolute top-7 left-8 h-12 w-3" />
-      </div>
+      <BookStack />
 
       <div className="flex flex-1 flex-col gap-3">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted">

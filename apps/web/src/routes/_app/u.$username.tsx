@@ -4,6 +4,7 @@ import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
 import { ProfileHeader } from "@/features/profile";
+import { YearStats } from "@/features/stats";
 
 export const Route = createFileRoute("/_app/u/$username")({
   component: ReaderPage,
@@ -21,7 +22,7 @@ function ReaderPage() {
 
   return (
     <Screen>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         <ProfileHeader
           profile={profile}
           actions={
@@ -36,9 +37,7 @@ function ReaderPage() {
             )
           }
         />
-        <p className="text-sm text-text-muted">
-          {stats.booksRead} livros e {stats.pagesRead} páginas lidas em {stats.year}.
-        </p>
+        <YearStats stats={stats} />
       </div>
     </Screen>
   );

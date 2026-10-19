@@ -85,7 +85,7 @@ function ActivityLine({ item }: { item: FeedItem }) {
   const { actor, book } = item;
   return (
     <li className="flex items-center gap-2.5 px-1 text-sm">
-      <Avatar src={actor.image} name={actor.name} size="size-7" className="text-xs" />
+      <Avatar src={actor.image} name={actor.name} size="size-7" />
       <p className="min-w-0 flex-1 leading-snug">
         <ActorName actor={actor} />{" "}
         <span className="text-text-muted">{describeActivity(item.kind, item.data)}</span>
@@ -106,7 +106,7 @@ function PostBubble({ item, mine }: { item: FeedItem; mine: boolean }) {
 
   return (
     <li className={cn("flex items-end gap-2", mine && "flex-row-reverse")}>
-      <Avatar src={actor.image} name={actor.name} size="size-8" className="text-xs" />
+      <Avatar src={actor.image} name={actor.name} size="size-8" />
       <div
         className={cn(
           "flex max-w-[85%] flex-col gap-2 rounded-lg px-4 py-3 text-sm shadow-sm shadow-shadow",

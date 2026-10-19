@@ -2,10 +2,10 @@ import { useShelf, useShelfTabStore } from "@grimo/client";
 import { countByShelf } from "@grimo/core";
 import { Spinner } from "@/components/feedback/spinner";
 import { FeedPanel } from "@/features/feed";
+import { ShelfTiles } from "@/features/shelves";
 import { GoalHero } from "./goal-hero";
 import { MonthList } from "./month-list";
 import { ShelfCarousel } from "./shelf-carousel";
-import { ShelfTiles } from "./shelf-tiles";
 
 /**
  * Home: shelf tiles pick the carousel of books; goal and month highlights below; the feed
