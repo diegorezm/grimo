@@ -6,153 +6,109 @@ acompanhe outros leitores e compartilhe o resumo do seu mês de leitura.
 > O foco é ser **simples, bonito e pessoal**: perfil, estantes, resenhas, feed e compartilhamento
 > de métricas. Não é um catálogo gigante de livros nem um app complexo de estatísticas.
 
-## 🏠 Seu Grimo, no seu servidor
-
-**Self-hosting é um dos pilares do Grimo, não um extra.** Seus registros de leitura são seus: você
-pode usar a instância oficial ou rodar o seu próprio Grimo, com o mesmo app web e mobile.
-
-- **Modo pessoal**: um diário de leitura só seu. Uma conta, cadastro fechado, sem nada social, e
-  ainda com estantes, resenhas, estatísticas e o card do mês.
-- **Modo comunidade**: a rede social completa, para você, sua família, seu clube do livro…
-- **Um comando**: `docker compose up -d`. Um container (API + web), um volume com um arquivo
-  SQLite. Roda em VPS, NAS ou Raspberry Pi (imagens amd64 e arm64).
-- **O app mobile conecta em qualquer servidor**: é só trocar o servidor na tela de login.
-- **O mesmo código** roda na Cloudflare e no seu servidor. Self-host não é uma versão de segunda.
-
-```bash
-curl -O https://raw.githubusercontent.com/diegorezm/grimo/main/docker-compose.yml
-echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" > .env
-docker compose up -d   # → http://localhost:3000
-```
-
-Guia completo (variáveis, backup, HTTPS, atualização): **[docs/self-hosting.md](docs/self-hosting.md)**.
-
 ## Stack
 
 | Camada       | Tecnologia                                                                         |
 | ------------ | ---------------------------------------------------------------------------------- |
 | Monorepo     | [pnpm workspaces](https://pnpm.io) + [Turborepo](https://turborepo.com)            |
-| API          | [Hono](https://hono.dev), independente de runtime                                  |
-| Runtimes     | **Cloudflare Workers** (instância oficial) ou **Node + Docker** (self-host)        |
-| Banco        | SQLite em ambos: **Cloudflare D1** ou arquivo via libSQL. [Drizzle ORM](https://orm.drizzle.team) |
-| Arquivos     | **Cloudflare R2** ou disco local                                                   |
-| Autenticação | [Better Auth](https://better-auth.com) (email/senha + username)                    |
-| Web          | React 19 + Vite + TanStack Router/Query + Tailwind v4                              |
+| Backend      | [Convex](https://convex.dev): banco, funções, tempo real e arquivos                |
+| Autenticação | [Better Auth](https://better-auth.com) no Convex (email/senha + username)          |
+| Web          | React 19 + Vite + TanStack Router/Query + Tailwind v4 (SPA estática)               |
 | Mobile       | Expo (SDK 58) + Expo Router                                                        |
-| Validação    | Zod (schemas compartilhados entre API, web e mobile)                               |
+| Cache        | TanStack Query persistido (localStorage / MMKV), alimentado pelas subscriptions do Convex |
+| Validação    | Zod (schemas compartilhados entre backend, web e mobile)                           |
 | Lint/format  | [Biome](https://biomejs.dev)                                                       |
 
 ## Estrutura
 
 ```
 apps/
-  api/       Runtime Cloudflare: Worker que liga D1 + R2 ao app Hono
-  server/    Runtime self-host: Node + SQLite + disco, serve API e web (Docker)
-  web/       App web (Vite + React). Na Cloudflare, é um Worker que repassa /api/* para a API
-  mobile/    App mobile (Expo), com escolha de servidor
+  web/       App web (Vite + React), SPA estática (Cloudflare static assets ou qualquer host)
+  mobile/    App mobile (Expo)
 packages/
-  core/      Domínio puro: schemas Zod, constantes, regras (estantes, resumo do mês, modos). Sem React.
-  db/        Schema Drizzle + migrações SQL + drivers (D1 e libSQL)
-  auth/      Config do Better Auth (servidor) + peças compartilhadas do cliente
-  api/       App Hono (rotas por feature), sem depender de runtime. Exporta `createApp` e `AppType`
-  client/    Camada de dados compartilhada por web e mobile: cliente RPC tipado + hooks TanStack Query
+  backend/   Convex: schema, queries/mutations/actions, auth (Better Auth), seed e testes
+  core/      Domínio puro: schemas Zod, constantes, regras (estantes, resumo do mês). Sem React.
+  client/    Camada de dados compartilhada por web e mobile: ponte Convex ↔ TanStack Query,
+             cache persistido e hooks (`useFeed`, `useShelf`, `useMe`…)
   tokens/    Design tokens (cores, espaçamento, fontes) → Tailwind (web) e StyleSheet (mobile)
   tsconfig/  Configs base de TypeScript
 ```
 
-O que é compartilhado:
+O que é compartilhado entre plataformas: schemas e regras (`@grimo/core`), os hooks e o cache
+(`@grimo/client`) e os tokens visuais. Só a camada de UI é por plataforma.
 
-- **Entre runtimes**: toda a API (`@grimo/api`), o schema e as **mesmas migrações SQL**. Cada runtime
-  só fornece o banco, o storage e as variáveis de ambiente.
-- **Entre plataformas**: schemas e regras (`@grimo/core`), o cliente da API e os hooks
-  (`useFeed`, `useShelf`, `useInstance`…) de `@grimo/client`, e os tokens visuais.
-  Só a camada de UI é por plataforma (DOM no web, React Native no mobile).
+**Offline primeiro:** o cache inteiro fica salvo no aparelho por 7 dias. Ao abrir, as telas
+aparecem na hora a partir dele (mesmo sem internet) e o Convex atualiza em tempo real o que está
+na tela. Curtir, seguir e atualizar progresso refletem na hora (otimista) e são desfeitos se o
+servidor recusar.
 
 ## Desenvolvimento
 
-Pré-requisitos: Node 22+, pnpm 12+. Para o mobile: app Expo Go ou um emulador.
+Pré-requisitos: Node 22+, pnpm 12+. Para o mobile: um development build ou emulador.
 
 ```bash
 pnpm install
-cp apps/api/.dev.vars.example apps/api/.dev.vars   # e troque o BETTER_AUTH_SECRET
-pnpm db:migrate                                    # cria o D1 local
-pnpm dev                                           # web + API (runtime Cloudflare) em http://localhost:5173
+pnpm dev:backend        # 1ª vez: cria o deployment Convex (login, ou local sem conta) e fica rodando
 ```
 
-`pnpm dev` sobe o Vite com o plugin da Cloudflare: o Worker da web **e** o Worker da API rodam no
-mesmo processo, com D1/R2 locais (Miniflare). Não precisa de conta Cloudflare.
-
-Para ter dados de exemplo (leitores, livros com capa, estantes, resenhas, seguidores e curtidas),
-com o `pnpm dev` rodando:
+Na primeira vez, configure o deployment (em outro terminal):
 
 ```bash
-pnpm db:seed                                       # entre como rafa@grimo.test / grimo-demo
+cd packages/backend
+npx convex env set SITE_URL http://localhost:5173
+npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 ```
+
+Depois, no dia a dia:
+
+```bash
+pnpm dev                # Convex (convex dev) + web em http://localhost:5173
+pnpm seed               # dados de exemplo: entre como rafa@grimo.test / grimo-demo
+```
+
+A web acha o deployment sozinha (lê `packages/backend/.env.local`, escrito pelo `convex dev`);
+para apontar para outro, use `VITE_CONVEX_URL` (veja `apps/web/.env.example`).
 
 Todas as contas de exemplo (`rafa`, `bia.lima`, `caio`, `lu.prado`, `theo`) usam a senha
-`grimo-demo` (troque com `SEED_PASSWORD`). Para outro servidor: `SEED_URL=http://localhost:3000`.
-
-Para testar o runtime de self-host (Node + SQLite):
-
-```bash
-cp apps/server/.env.example apps/server/.env
-pnpm dev:server                                    # http://localhost:3000
-```
+`grimo-demo`.
 
 ### Mobile
 
 ```bash
-cp apps/mobile/.env.example apps/mobile/.env.local  # servidor padrão
+cp apps/mobile/.env.example apps/mobile/.env.local  # EXPO_PUBLIC_CONVEX_URL
 pnpm dev:mobile
 ```
 
-No celular físico, use o IP da sua máquina na rede (ex. `http://192.168.0.10:5173`). No emulador
-Android, `http://10.0.2.2:5173`. O servidor também pode ser trocado na tela de login do app.
+Com o deployment local, no celular físico use o IP da sua máquina (ex. `http://192.168.0.10:3210`);
+no emulador Android, `http://10.0.2.2:3210`. Um deployment na nuvem funciona igual em todo lugar.
 
 ## Scripts
 
 | Comando                  | O que faz                                                    |
 | ------------------------ | ------------------------------------------------------------ |
-| `pnpm dev`               | Web + API locais (runtime Cloudflare)                        |
-| `pnpm dev:server`        | Servidor self-host local (Node + SQLite), porta 3000         |
-| `pnpm dev:api`           | Só a API na Cloudflare local (`wrangler dev`, porta 8787)    |
+| `pnpm dev`               | Convex (`convex dev`) + web                                  |
+| `pnpm dev:backend`       | Só o Convex (aplica schema/funções a cada mudança)           |
 | `pnpm dev:mobile`        | Expo                                                         |
 | `pnpm check`             | Lint + typecheck + testes (rode antes de abrir PR)           |
-| `pnpm db:generate`       | Gera migração SQL a partir do schema Drizzle                 |
-| `pnpm db:migrate`        | Aplica migrações no D1 local                                 |
-| `pnpm db:migrate:remote` | Aplica migrações no D1 de produção                           |
-| `pnpm db:studio`         | Drizzle Studio                                               |
-| `pnpm db:seed`           | Dados de exemplo via API (precisa do servidor rodando)       |
+| `pnpm seed`              | Dados de exemplo no deployment de dev                        |
 | `pnpm tokens:generate`   | Regenera o `theme.css` do Tailwind a partir dos tokens       |
-| `pnpm deploy`            | Deploy da API e da web na Cloudflare                         |
+| `pnpm deploy`            | Deploy do Convex (produção) e da web (Cloudflare)            |
 
-## Deploy na Cloudflare (instância oficial ou self-host na sua conta)
+## Deploy
 
-Uma vez:
-
-```bash
-pnpm --filter @grimo/api-worker exec wrangler d1 create grimo-db   # cole o id em apps/api/wrangler.jsonc
-pnpm --filter @grimo/api-worker exec wrangler r2 bucket create grimo-media
-pnpm --filter @grimo/api-worker exec wrangler secret put BETTER_AUTH_SECRET
-```
-
-Ajuste as variáveis em `apps/api/wrangler.jsonc` (`GRIMO_MODE`, `BETTER_AUTH_URL`,
-`TRUSTED_ORIGINS`…; as mesmas do [guia de self-host](docs/self-hosting.md#variáveis)). Depois:
-
-```bash
-pnpm db:migrate:remote
-pnpm deploy
-```
-
-A web (`grimo-web`) chama a API (`grimo-api`) por **service binding**: o navegador só fala com um
-domínio, então os cookies de sessão são first-party. O mobile pode apontar para o mesmo domínio.
+1. Convex: `pnpm --filter @grimo/backend exec convex deploy` (pede login/projeto na primeira vez).
+   No deployment de produção, defina `SITE_URL` (origem da web, ex. `https://grimo.app`) e
+   `BETTER_AUTH_SECRET`.
+2. Web: `VITE_CONVEX_URL=https://<prod>.convex.cloud pnpm --filter @grimo/web build`, depois
+   `pnpm --filter @grimo/web deploy` (Cloudflare static assets, `apps/web/wrangler.jsonc`) ou
+   qualquer host estático com fallback de SPA para `index.html`.
+3. Mobile: `EXPO_PUBLIC_CONVEX_URL` do deployment de produção no build do EAS.
 
 ## Próximos passos do MVP
 
-- Upload de avatar (a porta `Storage` já existe: R2 na Cloudflare, disco no self-host)
-- Tela de post/resenha com comentários (API e hooks já existem)
-- Editar perfil (gêneros favoritos, bio, meta anual): API e `useUpdateMe` já existem
-- Cadastro por convite (modo comunidade fechado para família e amigos)
+- Upload de avatar (Convex file storage: `ctx.storage` + URL de upload)
+- Tela de post/resenha com comentários (backend e hooks já existem)
+- Editar perfil no mobile (backend e `useUpdateMe` já existem)
 - Exportar/importar dados (CSV do Goodreads, backup em JSON)
 - Descoberta de leitores com gostos parecidos
 
