@@ -1,38 +1,14 @@
-import * as SecureStore from "expo-secure-store";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { convexSiteUrl } from "@grimo/client";
 
 /**
- * Which Grimo server the app talks to. Grimo can be self-hosted, so the user picks
- * the server on the sign-in screen (like Immich/Jellyfin). Default comes from the build.
- * Physical device in dev: your LAN IP. Android emulator: http://10.0.2.2:5173.
+ * The Convex deployment the app talks to, fixed at build time (`EXPO_PUBLIC_CONVEX_URL`).
+ * Auth lives on the deployment's site URL. In dev, use your machine's LAN IP for a local
+ * deployment (e.g. http://192.168.0.10:3210); a cloud deployment works as is.
  */
-export const DEFAULT_SERVER_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:5173";
+export const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL ?? "";
 
-/** `meu-grimo.com/` → `https://meu-grimo.com`. */
-export function normalizeServerUrl(input: string) {
-  const trimmed = input.trim().replace(/\/+$/, "");
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+if (!CONVEX_URL) {
+  throw new Error("EXPO_PUBLIC_CONVEX_URL não definido (veja apps/mobile/.env.example).");
 }
 
-interface ServerState {
-  serverUrl: string;
-  setServerUrl: (url: string) => void;
-}
-
-export const useServerStore = create<ServerState>()(
-  persist(
-    (set) => ({
-      serverUrl: DEFAULT_SERVER_URL,
-      setServerUrl: (url) => set({ serverUrl: normalizeServerUrl(url) }),
-    }),
-    {
-      name: "grimo.server",
-      storage: createJSONStorage(() => ({
-        getItem: SecureStore.getItemAsync,
-        setItem: SecureStore.setItemAsync,
-        removeItem: SecureStore.deleteItemAsync,
-      })),
-    },
-  ),
-);
+export const CONVEX_SITE_URL = convexSiteUrl(CONVEX_URL);

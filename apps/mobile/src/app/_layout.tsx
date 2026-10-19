@@ -1,11 +1,11 @@
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeStore } from "@/lib/theme";
-import { AppProviders, useAuthClient } from "@/providers/app-providers";
+import { AppProviders, useAuthClient, useClearCache } from "@/providers/app-providers";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,9 +20,14 @@ export default function RootLayout() {
   );
 }
 
-/** Auth gate: signed-in users see the tabs, everyone else the sign-in screen. */
+/**
+ * Auth gate: signed-in users see the tabs, everyone else the sign-in screen. The session is
+ * restored from SecureStore, so the app opens offline on the persisted cache; a network error
+ * keeps it, only the server saying "no session" signs out.
+ */
 function RootNavigator() {
   const { data: session, isPending } = useAuthClient().useSession();
+  useClearCacheOnSignOut(session?.session.id ?? null);
   const [fontsLoaded] = useFonts(fontAssets);
   useThemeStore(); // subscribes so the saved appearance is applied on startup
   const ready = fontsLoaded && !isPending;
@@ -60,4 +65,14 @@ function RootNavigator() {
       </Stack.Protected>
     </Stack>
   );
+}
+
+/** The session ended (sign-out, expired, revoked): nothing from that account stays cached. */
+function useClearCacheOnSignOut(sessionId: string | null) {
+  const clearCache = useClearCache();
+  const previous = useRef(sessionId);
+  useEffect(() => {
+    if (previous.current && !sessionId) void clearCache();
+    previous.current = sessionId;
+  }, [sessionId, clearCache]);
 }

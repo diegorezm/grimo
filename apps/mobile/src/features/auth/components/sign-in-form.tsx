@@ -1,28 +1,20 @@
-import { useInstance } from "@grimo/client";
 import { useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthClient, useClearCache } from "@/providers/app-providers";
-import { ServerPicker } from "./server-picker";
 
 /** On success the session changes and the root layout swaps to the tabs. */
 export function SignInForm() {
   const authClient = useAuthClient();
   const clearCache = useClearCache();
-  const instance = useInstance();
   const dark = useColorScheme() === "dark";
-  const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm({ ...form, [key]: value });
-
-  // Personal instance without an account yet → this form creates the owner account.
-  const isSetup = instance.data?.mode === "personal" && instance.data.registrationOpen;
-  const canSignUp = instance.data?.registrationOpen ?? false;
-  const mode = isSetup ? "sign-up" : canSignUp ? chosenMode : "sign-in";
 
   async function submit() {
     setPending(true);
@@ -49,14 +41,8 @@ export function SignInForm() {
         }
         style={styles.logo}
       />
-      <Text variant="display">{instance.data?.name ?? "Grimo"}</Text>
-      <Text color="textMuted">
-        {isSetup
-          ? "Crie a sua conta. Este Grimo é só seu: o cadastro fecha depois dela."
-          : "O que cada livro deixou em você."}
-      </Text>
-      <ServerPicker />
-      {instance.isError && <Text color="danger">Não foi possível conectar a este servidor.</Text>}
+      <Text variant="display">Grimo</Text>
+      <Text color="textMuted">O que cada livro deixou em você.</Text>
       <View style={styles.fields}>
         {mode === "sign-up" && (
           <>
@@ -89,13 +75,11 @@ export function SignInForm() {
         onPress={submit}
         disabled={pending}
       />
-      {canSignUp && !isSetup && (
-        <Button
-          variant="ghost"
-          title={mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
-          onPress={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-        />
-      )}
+      <Button
+        variant="ghost"
+        title={mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
+        onPress={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
+      />
     </Card>
   );
 }

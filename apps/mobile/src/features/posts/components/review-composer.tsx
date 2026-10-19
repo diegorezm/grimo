@@ -1,4 +1,4 @@
-import { useBook, useCreatePost, useUpdateShelfEntry } from "@grimo/client";
+import { errorMessage, useBook, useCreatePost, useUpdateShelfEntry } from "@grimo/client";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Switch, TextInput, View } from "react-native";
@@ -35,7 +35,7 @@ export function ReviewComposer({ openLibraryId }: { openLibraryId: string }) {
       if (entry && value !== entry.rating) updateEntry.mutate({ id: entry.id, rating: value });
       router.back();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível publicar");
+      setError(errorMessage(e, "Não foi possível publicar"));
     }
   }
 
