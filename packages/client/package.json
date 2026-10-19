@@ -11,19 +11,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@convex-dev/better-auth": "catalog:",
+    "@grimo/backend": "workspace:*",
     "@grimo/core": "workspace:*",
     "@tanstack/query-async-storage-persister": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-persist-client": "catalog:",
-    "hono": "catalog:",
+    "better-auth": "catalog:",
+    "convex": "catalog:",
     "zustand": "catalog:"
   },
   "peerDependencies": {
     "react": "*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:",
-    "@grimo/api": "workspace:*",
     "@grimo/tsconfig": "workspace:*",
     "@types/react": "catalog:",
     "react": "catalog:",

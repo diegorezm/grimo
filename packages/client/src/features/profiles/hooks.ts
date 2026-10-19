@@ -1,151 +1,104 @@
+import { api, type Id } from "@grimo/backend";
 import type { UpdateProfileInput } from "@grimo/core";
-import {
-  infiniteQueryOptions,
-  queryOptions,
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import type { InferResponseType } from "hono/client";
-import type { ApiClient } from "../../lib/api-client";
-import { useApi } from "../../lib/api-context";
-import { PAGE_SIZE, parseResponse, queryKeys, staleTimes } from "../../lib/query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { FunctionReturnType } from "convex/server";
+import { useRef } from "react";
+import { CONVEX_QUERY, convexQuery } from "../../lib/convex-cache";
+import { useGrowingList } from "../../lib/list";
+import { usePatchQueries } from "../../lib/mutation";
+import { useConvexCache } from "../../lib/provider";
+import { PAGE_SIZE } from "../../lib/query";
 
-export type Profile = InferResponseType<ApiClient["me"]["$get"], 200>;
-export type ReaderPage = InferResponseType<ApiClient["users"][":username"]["$get"], 200>;
+export type Profile = FunctionReturnType<typeof api.users.me>;
+export type ReaderPage = FunctionReturnType<typeof api.users.byUsername>;
+export type ReaderActivityPage = FunctionReturnType<typeof api.users.activity>;
+export type ConnectionKind = "followers" | "following";
+export type ReaderCard = FunctionReturnType<typeof api.users.connections>["items"][number];
+export type ReaderSuggestion = FunctionReturnType<typeof api.users.suggestions>["items"][number];
 
-export function meQuery(api: ApiClient) {
-  return queryOptions({
-    queryKey: queryKeys.me,
-    queryFn: () => parseResponse(api.me.$get()),
-    staleTime: staleTimes.own,
-  });
+export function meQuery() {
+  return convexQuery(api.users.me, {}, "required");
 }
 
-export function readerQuery(api: ApiClient, username: string) {
-  return queryOptions({
-    queryKey: queryKeys.reader(username),
-    queryFn: () => parseResponse(api.users[":username"].$get({ param: { username } })),
-    staleTime: staleTimes.social,
-    enabled: Boolean(username),
-  });
+/** A reader's public page; `year` picks the stats shown (defaults to this year). */
+export function readerQuery(username: string, year = new Date().getUTCFullYear()) {
+  return convexQuery(api.users.byUsername, { username, year }, "optional");
 }
 
 export function useMe(options: { enabled?: boolean } = {}) {
-  return useQuery({ ...meQuery(useApi()), ...options });
+  return useQuery({ ...meQuery(), ...options });
 }
 
 /** Key of the profile update mutation (lets a pinned "Salvar" button show progress). */
 export const updateMeMutationKey = ["me", "update"] as const;
 
 export function useUpdateMe() {
-  const api = useApi();
+  const { convex } = useConvexCache();
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: updateMeMutationKey,
-    mutationFn: (json: UpdateProfileInput) => parseResponse(api.me.$patch({ json })),
-    onSuccess: (profile) => {
-      queryClient.setQueryData(queryKeys.me, profile);
-      return queryClient.invalidateQueries({ queryKey: queryKeys.stats });
-    },
+    mutationFn: (input: UpdateProfileInput) => convex.mutation(api.users.updateMe, input),
+    onSuccess: (profile) => queryClient.setQueryData(meQuery().queryKey, profile),
   });
 }
 
 export function useReader(username: string) {
-  return useQuery(readerQuery(useApi(), username));
+  return useQuery({ ...readerQuery(username), enabled: Boolean(username) });
 }
 
-export type ReaderActivityPage = InferResponseType<
-  ApiClient["users"][":username"]["activity"]["$get"],
-  200
->;
+/** First pages of the reader lists, for route loaders to prefetch (same keys as the hooks). */
+export const readerActivityQuery = (username: string) =>
+  convexQuery(api.users.activity, { username, limit: PAGE_SIZE }, "optional");
+export const readerConnectionsQuery = (username: string, kind: ConnectionKind) =>
+  convexQuery(api.users.connections, { username, kind, limit: PAGE_SIZE }, "optional");
+export const readerSearchQuery = (q: string) =>
+  convexQuery(api.users.search, { q: q.trim(), limit: PAGE_SIZE }, "required");
+export const readerSuggestionsQuery = () =>
+  convexQuery(api.users.suggestions, { limit: PAGE_SIZE }, "required");
 
 /** A reader's own activity (posts, progress, finished books…), newest first. */
-export function readerActivityQuery(api: ApiClient, username: string) {
-  return infiniteQueryOptions({
-    queryKey: queryKeys.readerActivity(username),
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      parseResponse(
-        api.users[":username"].activity.$get({
-          param: { username },
-          query: { cursor: pageParam, limit: PAGE_SIZE },
-        }),
-      ),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-    staleTime: staleTimes.social,
-  });
-}
-
 export function useReaderActivity(username: string) {
-  return useInfiniteQuery(readerActivityQuery(useApi(), username));
+  return useGrowingList(api.users.activity, { username }, "optional");
 }
-
-export type ConnectionKind = "followers" | "following";
-export type ReaderCard = InferResponseType<
-  ApiClient["users"][":username"]["followers"]["$get"],
-  200
->["items"][number];
 
 /** Who follows a reader, or whom they follow. */
-export function readerConnectionsQuery(api: ApiClient, username: string, kind: ConnectionKind) {
-  return infiniteQueryOptions({
-    queryKey: queryKeys.readerConnections(username, kind),
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => {
-      const input = { param: { username }, query: { cursor: pageParam, limit: PAGE_SIZE } };
-      const route = api.users[":username"];
-      return parseResponse(
-        kind === "followers" ? route.followers.$get(input) : route.following.$get(input),
-      );
-    },
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-    staleTime: staleTimes.social,
-  });
-}
-
 export function useReaderConnections(username: string, kind: ConnectionKind) {
-  return useInfiniteQuery(readerConnectionsQuery(useApi(), username, kind));
+  return useGrowingList(api.users.connections, { username, kind }, "optional");
 }
 
-/** Readers whose name or @username contains `q`, a page at a time. */
-export function readerSearchQuery(api: ApiClient, q: string) {
-  return infiniteQueryOptions({
-    queryKey: queryKeys.readerSearch(q),
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      parseResponse(api.users.$get({ query: { q, cursor: pageParam, limit: PAGE_SIZE } })),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-    staleTime: staleTimes.social,
-    enabled: q.trim().length > 0,
-  });
-}
-
+/** Readers whose name or @username matches `q`. */
 export function useReaderSearch(q: string) {
-  return useInfiniteQuery(readerSearchQuery(useApi(), q));
+  const text = q.trim();
+  return useGrowingList(api.users.search, { q: text }, "required", { enabled: text.length > 0 });
 }
 
-export type ReaderSuggestion = InferResponseType<
-  ApiClient["users"]["suggestions"]["$get"],
-  200
->["items"][number];
-
-/** Everyone you don't follow yet, best matches first, a page at a time. */
-export function readerSuggestionsQuery(api: ApiClient) {
-  return infiniteQueryOptions({
-    queryKey: queryKeys.readerSuggestions,
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      parseResponse(api.users.suggestions.$get({ query: { cursor: pageParam, limit: PAGE_SIZE } })),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-    staleTime: staleTimes.social,
-  });
-}
-
+/**
+ * Everyone you don't follow yet, best matches first. Live, but a reader you just followed stays
+ * in place (now "Seguindo") until you leave, instead of vanishing under your cursor.
+ */
 export function useReaderSuggestions() {
-  return useInfiniteQuery(readerSuggestionsQuery(useApi()));
+  const list = useGrowingList(api.users.suggestions, {}, "required");
+  const shown = useRef(new Map<string, ReaderSuggestion>());
+  const items = list.data?.items;
+  if (!items) return list;
+
+  const current = new Set<string>(items.map((reader) => reader.id));
+  const merged: ReaderSuggestion[] = [];
+  for (const [id, reader] of shown.current) {
+    if (!current.has(id)) merged.push({ ...reader, isFollowing: true });
+  }
+  const order = [...shown.current.keys()];
+  merged.push(...items);
+  merged.sort((a, b) => rank(order, a.id) - rank(order, b.id));
+  shown.current = new Map(merged.map((reader) => [reader.id, reader]));
+  return { ...list, data: { ...list.data!, items: merged } };
 }
+
+/** Position in the list as first shown; new readers go after the ones already on screen. */
+const rank = (order: string[], id: string) => {
+  const index = order.indexOf(id);
+  return index === -1 ? order.length : index;
+};
 
 type FollowState = { id: string; isFollowing: boolean; followers: number };
 
@@ -157,13 +110,12 @@ function patchFollow(data: unknown, userId: string, follow: boolean): unknown {
       ? { ...reader, isFollowing: follow, followers: reader.followers + (follow ? 1 : -1) }
       : reader;
 
-  if ("pages" in data && Array.isArray(data.pages)) {
-    return { ...data, pages: data.pages.map((page) => patchFollow(page, userId, follow)) };
-  }
   if ("items" in data && Array.isArray(data.items)) {
     return {
       ...data,
-      items: data.items.map((item: FollowState) => ("isFollowing" in item ? patch(item) : item)),
+      items: data.items.map((item: FollowState) =>
+        item && typeof item === "object" && "isFollowing" in item ? patch(item) : item,
+      ),
     };
   }
   if ("profile" in data && "isFollowing" in data) {
@@ -178,46 +130,32 @@ function patchFollow(data: unknown, userId: string, follow: boolean): unknown {
   return data;
 }
 
+/** Every cached reader query (`users:*`): pages, search, suggestions, follower lists. */
+const readerQueries = [CONVEX_QUERY, "users:"] as const;
+
 /**
  * Follow/unfollow from anywhere (profile, search, suggestions, follower lists): every cached
  * reader list and page shows the new state immediately (rolled back on error).
  */
 export function useToggleFollow() {
-  const api = useApi();
+  const { convex } = useConvexCache();
   const queryClient = useQueryClient();
-  const readers = { queryKey: queryKeys.allReaders };
+  const patchQueries = usePatchQueries();
   return useMutation({
-    mutationFn: ({
-      userId,
-      follow,
-    }: {
-      userId: string;
-      follow: boolean;
-    }): Promise<{ following: boolean }> => {
-      const route = api.users[":id"].follow;
-      const param = { id: userId };
-      return follow
-        ? parseResponse(route.$post({ param }))
-        : parseResponse(route.$delete({ param }));
-    },
+    mutationFn: ({ userId, follow }: { userId: string; follow: boolean }) =>
+      convex.mutation(api.users.setFollowing, { userId: userId as Id<"users">, follow }),
     onMutate: async ({ userId, follow }) => {
-      await queryClient.cancelQueries(readers);
-      const previous = queryClient.getQueriesData(readers);
-      queryClient.setQueriesData(readers, (data) => patchFollow(data, userId, follow));
-      return () => {
-        for (const [key, data] of previous) queryClient.setQueryData(key, data);
-      };
+      const keys = queryClient
+        .getQueryCache()
+        .findAll({
+          predicate: ({ queryKey }) =>
+            queryKey[0] === readerQueries[0] &&
+            typeof queryKey[1] === "string" &&
+            queryKey[1].startsWith(readerQueries[1]),
+        })
+        .map((query) => query.queryKey);
+      return patchQueries<unknown>(keys, (data) => patchFollow(data, userId, follow));
     },
     onError: (_error, _input, rollback) => rollback?.(),
-    onSettled: () =>
-      Promise.all([
-        // Suggestions and search keep the reader in place (now "Seguindo") until they go stale.
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.allReaders,
-          predicate: ({ queryKey }) => queryKey[1] !== "suggestions" && queryKey[1] !== "search",
-        }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.me }),
-      ]),
   });
 }

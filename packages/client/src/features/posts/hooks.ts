@@ -1,117 +1,75 @@
+import { api, type Id } from "@grimo/backend";
 import type { CreatePostInput } from "@grimo/core";
-import {
-  type InfiniteData,
-  queryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import type { InferResponseType } from "hono/client";
-import type { ApiClient } from "../../lib/api-client";
-import { useApi } from "../../lib/api-context";
-import { parseResponse, queryKeys, staleTimes } from "../../lib/query";
-import type { FeedPage } from "../feed/hooks";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { FunctionReturnType } from "convex/server";
+import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
+import { usePatchQueries } from "../../lib/mutation";
+import { useConvexCache } from "../../lib/provider";
 
-export type PostDetail = InferResponseType<ApiClient["posts"][":id"]["$get"], 200>;
+export type PostDetail = FunctionReturnType<typeof api.posts.get>;
 
-export function postQuery(api: ApiClient, id: string) {
-  return queryOptions({
-    queryKey: queryKeys.post(id),
-    queryFn: () => parseResponse(api.posts[":id"].$get({ param: { id } })),
-    staleTime: staleTimes.social,
-  });
+export function postQuery(id: string) {
+  return convexQuery(api.posts.get, { id }, "optional");
 }
 
 export function usePost(id: string) {
-  return useQuery(postQuery(useApi(), id));
+  return useQuery(postQuery(id));
 }
 
 export function useCreatePost() {
-  const api = useApi();
-  const queryClient = useQueryClient();
+  const { convex } = useConvexCache();
   return useMutation({
-    mutationFn: (json: CreatePostInput) => parseResponse(api.posts.$post({ json })),
-    onSettled: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.allBooks }),
-      ]),
+    mutationFn: (input: CreatePostInput) =>
+      convex.mutation(api.posts.create, {
+        ...input,
+        bookId: input.bookId as Id<"books"> | null,
+      }),
   });
 }
 
-/** Like/unlike: the heart and count change instantly in the feed (rolled back on error). */
+type PostList = {
+  items: { post: { id: string; likedByMe: boolean; likeCount: number } | null }[];
+};
+
+/** Like/unlike: the heart and count change instantly in every list (rolled back on error). */
 export function useToggleLike() {
-  const api = useApi();
-  const queryClient = useQueryClient();
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
   return useMutation({
-    mutationFn: ({
-      postId,
-      like,
-    }: {
-      postId: string;
-      like: boolean;
-    }): Promise<{ liked: boolean }> => {
-      const route = api.posts[":id"].like;
-      const param = { id: postId };
-      return like ? parseResponse(route.$post({ param })) : parseResponse(route.$delete({ param }));
-    },
-    onMutate: async ({ postId, like }) => {
-      // The post can be in the feed and on its author's page (`allReaderActivity`).
-      const lists = [queryKeys.feed, queryKeys.allReaderActivity];
-      await Promise.all(lists.map((queryKey) => queryClient.cancelQueries({ queryKey })));
-      const previous = lists.flatMap((queryKey) =>
-        queryClient.getQueriesData<InfiniteData<FeedPage>>({ queryKey }),
-      );
-      for (const queryKey of lists) {
-        queryClient.setQueriesData<InfiniteData<FeedPage>>({ queryKey }, (data) =>
-          data ? likeInPages(data, postId, like) : data,
-        );
-      }
-      return () => {
-        for (const [key, data] of previous) queryClient.setQueryData(key, data);
-      };
-    },
+    mutationFn: ({ postId, like }: { postId: string; like: boolean }) =>
+      convex.mutation(api.posts.setLiked, { postId: postId as Id<"posts">, like }),
+    // The post can be in the feed and on its author's page.
+    onMutate: ({ postId, like }) =>
+      patchQueries<PostList>(
+        [convexQueryPrefix(api.feed.list), convexQueryPrefix(api.users.activity)],
+        (data) => likeInList(data, postId, like),
+      ),
     onError: (_error, _input, rollback) => rollback?.(),
-    onSettled: (_data, _error, { postId }) =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.allReaderActivity }),
-      ]),
   });
 }
 
-function likeInPages(data: InfiniteData<FeedPage>, postId: string, like: boolean) {
+function likeInList<T extends PostList>(data: T, postId: string, like: boolean): T {
   return {
     ...data,
-    pages: data.pages.map((page) => ({
-      ...page,
-      items: page.items.map((item) =>
-        item.post?.id === postId && Boolean(item.post.likedByMe) !== like
-          ? {
-              ...item,
-              post: {
-                ...item.post,
-                likedByMe: like,
-                likeCount: (item.post.likeCount ?? 0) + (like ? 1 : -1),
-              },
-            }
-          : item,
-      ),
-    })),
+    items: data.items.map((item) =>
+      item.post?.id === postId && item.post.likedByMe !== like
+        ? {
+            ...item,
+            post: {
+              ...item.post,
+              likedByMe: like,
+              likeCount: item.post.likeCount + (like ? 1 : -1),
+            },
+          }
+        : item,
+    ),
   };
 }
 
 export function useAddComment(postId: string) {
-  const api = useApi();
-  const queryClient = useQueryClient();
+  const { convex } = useConvexCache();
   return useMutation({
     mutationFn: (body: string) =>
-      parseResponse(api.posts[":id"].comments.$post({ param: { id: postId }, json: { body } })),
-    onSettled: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
-      ]),
+      convex.mutation(api.posts.comment, { postId: postId as Id<"posts">, body }),
   });
 }

@@ -1,42 +1,44 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { defaultShouldDehydrateQuery, QueryCache, QueryClient } from "@tanstack/react-query";
 import type { AsyncStorage, PersistQueryClientOptions } from "@tanstack/react-query-persist-client";
-import { DetailedError, parseResponse } from "hono/client";
-
-export { parseResponse };
+import { type ConvexCache, isUnauthorized } from "./convex-cache";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
 /**
- * How long each kind of data counts as fresh (no refetch while fresh). Mutations update the cache
- * directly (optimistic + invalidation), so "fresh" can be generous: the screen is already right.
+ * How long non-Convex data counts as fresh. Convex queries are never stale for TanStack: their
+ * subscription keeps them live while on screen (see convex-cache.ts), so this only covers
+ * actions and the auth session.
  */
 export const staleTimes = {
-  /** Instance mode/name: changes only when the admin reconfigures the server. */
-  instance: HOUR,
-  /** Book search results from Open Library. */
+  /** Book search results from Open Library (the server caches them for a day too). */
   bookSearch: DAY,
-  /** Your own data (profile, shelves, stats): only you change it, and mutations keep it current. */
-  own: 10 * MINUTE,
-  /** Other people's data (feed, readers, posts). */
-  social: MINUTE,
-  /** Summaries of months that are over. */
-  pastMonth: DAY,
+  /** The Better Auth session, so route guards don't hit the server on every navigation. */
+  session: 5 * MINUTE,
 } as const;
 
-/** Items per page of every cursor-paginated list (the API's `limit`). */
-export const PAGE_SIZE = "20";
+/** Items per "page" of every growing list (feed, followers…): `limit` grows by this much. */
+export const PAGE_SIZE = 20;
 
 /** Persisted cache older than this is dropped on load. */
 export const CACHE_MAX_AGE = 7 * DAY;
 /** Bump to discard every persisted cache (e.g. when response shapes change). */
-export const CACHE_VERSION = "3";
+export const CACHE_VERSION = "4-convex";
 
-/** `onUnauthorized` runs when any query gets a 401 (expired session): sign the user out there. */
-export function createQueryClient({ onUnauthorized }: { onUnauthorized?: () => void } = {}) {
-  return new QueryClient({
+/**
+ * The app's QueryClient, wired to Convex: Convex keys use `convex.queryFn` and get live updates.
+ * `onUnauthorized` runs when a signed-in query is rejected (expired session): sign out there.
+ */
+export function createQueryClient({
+  convex,
+  onUnauthorized,
+}: {
+  convex: ConvexCache;
+  onUnauthorized?: () => void;
+}) {
+  const queryClient = new QueryClient({
     queryCache: new QueryCache({
       onError: (error) => {
         if (isUnauthorized(error)) onUnauthorized?.();
@@ -44,7 +46,7 @@ export function createQueryClient({ onUnauthorized }: { onUnauthorized?: () => v
     }),
     defaultOptions: {
       queries: {
-        staleTime: staleTimes.social,
+        queryFn: convex.queryFn,
         // Keep unused data around as long as it can be persisted, so going back is instant.
         gcTime: CACHE_MAX_AGE,
         retry: (count, error) => !isUnauthorized(error) && count < 2,
@@ -54,10 +56,8 @@ export function createQueryClient({ onUnauthorized }: { onUnauthorized?: () => v
       mutations: { networkMode: "offlineFirst" },
     },
   });
-}
-
-export function isUnauthorized(error: unknown) {
-  return error instanceof DetailedError && error.statusCode === 401;
+  convex.connect(queryClient);
+  return queryClient;
 }
 
 /** Key/value storage the persister writes to (localStorage on web, MMKV on mobile). */
@@ -65,8 +65,8 @@ export type CacheStorage = AsyncStorage<string>;
 
 /**
  * Options for `PersistQueryClientProvider`: the whole query cache is saved to `storage` and
- * restored on the next launch, so screens render instantly from cache while revalidating.
- * `scope` separates caches per server (and should change when the signed-in user changes).
+ * restored on the next launch, so screens render instantly from cache (even offline) while
+ * Convex brings them up to date. `scope` separates caches (e.g. per Convex deployment).
  */
 export function createPersistOptions(
   storage: CacheStorage,
@@ -88,27 +88,8 @@ export function createPersistOptions(
   };
 }
 
-/** Single place for cache keys — invalidate by prefix (e.g. `["shelves"]`). */
+/** Keys of the non-Convex queries (Convex ones are `["convexQuery", name, args]`). */
 export const queryKeys = {
   session: ["session"] as const,
-  instance: ["instance"] as const,
-  me: ["me"] as const,
-  allReaders: ["readers"] as const,
-  reader: (username: string) => ["readers", "profile", username] as const,
-  allReaderActivity: ["readers", "activity"] as const,
-  readerActivity: (username: string) => ["readers", "activity", username] as const,
-  readerConnections: (username: string, kind: "followers" | "following") =>
-    ["readers", kind, username] as const,
-  readerSearch: (q: string) => ["readers", "search", q] as const,
-  readerSuggestions: ["readers", "suggestions"] as const,
   bookSearch: (q: string) => ["books", "search", q] as const,
-  allBooks: ["books", "detail"] as const,
-  book: (openLibraryId: string) => ["books", "detail", openLibraryId] as const,
-  allShelves: ["shelves"] as const,
-  shelves: (status?: string) => ["shelves", status ?? "all"] as const,
-  feed: ["feed"] as const,
-  post: (id: string) => ["posts", id] as const,
-  stats: ["stats"] as const,
-  yearOverview: (year: number) => ["stats", "overview", year] as const,
-  monthlySummary: (month: string) => ["stats", "monthly", month] as const,
 };
