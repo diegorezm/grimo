@@ -169,5 +169,20 @@ pnpm check        # biome + typecheck (todos os workspaces) + vitest (core e con
   troque por fan-out na escrita (tabela `feedItems`) e contadores no livro.
 - `@convex-dev/react-query` **não** é usado de propósito: o `ConvexQueryClient` dele assina todo o
   cache restaurado e roda queries antes da auth (veja o topo de `convex-cache.ts`).
-- O SITE_URL do deployment precisa ser a origem da web (auth cross-domain + CORS). Dev:
-  `http://localhost:5173`.
+- O SITE_URL do deployment precisa ser a origem da web (auth cross-domain + CORS). Em dev
+  (SITE_URL em localhost) qualquer porta de `localhost`/`127.0.0.1` é aceita (`trustedOrigins` em
+  `convex/auth.ts`), então o Vite pode subir em 5174 etc.
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->

@@ -12,6 +12,20 @@ const siteUrl = env.SITE_URL;
 /** The mobile app's scheme (Expo deep links, `expo-origin` header). */
 const MOBILE_SCHEME = "grimo://";
 
+/** `http://localhost:<any port>` or `http://127.0.0.1:<any port>`. */
+const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+/**
+ * Origins allowed to call auth (and CORS). In local dev (SITE_URL on localhost) any localhost
+ * port is accepted too, so the web app works whichever port Vite picks.
+ */
+function trustedOrigins(request?: Request) {
+  const origins = [siteUrl, MOBILE_SCHEME];
+  const origin = request?.headers.get("origin");
+  if (LOCAL_ORIGIN.test(siteUrl) && origin && LOCAL_ORIGIN.test(origin)) origins.push(origin);
+  return origins;
+}
+
 const authFunctions: AuthFunctions = internal.auth;
 
 /**
@@ -80,7 +94,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
   betterAuth({
     // Auth endpoints are served by Convex (convex/http.ts), on the deployment's site URL.
     baseURL: env.CONVEX_SITE_URL,
-    trustedOrigins: [siteUrl, MOBILE_SCHEME],
+    trustedOrigins,
     database: authComponent.adapter(ctx),
     emailAndPassword: { enabled: true, requireEmailVerification: false },
     plugins: [
