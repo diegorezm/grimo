@@ -4,7 +4,7 @@ import { ShelfBoard } from "@/features/shelves";
 export default function ShelvesScreen() {
   return (
     <Screen>
-      <Text variant="heading">Estantes</Text>
+      <Text variant="display">Estantes</Text>
       <ShelfBoard />
     </Screen>
   );
