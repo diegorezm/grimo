@@ -1,20 +1,17 @@
-import { useFeed, useInstance } from "@grimo/client";
+import { useFeed } from "@grimo/client";
 import { Spinner } from "@/components/feedback/spinner";
 import { LoadMore } from "@/components/ui/load-more";
 import { FeedItem } from "./feed-item";
 
 export function FeedList() {
   const feed = useFeed();
-  const social = useInstance().data?.social ?? true;
-  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = feed.data?.items ?? [];
 
   if (feed.isPending) return <Spinner />;
   if (items.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-text-muted">
-        {social
-          ? "Seu feed está vazio. Adicione livros às estantes ou siga outros leitores."
-          : "Seu diário está vazio. Adicione livros às estantes para começar."}
+        Seu feed está vazio. Adicione livros às estantes ou siga outros leitores.
       </p>
     );
   }

@@ -8,7 +8,7 @@ import { Sparkle } from "@/components/ui/sparkle";
 /**
  * Profile header: a banner (a tilted mosaic of the reader's covers, or the accent gradient),
  * the avatar overlapping it, then name, bio, counts and favorite genres. `linkCounts` turns the
- * follower counts into links to the lists (community instances).
+ * follower counts into links to the lists.
  */
 export function ProfileHeader({
   profile,

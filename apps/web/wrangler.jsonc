@@ -1,15 +1,10 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Static SPA on Cloudflare (assets only, no worker). Data and auth live in Convex.
   "name": "grimo-web",
-  "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
-  "observability": { "enabled": true },
   "assets": {
-    "not_found_handling": "single-page-application",
-    // Only /api/* hits the worker; everything else is served straight from assets.
-    "run_worker_first": ["/api/*"]
-  },
-  // Same-origin API: the web worker forwards /api/* to the API worker.
-  // Keeps auth cookies first-party (no CORS / third-party cookie issues).
-  "services": [{ "binding": "API", "service": "grimo-api" }]
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
 }

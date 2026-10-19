@@ -1,4 +1,4 @@
-import { type ConnectionKind, useInstance, useReader } from "@grimo/client";
+import { type ConnectionKind, useReader } from "@grimo/client";
 import { Link } from "@tanstack/react-router";
 import { Screen } from "@/components/layout/screen";
 import { cn } from "@/utils/cn";
@@ -15,7 +15,6 @@ export function ConnectionsScreen({
   viewerId: string | null;
 }) {
   const reader = useReader(username);
-  const social = useInstance().data?.social ?? false;
   const profile = reader.data?.profile;
   const tabs = [
     { kind: "followers", label: "Seguidores", count: profile?.followers },
@@ -45,13 +44,7 @@ export function ConnectionsScreen({
             </Link>
           ))}
         </nav>
-        <ConnectionsList
-          key={kind}
-          username={username}
-          kind={kind}
-          viewerId={viewerId}
-          social={social}
-        />
+        <ConnectionsList key={kind} username={username} kind={kind} viewerId={viewerId} />
       </div>
     </Screen>
   );

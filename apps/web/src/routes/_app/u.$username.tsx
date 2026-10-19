@@ -1,4 +1,4 @@
-import { readerActivityQuery, readerQuery, useInstance, useReader } from "@grimo/client";
+import { readerActivityQuery, readerQuery, useReader } from "@grimo/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
@@ -8,9 +8,9 @@ import { YearStats } from "@/features/stats";
 
 /** A reader's public page. Opens signed out too, so the link can be shared anywhere. */
 export const Route = createFileRoute("/_app/u/$username")({
-  loader: ({ context: { queryClient, api }, params }) => {
-    void queryClient.prefetchQuery(readerQuery(api, params.username));
-    void queryClient.prefetchInfiniteQuery(readerActivityQuery(api, params.username));
+  loader: ({ context: { queryClient }, params }) => {
+    void queryClient.prefetchQuery(readerQuery(params.username));
+    void queryClient.prefetchQuery(readerActivityQuery(params.username));
   },
   component: ReaderPage,
 });
@@ -19,7 +19,6 @@ function ReaderPage() {
   const { username } = Route.useParams();
   const { session } = Route.useRouteContext();
   const reader = useReader(username);
-  const social = useInstance().data?.social ?? false;
 
   if (reader.isError) {
     return (
@@ -39,14 +38,12 @@ function ReaderPage() {
         profile={profile}
         covers={books.covers}
         bookCount={books.total}
-        followsYou={social && followsYou}
-        linkCounts={social}
+        followsYou={followsYou}
+        linkCounts
         actions={
           <>
-            {social && viewerId && !isMe && (
-              <FollowButton reader={{ ...profile, isFollowing, followsYou }} />
-            )}
-            {social && !viewerId && (
+            {viewerId && !isMe && <FollowButton reader={{ ...profile, isFollowing, followsYou }} />}
+            {!viewerId && (
               <Link
                 to="/login"
                 search={{ redirect: `/u/${username}` }}

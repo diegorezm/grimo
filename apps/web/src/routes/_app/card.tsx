@@ -5,11 +5,11 @@ import { Screen } from "@/components/layout/screen";
 import { CardStudio } from "@/features/stats";
 
 export const Route = createFileRoute("/_app/card")({
-  loader: ({ context: { queryClient, api } }) => {
+  loader: ({ context: { queryClient } }) => {
     const month = toMonthKey(new Date());
-    void queryClient.prefetchQuery(meQuery(api));
-    void queryClient.prefetchQuery(monthlySummaryQuery(api, month));
-    void queryClient.prefetchQuery(monthlySummaryQuery(api, shiftMonth(month, -1)));
+    void queryClient.prefetchQuery(meQuery());
+    void queryClient.prefetchQuery(monthlySummaryQuery(month));
+    void queryClient.prefetchQuery(monthlySummaryQuery(shiftMonth(month, -1)));
   },
   component: () => (
     <Screen

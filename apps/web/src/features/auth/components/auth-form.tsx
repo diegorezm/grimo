@@ -1,4 +1,3 @@
-import { useInstance } from "@grimo/client";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,12 +9,7 @@ import { authClient } from "@/lib/auth-client";
 /** `redirectTo`: the page to open once signed in (defaults to home). */
 export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
   const navigate = useNavigate();
-  const { data: instance } = useInstance();
-  const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
-  // Personal instance without an account yet → this form creates the owner account.
-  const isSetup = instance?.mode === "personal" && instance.registrationOpen;
-  const canSignUp = instance?.registrationOpen ?? false;
-  const mode = isSetup ? "sign-up" : canSignUp ? chosenMode : "sign-in";
+  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -48,14 +42,10 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
     <div className="mx-auto w-full max-w-sm">
       <Logo className="mb-6 h-16" />
       <h1 className="text-4xl font-medium italic">
-        {mode === "sign-in" ? `Bem-vindo ao ${instance?.name ?? "Grimo"}` : "Crie sua conta"}
+        {mode === "sign-in" ? "Bem-vindo ao Grimo" : "Crie sua conta"}
       </h1>
       <p className="mt-2 mb-8 text-text-muted">
-        {isSetup
-          ? "Crie a sua conta. Este Grimo é só seu: o cadastro fecha depois dela."
-          : mode === "sign-in"
-            ? "Entre para continuar de onde parou."
-            : "Seu grimório começa aqui."}
+        {mode === "sign-in" ? "Entre para continuar de onde parou." : "Seu grimório começa aqui."}
       </p>
       <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
         {mode === "sign-up" && (
@@ -71,15 +61,13 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
           {mode === "sign-in" ? "Entrar" : "Criar conta"}
         </Button>
       </form>
-      {canSignUp && !isSetup && (
-        <Button
-          variant="ghost"
-          className="mt-3 w-full"
-          onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-        >
-          {mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        className="mt-3 w-full"
+        onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
+      >
+        {mode === "sign-in" ? "Não tem conta? Cadastre-se" : "Já tem conta? Entrar"}
+      </Button>
     </div>
   );
 }

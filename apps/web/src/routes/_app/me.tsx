@@ -2,7 +2,6 @@ import {
   meQuery,
   monthlySummaryQuery,
   shelfQuery,
-  useInstance,
   useMe,
   useShelf,
   yearOverviewQuery,
@@ -19,11 +18,11 @@ import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_app/me")({
-  loader: ({ context: { queryClient, api } }) => {
-    void queryClient.prefetchQuery(meQuery(api));
-    void queryClient.prefetchQuery(shelfQuery(api));
-    void queryClient.prefetchQuery(yearOverviewQuery(api));
-    void queryClient.prefetchQuery(monthlySummaryQuery(api));
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(meQuery());
+    void queryClient.prefetchQuery(shelfQuery());
+    void queryClient.prefetchQuery(yearOverviewQuery());
+    void queryClient.prefetchQuery(monthlySummaryQuery());
   },
   component: MePage,
 });
@@ -33,7 +32,6 @@ const YEAR = new Date().getFullYear();
 function MePage() {
   const me = useMe();
   const shelf = useShelf();
-  const social = useInstance().data?.social ?? false;
   const navigate = useNavigate();
 
   async function signOut() {
@@ -60,10 +58,10 @@ function MePage() {
         profile={me.data}
         covers={covers}
         bookCount={items.length}
-        linkCounts={social}
+        linkCounts
         actions={
           <>
-            {social && me.data.username && (
+            {me.data.username && (
               <ShareProfileButton username={me.data.username} name={me.data.name} own />
             )}
             <Link

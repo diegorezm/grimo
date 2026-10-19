@@ -5,8 +5,8 @@ import { BookDetailBody, BookDetailSkeleton, BookShelfActions } from "@/features
 
 /** The book page expanded from the side peek. */
 export const Route = createFileRoute("/_app/books/$openLibraryId")({
-  loader: ({ context: { queryClient, api }, params }) => {
-    void queryClient.prefetchQuery(bookQuery(api, params.openLibraryId));
+  loader: ({ context: { queryClient }, params }) => {
+    void queryClient.prefetchQuery(bookQuery(params.openLibraryId));
   },
   component: BookPage,
 });

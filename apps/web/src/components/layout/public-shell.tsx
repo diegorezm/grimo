@@ -1,4 +1,3 @@
-import { useInstance } from "@grimo/client";
 import { Link, useLocation } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/ui/logo";
@@ -9,7 +8,6 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
  * sign-in on the right. Signing in comes back to the same page.
  */
 export function PublicShell({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
-  const { data: instance } = useInstance();
   const { pathname } = useLocation();
 
   return (
@@ -18,7 +16,7 @@ export function PublicShell({ children, aside }: { children: ReactNode; aside?: 
         <header className="flex items-center justify-between gap-4 px-4 py-5 lg:px-8">
           <Link to="/login" search={{ redirect: pathname }} className="flex items-center gap-2.5">
             <Logo className="h-10" />
-            <span className="font-serif text-2xl font-bold">{instance?.name ?? "Grimo"}</span>
+            <span className="font-serif text-2xl font-bold">Grimo</span>
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />

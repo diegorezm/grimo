@@ -1,11 +1,12 @@
 import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
 import { BookPeek } from "@/features/books";
 import { ProfilePeek } from "@/features/profile";
-import { sessionQuery } from "@/lib/api";
+import { sessionQuery, signOutLocally } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
 /** Pages a signed-out visitor may open: reader profiles, so shared links work for anyone. */
 const isPublicPath = (pathname: string) => pathname.startsWith("/u/");
@@ -43,6 +44,11 @@ function AppLayout() {
     );
   }
 
+  return <SignedInLayout book={book} panel={panel} />;
+}
+
+function SignedInLayout({ book, panel }: { book?: string; panel?: "profile" }) {
+  useSessionGuard();
   const aside = book ? (
     <BookPeek key={book} openLibraryId={book} />
   ) : panel === "profile" ? (
@@ -53,6 +59,18 @@ function AppLayout() {
       <Outlet />
     </AppShell>
   );
+}
+
+/**
+ * The server says the session is gone (expired, revoked, signed out elsewhere): clear the cache
+ * and go to /login. A network error is not that: offline, the app keeps running on the cache.
+ */
+function useSessionGuard() {
+  const { data, error, isPending } = authClient.useSession();
+  const signedOut = !isPending && !data && (!error || error.status === 401);
+  useEffect(() => {
+    if (signedOut) signOutLocally();
+  }, [signedOut]);
 }
 
 /** Signed out, a book link opens an invitation instead of the book page. */

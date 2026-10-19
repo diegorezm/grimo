@@ -5,7 +5,7 @@ import { cn } from "@/utils/cn";
 
 /**
  * Follow / following toggle. While following, hovering shows what a click does ("Deixar de
- * seguir"). Render it only for signed-in readers on community instances, never for yourself.
+ * seguir"). Render it only for signed-in readers, never for yourself.
  */
 export function FollowButton({
   reader,

@@ -18,7 +18,7 @@ export function PeopleDirectory({
   const [query, setQuery] = useState(initialQuery);
   const q = useDeferredValue(query.trim().replace(/^@/, ""));
   const search = useReaderSearch(q);
-  const items = search.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = search.data?.items ?? [];
 
   return (
     <div className="flex flex-col gap-6">

@@ -3,11 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ConnectionsScreen } from "@/features/readers";
 
 export const Route = createFileRoute("/_app/u/$username_/following")({
-  loader: ({ context: { queryClient, api }, params }) => {
-    void queryClient.prefetchQuery(readerQuery(api, params.username));
-    void queryClient.prefetchInfiniteQuery(
-      readerConnectionsQuery(api, params.username, "following"),
-    );
+  loader: ({ context: { queryClient }, params }) => {
+    void queryClient.prefetchQuery(readerQuery(params.username));
+    void queryClient.prefetchQuery(readerConnectionsQuery(params.username, "following"));
   },
   component: FollowingPage,
 });

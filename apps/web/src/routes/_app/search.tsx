@@ -8,8 +8,8 @@ export const Route = createFileRoute("/_app/search")({
     q: typeof search.q === "string" && search.q ? search.q : undefined,
   }),
   loaderDeps: ({ search }) => ({ q: search.q }),
-  loader: ({ context: { queryClient, api }, deps }) => {
-    if (deps.q) void queryClient.prefetchQuery(bookSearchQuery(api, deps.q));
+  loader: ({ context: { queryClient, cache }, deps }) => {
+    if (deps.q) void queryClient.prefetchQuery(bookSearchQuery(cache, deps.q));
   },
   component: SearchPage,
 });

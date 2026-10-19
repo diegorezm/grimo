@@ -1,20 +1,28 @@
 import {
   type CacheStorage,
-  createApiClient,
+  ConvexCache,
   createPersistOptions,
   createQueryClient,
   queryKeys,
+  staleTimes,
 } from "@grimo/client";
 import { queryOptions } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
+import { ConvexReactClient } from "convex/react";
+import { authClient, type Session } from "@/lib/auth-client";
 
-export const api = createApiClient({ baseUrl: window.location.origin });
-export const queryClient = createQueryClient({
-  // Session expired on the server: forget everything and go back to the login screen.
-  onUnauthorized: () => {
-    void clearCache().then(() => window.location.assign("/login"));
-  },
+if (!import.meta.env.VITE_CONVEX_URL) {
+  throw new Error("VITE_CONVEX_URL não definido: rode `pnpm dev` (ou veja apps/web/.env.example).");
+}
+
+/** Session expired or revoked: forget everything and go back to the login screen. */
+export function signOutLocally() {
+  void clearCache().then(() => window.location.assign("/login"));
+}
+
+export const cache = new ConvexCache(new ConvexReactClient(import.meta.env.VITE_CONVEX_URL), {
+  onUnauthorized: signOutLocally,
 });
+export const queryClient = createQueryClient({ convex: cache, onUnauthorized: signOutLocally });
 
 /** localStorage that never throws (private mode, blocked storage): the cache just isn't saved. */
 const storage: CacheStorage = {
@@ -40,11 +48,26 @@ const storage: CacheStorage = {
 /** The query cache survives reloads: screens paint from it instantly and revalidate. */
 export const persistOptions = createPersistOptions(storage);
 
-/** Better Auth session, cached so route guards don't hit the server on every navigation. */
+/**
+ * Better Auth session, cached (in memory only) so route guards don't hit the server on every
+ * navigation. Offline, the server can't answer: fall back to the last session the auth client
+ * saw, so a cold start without network still opens the app on the persisted cache.
+ */
 export const sessionQuery = queryOptions({
   queryKey: queryKeys.session,
-  queryFn: async () => (await authClient.getSession()).data,
-  staleTime: 5 * 60_000,
+  queryFn: async (): Promise<Session | null> => {
+    const offline = () => (authClient.getSessionData() as Session | null) ?? null;
+    try {
+      const { data, error } = await authClient.getSession();
+      // A 401 is a real "signed out"; anything else (5xx, no network) keeps the last session.
+      if (error && error.status !== 401) return offline();
+      return data;
+    } catch {
+      return offline();
+    }
+  },
+  staleTime: staleTimes.session,
+  networkMode: "always",
 });
 
 /** Drops every cached query, in memory and on disk (sign-in, sign-out). */
