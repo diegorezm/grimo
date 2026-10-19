@@ -1,3 +1,4 @@
+import { coverUrl } from "@grimo/core";
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
@@ -15,7 +16,8 @@ export function BookCover({
 }) {
   const theme = useTheme();
   const size = { width, height: width * 1.5, backgroundColor: theme.surfaceMuted };
-  if (src) return <Image source={src} style={[styles.base, size]} contentFit="cover" />;
+  if (src)
+    return <Image source={coverUrl(src, "M")} style={[styles.base, size]} contentFit="cover" />;
   return (
     <View style={[styles.base, styles.placeholder, size]}>
       <Text variant="small" numberOfLines={3} style={styles.title}>
