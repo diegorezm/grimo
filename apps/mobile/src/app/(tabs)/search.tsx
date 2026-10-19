@@ -4,7 +4,7 @@ import { BookSearch } from "@/features/books";
 export default function SearchScreen() {
   return (
     <Screen>
-      <Text variant="heading">Buscar livros</Text>
+      <Text variant="display">Buscar</Text>
       <BookSearch />
     </Screen>
   );

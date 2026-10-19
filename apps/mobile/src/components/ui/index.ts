@@ -1,5 +1,8 @@
 export { Button } from "./button";
 export { Card } from "./card";
+export { Glass } from "./glass";
 export { Input } from "./input";
+export { ProgressBar } from "./progress-bar";
 export { Screen } from "./screen";
+export { Stars } from "./stars";
 export { Text } from "./text";
