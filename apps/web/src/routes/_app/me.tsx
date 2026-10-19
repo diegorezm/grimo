@@ -7,12 +7,11 @@ import {
   yearOverviewQuery,
 } from "@grimo/client";
 import { finishedPerMonth, genreBreakdown } from "@grimo/core";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
-import { BookRow, EditProfileDialog, ProfileHeader } from "@/features/profile";
+import { BookRow, ProfileHeader } from "@/features/profile";
 import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
 import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -33,7 +32,6 @@ function MePage() {
   const me = useMe();
   const shelf = useShelf();
   const navigate = useNavigate();
-  const [editing, setEditing] = useState(false);
 
   async function signOut() {
     await authClient.signOut();
@@ -61,9 +59,14 @@ function MePage() {
         bookCount={items.length}
         actions={
           <>
-            <Button variant="secondary" onClick={() => setEditing(true)}>
+            <Link
+              to="."
+              search={(prev) => ({ ...prev, panel: "profile" as const })}
+              resetScroll={false}
+              className="glass inline-flex items-center rounded-full px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider hover:opacity-90"
+            >
               Editar perfil
-            </Button>
+            </Link>
             <Button variant="ghost" onClick={signOut}>
               Sair
             </Button>
@@ -109,8 +112,6 @@ function MePage() {
           <MonthlyCard />
         </aside>
       </div>
-
-      <EditProfileDialog profile={me.data} open={editing} onClose={() => setEditing(false)} />
     </Screen>
   );
 }

@@ -29,10 +29,14 @@ export function useMe(options: { enabled?: boolean } = {}) {
   return useQuery({ ...meQuery(useApi()), ...options });
 }
 
+/** Key of the profile update mutation (lets a pinned "Salvar" button show progress). */
+export const updateMeMutationKey = ["me", "update"] as const;
+
 export function useUpdateMe() {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: updateMeMutationKey,
     mutationFn: (json: UpdateProfileInput) => parseResponse(api.me.$patch({ json })),
     onSuccess: (profile) => {
       queryClient.setQueryData(queryKeys.me, profile);
