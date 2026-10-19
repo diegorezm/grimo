@@ -1,6 +1,7 @@
 import { useMe } from "@grimo/client";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
+import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
 import { ProfileHeader } from "@/features/profile";
 import { MonthlyCard, YearStats } from "@/features/stats";
@@ -23,18 +24,20 @@ function MePage() {
 
   if (!me.data) return <Spinner />;
   return (
-    <div className="flex flex-col gap-6">
-      <ProfileHeader
-        profile={me.data}
-        actions={
-          <Button variant="ghost" onClick={signOut}>
-            Sair
-          </Button>
-        }
-      />
-      <YearStats />
-      <h2 className="text-xl font-bold">Resumo do mês</h2>
-      <MonthlyCard />
-    </div>
+    <Screen>
+      <div className="flex flex-col gap-6">
+        <ProfileHeader
+          profile={me.data}
+          actions={
+            <Button variant="ghost" onClick={signOut}>
+              Sair
+            </Button>
+          }
+        />
+        <YearStats />
+        <h2 className="text-xl font-bold">Resumo do mês</h2>
+        <MonthlyCard />
+      </div>
+    </Screen>
   );
 }

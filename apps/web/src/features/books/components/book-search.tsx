@@ -5,8 +5,8 @@ import { Spinner } from "@/components/feedback/spinner";
 import { Input } from "@/components/ui/input";
 import { BookCover } from "./book-cover";
 
-export function BookSearch() {
-  const [query, setQuery] = useState("");
+export function BookSearch({ initialQuery = "" }: { initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery);
   const deferred = useDeferredValue(query);
   const search = useBookSearch(deferred);
   const addToShelf = useAddToShelf();

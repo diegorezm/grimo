@@ -64,6 +64,12 @@ export const colors = {
     ornament: palette.lilac,
     glowA: palette.blush,
     glowB: palette.lilacMist,
+    /** Highlighter stroke behind the selected row (rose → lavender). */
+    highlightStart: "#FBD3DF",
+    highlightEnd: "#E3D6FA",
+    /** Sticky note and its washi tape. */
+    note: "#FFF6DA",
+    tape: "#F2A9BD",
     /** Liquid glass fill (translucent page). */
     glass: "rgba(255,251,245,0.55)",
     glassBorder: "rgba(255,255,255,0.85)",
@@ -90,6 +96,10 @@ export const colors = {
     ornament: "#8D78A4",
     glowA: "rgba(231,161,181,0.12)",
     glowB: "rgba(156,124,214,0.16)",
+    highlightStart: "rgba(235,169,188,0.35)",
+    highlightEnd: "rgba(183,154,230,0.35)",
+    note: "#3B3122",
+    tape: "#C97A93",
     glass: "rgba(38,32,48,0.55)",
     glassBorder: "rgba(243,234,242,0.14)",
     shadow: "rgba(0,0,0,0.40)",

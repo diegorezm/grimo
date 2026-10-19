@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FeedList } from "@/features/feed";
+import { Dashboard } from "@/features/dashboard";
 
 export const Route = createFileRoute("/_app/")({
-  component: FeedList,
+  component: Dashboard,
 });

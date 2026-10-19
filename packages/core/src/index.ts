@@ -1,5 +1,6 @@
 export * from "./books";
 export * from "./instance";
+export * from "./lib/dashboard";
 export * from "./lib/date";
 export * from "./lib/pagination";
 export * from "./posts";

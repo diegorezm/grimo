@@ -7,7 +7,7 @@ export function ProfileHeader({ profile, actions }: { profile: Profile; actions?
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
-        <Avatar src={profile.image} name={profile.name} className="size-16" />
+        <Avatar src={profile.image} name={profile.name} size="size-16" />
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{profile.name}</h1>
           {profile.username && <p className="text-sm text-text-muted">@{profile.username}</p>}

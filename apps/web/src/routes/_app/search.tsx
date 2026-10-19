@@ -1,6 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Screen } from "@/components/layout/screen";
 import { BookSearch } from "@/features/books";
 
 export const Route = createFileRoute("/_app/search")({
-  component: BookSearch,
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    q: typeof search.q === "string" && search.q ? search.q : undefined,
+  }),
+  component: SearchPage,
 });
+
+function SearchPage() {
+  const { q } = Route.useSearch();
+  return (
+    <Screen title="Buscar livros">
+      <BookSearch key={q} initialQuery={q} />
+    </Screen>
+  );
+}

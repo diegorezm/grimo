@@ -1,6 +1,7 @@
 import { useInstance, useReader, useToggleFollow } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
+import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
 import { ProfileHeader } from "@/features/profile";
 
@@ -19,24 +20,26 @@ function ReaderPage() {
   const { profile, stats, isFollowing } = reader.data;
 
   return (
-    <div className="flex flex-col gap-6">
-      <ProfileHeader
-        profile={profile}
-        actions={
-          social &&
-          profile.id !== session.user.id && (
-            <Button
-              variant={isFollowing ? "secondary" : "primary"}
-              onClick={() => toggleFollow.mutate({ userId: profile.id, follow: !isFollowing })}
-            >
-              {isFollowing ? "Seguindo" : "Seguir"}
-            </Button>
-          )
-        }
-      />
-      <p className="text-sm text-text-muted">
-        {stats.booksRead} livros e {stats.pagesRead} páginas lidas em {stats.year}.
-      </p>
-    </div>
+    <Screen>
+      <div className="flex flex-col gap-6">
+        <ProfileHeader
+          profile={profile}
+          actions={
+            social &&
+            profile.id !== session.user.id && (
+              <Button
+                variant={isFollowing ? "secondary" : "primary"}
+                onClick={() => toggleFollow.mutate({ userId: profile.id, follow: !isFollowing })}
+              >
+                {isFollowing ? "Seguindo" : "Seguir"}
+              </Button>
+            )
+          }
+        />
+        <p className="text-sm text-text-muted">
+          {stats.booksRead} livros e {stats.pagesRead} páginas lidas em {stats.year}.
+        </p>
+      </div>
+    </Screen>
   );
 }
