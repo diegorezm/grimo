@@ -10,7 +10,7 @@ import { finishedPerMonth, genreBreakdown } from "@grimo/core";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
-import { Button } from "@/components/ui/button";
+import { LogOutIcon, PencilIcon } from "@/components/ui/icons";
 import { BookRow, ProfileHeader } from "@/features/profile";
 import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
 import { clearCache } from "@/lib/api";
@@ -63,13 +63,20 @@ function MePage() {
               to="."
               search={(prev) => ({ ...prev, panel: "profile" as const })}
               resetScroll={false}
-              className="glass inline-flex items-center rounded-full px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface py-2.5 pr-5 pl-4 font-mono text-xs font-medium uppercase tracking-wider shadow-sm shadow-shadow transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent hover:shadow-md"
             >
+              <PencilIcon className="size-4" />
               Editar perfil
             </Link>
-            <Button variant="ghost" onClick={signOut}>
-              Sair
-            </Button>
+            <button
+              type="button"
+              onClick={signOut}
+              aria-label="Sair da conta"
+              title="Sair da conta"
+              className="grid size-10 place-items-center rounded-full border border-border bg-surface text-text-muted shadow-sm shadow-shadow transition hover:-translate-y-0.5 hover:border-danger/40 hover:bg-danger/10 hover:text-danger"
+            >
+              <LogOutIcon className="size-[18px]" />
+            </button>
           </>
         }
       />
