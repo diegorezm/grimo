@@ -9,7 +9,8 @@ export type YearOverview = NonNullable<ReturnType<typeof useYearOverview>["data"
  * defaults to the signed-in reader.
  */
 export function YearStats({ stats }: { stats?: YearOverview }) {
-  const own = useYearOverview();
+  // Only fetch your own when no stats were given (someone else's page may be viewed signed out).
+  const own = useYearOverview(undefined, { enabled: !stats });
   const data = stats ?? own.data;
   if (!data) return null;
   const goal = data.goal ? goalProgress(data.goal.target, data.goal.done) : null;

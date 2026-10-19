@@ -3,7 +3,7 @@ import { greetingFor } from "@grimo/core";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { HomeIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/components/ui/icons";
+import { HomeIcon, PeopleIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
@@ -11,6 +11,7 @@ const nav = [
   { to: "/", label: "Início", personalLabel: "Diário", icon: HomeIcon },
   { to: "/shelves", label: "Estantes", icon: ShelvesIcon },
   { to: "/search", label: "Buscar", icon: SearchIcon },
+  { to: "/people", label: "Leitores", icon: PeopleIcon, social: true },
   { to: "/me", label: "Perfil", icon: UserIcon },
 ] as const;
 
@@ -27,6 +28,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
   const personal = instance?.mode === "personal";
   const label = (item: NavItem) =>
     personal && "personalLabel" in item ? item.personalLabel : item.label;
+  const items = nav.filter((item) => !("social" in item) || instance?.social);
 
   return (
     <div className="min-h-dvh">
@@ -36,7 +38,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
             <Logo className="h-10" />
           </Link>
           <nav aria-label="Seções" className="flex flex-col gap-1">
-            {nav.map((item) => (
+            {items.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -75,12 +77,12 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
         {aside}
       </div>
 
-      <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-md justify-around gap-1 rounded-full p-1.5 font-mono text-[11px] uppercase tracking-wider lg:hidden">
-        {nav.map((item) => (
+      <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-lg justify-around gap-1 rounded-full p-1.5 font-mono text-[10px] uppercase tracking-wider lg:hidden">
+        {items.map((item) => (
           <Link
             key={item.to}
             to={item.to}
-            className="flex-1 rounded-full px-3 py-2.5 text-center transition"
+            className="flex-1 rounded-full px-1 py-2.5 text-center transition"
             activeProps={{ className: "bg-shelf-reading-bg text-text" }}
             inactiveProps={{ className: "text-text-muted hover:text-text" }}
             activeOptions={{ exact: item.to === "/" }}

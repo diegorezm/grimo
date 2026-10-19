@@ -1,24 +1,31 @@
 import type { Profile } from "@grimo/client";
-import { GENRE_LABELS, type Genre } from "@grimo/core";
+import { coverUrl, GENRE_LABELS, type Genre } from "@grimo/core";
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Sparkle } from "@/components/ui/sparkle";
 
 /**
  * Profile header: a banner (a tilted mosaic of the reader's covers, or the accent gradient),
- * the avatar overlapping it, then name, bio, counts and favorite genres.
+ * the avatar overlapping it, then name, bio, counts and favorite genres. `linkCounts` turns the
+ * follower counts into links to the lists (community instances).
  */
 export function ProfileHeader({
   profile,
   covers = [],
   bookCount,
   actions,
+  followsYou = false,
+  linkCounts = false,
 }: {
   profile: Profile;
   covers?: string[];
   bookCount?: number;
   actions?: ReactNode;
+  followsYou?: boolean;
+  linkCounts?: boolean;
 }) {
+  const username = linkCounts ? profile.username : null;
   // Repeat covers so the mosaic always fills the banner.
   const tiles =
     covers.length > 0 ? Array.from({ length: 24 }, (_, i) => covers[i % covers.length]!) : [];
@@ -34,7 +41,7 @@ export function ProfileHeader({
             {tiles.map((src, i) => (
               <img
                 key={i}
-                src={src}
+                src={coverUrl(src, "M")}
                 alt=""
                 className="aspect-[2/3] w-full rounded-sm object-cover shadow-md"
               />
@@ -62,18 +69,31 @@ export function ProfileHeader({
 
         <h1 className="mt-4 text-4xl font-medium italic lg:text-5xl">{profile.name}</h1>
         {profile.username && (
-          <p className="mt-1 font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
+          <p className="mt-1 flex flex-wrap items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
             @{profile.username}
+            {followsYou && (
+              <span className="rounded-sm bg-surface-muted px-2 py-0.5 text-[10px] tracking-wider">
+                Segue você
+              </span>
+            )}
           </p>
         )}
         {profile.bio && <p className="mt-4 max-w-2xl text-lg leading-relaxed">{profile.bio}</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <dl className="flex gap-6">
+          <div className="flex gap-6">
             {bookCount !== undefined && <Count value={bookCount} label="livros" />}
-            <Count value={profile.followers} label="seguidores" />
-            <Count value={profile.following} label="seguindo" />
-          </dl>
+            <Count
+              value={profile.followers}
+              label={profile.followers === 1 ? "seguidor" : "seguidores"}
+              to={username ? { username, kind: "followers" } : undefined}
+            />
+            <Count
+              value={profile.following}
+              label="seguindo"
+              to={username ? { username, kind: "following" } : undefined}
+            />
+          </div>
           {profile.favoriteGenres.length > 0 && (
             <ul className="flex flex-wrap gap-2" aria-label="Gêneros favoritos">
               {profile.favoriteGenres.map((genre) => (
@@ -92,11 +112,29 @@ export function ProfileHeader({
   );
 }
 
-function Count({ value, label }: { value: number; label: string }) {
+function Count({
+  value,
+  label,
+  to,
+}: {
+  value: number;
+  label: string;
+  to?: { username: string; kind: "followers" | "following" };
+}) {
+  const content = (
+    <>
+      <span className="font-serif text-xl font-medium">{value}</span>
+      <span className="text-sm text-text-muted">{label}</span>
+    </>
+  );
+  if (!to) return <div className="flex items-baseline gap-1.5">{content}</div>;
   return (
-    <div className="flex items-baseline gap-1.5">
-      <dd className="font-serif text-xl font-medium">{value}</dd>
-      <dt className="text-sm text-text-muted">{label}</dt>
-    </div>
+    <Link
+      to={to.kind === "followers" ? "/u/$username/followers" : "/u/$username/following"}
+      params={{ username: to.username }}
+      className="flex items-baseline gap-1.5 decoration-border underline-offset-4 hover:underline"
+    >
+      {content}
+    </Link>
   );
 }

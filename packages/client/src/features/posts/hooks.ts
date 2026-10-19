@@ -56,37 +56,50 @@ export function useToggleLike() {
       return like ? parseResponse(route.$post({ param })) : parseResponse(route.$delete({ param }));
     },
     onMutate: async ({ postId, like }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.feed });
-      const previous = queryClient.getQueryData<InfiniteData<FeedPage>>(queryKeys.feed);
-      if (previous) {
-        queryClient.setQueryData<InfiniteData<FeedPage>>(queryKeys.feed, {
-          ...previous,
-          pages: previous.pages.map((page) => ({
-            ...page,
-            items: page.items.map((item) =>
-              item.post?.id === postId && Boolean(item.post.likedByMe) !== like
-                ? {
-                    ...item,
-                    post: {
-                      ...item.post,
-                      likedByMe: like,
-                      likeCount: (item.post.likeCount ?? 0) + (like ? 1 : -1),
-                    },
-                  }
-                : item,
-            ),
-          })),
-        });
+      // The post can be in the feed and on its author's page (`allReaderActivity`).
+      const lists = [queryKeys.feed, queryKeys.allReaderActivity];
+      await Promise.all(lists.map((queryKey) => queryClient.cancelQueries({ queryKey })));
+      const previous = lists.flatMap((queryKey) =>
+        queryClient.getQueriesData<InfiniteData<FeedPage>>({ queryKey }),
+      );
+      for (const queryKey of lists) {
+        queryClient.setQueriesData<InfiniteData<FeedPage>>({ queryKey }, (data) =>
+          data ? likeInPages(data, postId, like) : data,
+        );
       }
-      return () => queryClient.setQueryData(queryKeys.feed, previous);
+      return () => {
+        for (const [key, data] of previous) queryClient.setQueryData(key, data);
+      };
     },
     onError: (_error, _input, rollback) => rollback?.(),
     onSettled: (_data, _error, { postId }) =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
         queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.allReaderActivity }),
       ]),
   });
+}
+
+function likeInPages(data: InfiniteData<FeedPage>, postId: string, like: boolean) {
+  return {
+    ...data,
+    pages: data.pages.map((page) => ({
+      ...page,
+      items: page.items.map((item) =>
+        item.post?.id === postId && Boolean(item.post.likedByMe) !== like
+          ? {
+              ...item,
+              post: {
+                ...item.post,
+                likedByMe: like,
+                likeCount: (item.post.likeCount ?? 0) + (like ? 1 : -1),
+              },
+            }
+          : item,
+      ),
+    })),
+  };
 }
 
 export function useAddComment(postId: string) {

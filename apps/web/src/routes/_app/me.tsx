@@ -2,6 +2,7 @@ import {
   meQuery,
   monthlySummaryQuery,
   shelfQuery,
+  useInstance,
   useMe,
   useShelf,
   yearOverviewQuery,
@@ -12,6 +13,7 @@ import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
 import { LogOutIcon, PencilIcon } from "@/components/ui/icons";
 import { BookRow, ProfileHeader } from "@/features/profile";
+import { ShareProfileButton } from "@/features/readers";
 import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
 import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -31,6 +33,7 @@ const YEAR = new Date().getFullYear();
 function MePage() {
   const me = useMe();
   const shelf = useShelf();
+  const social = useInstance().data?.social ?? false;
   const navigate = useNavigate();
 
   async function signOut() {
@@ -57,8 +60,12 @@ function MePage() {
         profile={me.data}
         covers={covers}
         bookCount={items.length}
+        linkCounts={social}
         actions={
           <>
+            {social && me.data.username && (
+              <ShareProfileButton username={me.data.username} name={me.data.name} own />
+            )}
             <Link
               to="."
               search={(prev) => ({ ...prev, panel: "profile" as const })}
@@ -88,11 +95,13 @@ function MePage() {
             title="Lendo agora"
             items={reading}
             empty="Nenhum livro aberto agora. Que tal começar um?"
+            shelfLink
           />
           <BookRow
             title="Favoritos"
             items={favorites}
             empty="Avalie os livros que terminar e os melhores aparecem aqui."
+            shelfLink
           />
           <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-2">
             <ReadingRhythm

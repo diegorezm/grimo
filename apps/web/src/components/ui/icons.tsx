@@ -113,3 +113,24 @@ export const LogOutIcon = (p: IconProps) => (
     <path d="M15 16l4-4-4-4M19 12H9" />
   </Icon>
 );
+
+export const PeopleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8.5" r="3.3" />
+    <path d="M2.8 19.5c1-3.1 3.4-4.7 6.2-4.7s5.2 1.6 6.2 4.7" />
+    <path d="M15.5 5.4a3.3 3.3 0 0 1 0 6.2M17.6 14.9c1.8.6 3 2.1 3.6 4.6" />
+  </Icon>
+);
+
+export const ShareIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 15V3.5M7.5 8 12 3.5 16.5 8" />
+    <path d="M5 12.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6.5" />
+  </Icon>
+);
+
+export const CheckIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Icon>
+);

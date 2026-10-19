@@ -17,6 +17,84 @@ export function describeActivity(kind: ActivityKind, data: Record<string, unknow
     case "posted":
       return "publicou";
     case "followed":
-      return "começou a seguir alguém";
+      // Clients append the followed reader (like the book title on other kinds).
+      return "começou a seguir";
   }
+}
+
+/** Same-kind activities closer than this (to the newest one) collapse into one entry. */
+const GROUP_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export interface GroupableActivity {
+  id: string;
+  kind: ActivityKind;
+  data: Record<string, unknown> | null;
+  actor: { id: string };
+  book?: { id: string | null } | null;
+  createdAt: string | Date;
+}
+
+/** One feed entry: `items` newest first; `items[0]` is the one to show for single-book kinds. */
+export interface ActivityGroup<T> {
+  id: string;
+  items: T[];
+}
+
+/** What makes two activities "the same thing again", or null when they never group. */
+function groupKey(item: GroupableActivity): string | null {
+  switch (item.kind) {
+    case "shelved":
+      return `${item.actor.id}:shelved:${String(item.data?.status)}`;
+    case "finished":
+      return `${item.actor.id}:finished`;
+    // Logging pages on the same book several times reads as one update (the latest page).
+    case "progress":
+      return item.book?.id ? `${item.actor.id}:progress:${item.book.id}` : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Collapses runs of repeated activities (newest first in, newest first out): eight books added
+ * to "Quero ler" in one evening become one entry, and progress on a book keeps only the latest
+ * page. Posts and follows always stand alone.
+ */
+export function groupActivities<T extends GroupableActivity>(items: T[]): ActivityGroup<T>[] {
+  const groups: ActivityGroup<T>[] = [];
+  let currentKey: string | null = null;
+  for (const item of items) {
+    const key = groupKey(item);
+    const group = groups.at(-1);
+    const first = group?.items[0];
+    if (
+      group &&
+      first &&
+      key !== null &&
+      key === currentKey &&
+      new Date(first.createdAt).getTime() - new Date(item.createdAt).getTime() <= GROUP_WINDOW_MS
+    ) {
+      group.items.push(item);
+    } else {
+      groups.push({ id: item.id, items: [item] });
+      currentKey = key;
+    }
+  }
+  return groups;
+}
+
+/** Sentence for a group of `count` activities (see `groupActivities`). */
+export function describeActivityGroup(
+  kind: ActivityKind,
+  data: Record<string, unknown> | null,
+  count: number,
+): string {
+  if (count > 1 && kind === "shelved") {
+    const status = data?.status as ShelfStatus | undefined;
+    return status
+      ? `adicionou ${count} livros à estante “${SHELF_LABELS[status]}”`
+      : `adicionou ${count} livros`;
+  }
+  if (count > 1 && kind === "finished") return `terminou de ler ${count} livros`;
+  return describeActivity(kind, data);
 }

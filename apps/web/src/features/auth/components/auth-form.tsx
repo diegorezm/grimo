@@ -7,7 +7,8 @@ import { Logo } from "@/components/ui/logo";
 import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
-export function AuthForm() {
+/** `redirectTo`: the page to open once signed in (defaults to home). */
+export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
   const navigate = useNavigate();
   const { data: instance } = useInstance();
   const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -40,7 +41,7 @@ export function AuthForm() {
     if (error) return setError(error.message ?? "Algo deu errado");
     // New session: start from an empty cache so nothing from a previous account shows up.
     await clearCache();
-    await navigate({ to: "/" });
+    await navigate({ to: redirectTo });
   }
 
   return (

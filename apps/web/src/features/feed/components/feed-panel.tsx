@@ -11,6 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
+import { LoadMore } from "@/components/ui/load-more";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { cn } from "@/utils/cn";
 
@@ -33,16 +34,33 @@ export function FeedPanel({ className }: { className?: string }) {
         <h2 id="feed-panel-title" className="text-xl font-medium italic">
           {social ? "Atividade" : "Seu diário"}
         </h2>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted">
-          {social ? "Quem você segue" : "Só você"}
-        </span>
+        {social ? (
+          <Link
+            to="/people"
+            className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted hover:text-accent"
+          >
+            Encontrar leitores →
+          </Link>
+        ) : (
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted">
+            Só você
+          </span>
+        )}
       </header>
 
       <ol className="flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto px-4 pb-4 [scrollbar-width:thin]">
         {feed.isPending && <Spinner />}
         {!feed.isPending && items.length === 0 && (
-          <li className="py-10 text-center text-sm text-text-muted">
+          <li className="flex flex-col items-center gap-3 py-10 text-center text-sm text-text-muted">
             Nada por aqui ainda. Que tal escrever uma nota?
+            {social && (
+              <Link
+                to="/people"
+                className="font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"
+              >
+                Encontrar leitores →
+              </Link>
+            )}
           </li>
         )}
         {items.map((item) =>
@@ -53,15 +71,8 @@ export function FeedPanel({ className }: { className?: string }) {
           ),
         )}
         {feed.hasNextPage && (
-          <li className="text-center">
-            <button
-              type="button"
-              onClick={() => feed.fetchNextPage()}
-              disabled={feed.isFetchingNextPage}
-              className="font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80 disabled:opacity-50"
-            >
-              Carregar mais
-            </button>
+          <li>
+            <LoadMore {...feed} className="py-2" />
           </li>
         )}
       </ol>
@@ -71,7 +82,7 @@ export function FeedPanel({ className }: { className?: string }) {
   );
 }
 
-function ActorName({ actor }: { actor: FeedItem["actor"] }) {
+function ActorName({ actor }: { actor: { name: string | null; username: string | null } }) {
   return actor.username ? (
     <Link to="/u/$username" params={{ username: actor.username }} className="font-semibold">
       {actor.name}
@@ -89,6 +100,12 @@ function ActivityLine({ item }: { item: FeedItem }) {
       <p className="min-w-0 flex-1 leading-snug">
         <ActorName actor={actor} />{" "}
         <span className="text-text-muted">{describeActivity(item.kind, item.data)}</span>
+        {item.target?.name && (
+          <>
+            {" "}
+            <ActorName actor={item.target} />
+          </>
+        )}
         {book?.title && book.openLibraryId && (
           <>
             {" "}

@@ -26,10 +26,13 @@ export const staleTimes = {
   pastMonth: DAY,
 } as const;
 
+/** Items per page of every cursor-paginated list (the API's `limit`). */
+export const PAGE_SIZE = "20";
+
 /** Persisted cache older than this is dropped on load. */
 export const CACHE_MAX_AGE = 7 * DAY;
 /** Bump to discard every persisted cache (e.g. when response shapes change). */
-export const CACHE_VERSION = "1";
+export const CACHE_VERSION = "3";
 
 /** `onUnauthorized` runs when any query gets a 401 (expired session): sign the user out there. */
 export function createQueryClient({ onUnauthorized }: { onUnauthorized?: () => void } = {}) {
@@ -57,7 +60,7 @@ export function isUnauthorized(error: unknown) {
   return error instanceof DetailedError && error.statusCode === 401;
 }
 
-/** Key/value storage the persister writes to (localStorage on web, AsyncStorage on mobile). */
+/** Key/value storage the persister writes to (localStorage on web, MMKV on mobile). */
 export type CacheStorage = AsyncStorage<string>;
 
 /**
@@ -90,7 +93,14 @@ export const queryKeys = {
   session: ["session"] as const,
   instance: ["instance"] as const,
   me: ["me"] as const,
-  reader: (username: string) => ["readers", username] as const,
+  allReaders: ["readers"] as const,
+  reader: (username: string) => ["readers", "profile", username] as const,
+  allReaderActivity: ["readers", "activity"] as const,
+  readerActivity: (username: string) => ["readers", "activity", username] as const,
+  readerConnections: (username: string, kind: "followers" | "following") =>
+    ["readers", kind, username] as const,
+  readerSearch: (q: string) => ["readers", "search", q] as const,
+  readerSuggestions: ["readers", "suggestions"] as const,
   bookSearch: (q: string) => ["books", "search", q] as const,
   allBooks: ["books", "detail"] as const,
   book: (openLibraryId: string) => ["books", "detail", openLibraryId] as const,

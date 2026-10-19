@@ -5,11 +5,21 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { AuthForm } from "@/features/auth";
 
 export const Route = createFileRoute("/login")({
+  // Where to go after signing in (e.g. the profile a shared link pointed to). Same-site paths only.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect:
+      typeof search.redirect === "string" &&
+      search.redirect.startsWith("/") &&
+      !search.redirect.startsWith("//")
+        ? search.redirect
+        : undefined,
+  }),
   component: LoginPage,
 });
 
 /** Full-screen split: illustration on the left (desktop), the form on the right. */
 function LoginPage() {
+  const { redirect } = Route.useSearch();
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:bg-surface">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-surface-muted p-12 lg:flex">
@@ -34,7 +44,7 @@ function LoginPage() {
 
       <main className="relative grid place-items-center px-4 py-16">
         <ThemeToggle className="absolute top-5 right-5" />
-        <AuthForm />
+        <AuthForm redirectTo={redirect} />
       </main>
     </div>
   );
