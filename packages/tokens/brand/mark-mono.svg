@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 200 186">
+  <title>Grimo</title>
+  <!-- One colour (Android themed icon): the pages are cut from the cover by a thin gap. -->
+  <mask id="gap">
+    <rect x="0" y="-4" width="200" height="186" fill="#fff"/>
+    <path d="M100 58 Q62 36 20 50 V148 Q62 134 100 156Z M100 58 Q138 36 180 50 V148 Q138 134 100 156Z" fill="none" stroke="#000" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M100 56 V176" stroke="#000" stroke-width="6"/>
+  </mask>
+  <g mask="url(#gap)" fill="#000">
+    <path d="M6 64 Q54 46 100 68 Q146 46 194 64 V174 Q146 158 100 180 Q54 158 6 174Z"/>
+    <path d="M100 58 Q62 36 20 50 V148 Q62 134 100 156Z"/>
+    <path d="M100 58 Q138 36 180 50 V148 Q138 134 100 156Z"/>
+  </g>
+  <path d="M100 0l6 16 16 6-16 6-6 16-6-16-16-6 16-6z" fill="#000"/>
+</svg>

@@ -1,9 +1,10 @@
 import { queryKeys, useInstance } from "@grimo/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuthClient } from "@/providers/app-providers";
 import { ServerPicker } from "./server-picker";
 
@@ -12,6 +13,7 @@ export function SignInForm() {
   const authClient = useAuthClient();
   const queryClient = useQueryClient();
   const instance = useInstance();
+  const dark = useColorScheme() === "dark";
   const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,13 @@ export function SignInForm() {
 
   return (
     <Card>
+      <Image
+        accessibilityIgnoresInvertColors
+        source={
+          dark ? require("@/assets/images/logo-dark.png") : require("@/assets/images/logo.png")
+        }
+        style={styles.logo}
+      />
       <Text variant="display">{instance.data?.name ?? "Grimo"}</Text>
       <Text color="textMuted">
         {isSetup
@@ -91,4 +100,7 @@ export function SignInForm() {
   );
 }
 
-const styles = StyleSheet.create({ fields: { gap: spacing[2] } });
+const styles = StyleSheet.create({
+  fields: { gap: spacing[2] },
+  logo: { width: 72, height: 72 },
+});

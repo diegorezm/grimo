@@ -62,6 +62,9 @@ export const colors = {
     /** Sparkles, star ratings, monthly goal bar. */
     gold: palette.gold,
     ornament: palette.lilac,
+    /** Logo: book cover and spine (pages use accentStart / accent, the block uses surface). */
+    logoCover: palette.ink,
+    logoSpine: palette.ink,
     glowA: palette.blush,
     glowB: palette.lilacMist,
     /** Liquid glass fill (translucent page). */
@@ -88,6 +91,8 @@ export const colors = {
     accentForeground: palette.nightDesk,
     gold: palette.nightGold,
     ornament: "#8D78A4",
+    logoCover: "#8D78A4",
+    logoSpine: palette.nightDesk,
     glowA: "rgba(231,161,181,0.12)",
     glowB: "rgba(156,124,214,0.16)",
     glass: "rgba(38,32,48,0.55)",
