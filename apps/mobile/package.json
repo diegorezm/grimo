@@ -6,6 +6,7 @@
     "@better-auth/expo": "catalog:",
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/ui": "~58.0.20",
     "@grimo/auth": "workspace:*",
     "@grimo/client": "workspace:*",

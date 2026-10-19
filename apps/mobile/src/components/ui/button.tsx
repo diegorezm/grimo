@@ -13,8 +13,8 @@ export function Button({
 }: PressableProps & { title: string; variant?: Variant }) {
   const theme = useTheme();
   const background = {
-    primary: theme.primary,
-    secondary: theme.surfaceMuted,
+    primary: theme.accent,
+    secondary: theme.surface,
     ghost: "transparent",
   }[variant];
 
@@ -23,12 +23,19 @@ export function Button({
       accessibilityRole="button"
       style={(state) => [
         styles.base,
+        variant === "primary" && {
+          shadowColor: theme.accent,
+          shadowOpacity: 0.35,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 8 },
+        },
+        variant === "secondary" && { borderWidth: 1, borderColor: theme.border },
         { backgroundColor: background, opacity: state.pressed || props.disabled ? 0.6 : 1 },
         typeof style === "function" ? style(state) : style,
       ]}
       {...props}
     >
-      <Text variant="label" color={variant === "primary" ? "primaryForeground" : "text"}>
+      <Text variant="label" color={variant === "primary" ? "accentForeground" : "text"}>
         {title}
       </Text>
     </Pressable>
@@ -38,8 +45,8 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     alignItems: "center",
-    borderRadius: radius.md,
-    paddingHorizontal: spacing[4],
+    borderRadius: radius.full,
+    paddingHorizontal: spacing[5],
     paddingVertical: spacing[3],
   },
 });

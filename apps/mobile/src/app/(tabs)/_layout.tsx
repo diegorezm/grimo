@@ -8,8 +8,10 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       backgroundColor={theme.background}
+      // iOS 26+ renders NativeTabs as system liquid glass; we only tint it.
+      tintColor={theme.accent}
       indicatorColor={theme.surfaceMuted}
-      labelStyle={{ selected: { color: theme.primary } }}
+      labelStyle={{ selected: { color: theme.accent } }}
     >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{personal ? "Diário" : "Feed"}</NativeTabs.Trigger.Label>
