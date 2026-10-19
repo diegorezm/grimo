@@ -21,6 +21,7 @@ type NavItem = (typeof nav)[number];
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: instance } = useInstance();
+  const { data: me } = useMe();
   const personal = instance?.mode === "personal";
   const label = (item: NavItem) =>
     personal && "personalLabel" in item ? item.personalLabel : item.label;
@@ -28,33 +29,39 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh">
       <div className="flex min-h-dvh lg:bg-surface">
-        <aside className="sticky top-0 hidden h-dvh w-22 shrink-0 flex-col items-center gap-2 border-r border-border py-6 lg:flex">
-          <Link to="/" aria-label={instance?.name ?? "Grimo"} className="mb-6">
+        <aside className="sticky top-0 hidden h-dvh w-24 shrink-0 flex-col items-stretch border-r border-border py-6 lg:flex">
+          <Link to="/" aria-label={instance?.name ?? "Grimo"} className="mb-8 self-center">
             <Emblem />
           </Link>
-          <nav aria-label="Seções" className="flex flex-col gap-2">
+          <nav aria-label="Seções" className="flex flex-col gap-1">
             {nav.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                title={label(item)}
-                aria-label={label(item)}
-                className="grid size-11 place-items-center rounded-md transition"
-                activeProps={{ className: "bg-shelf-reading-bg text-shelf-reading-fg" }}
+                className="flex flex-col items-center gap-1.5 py-3.5 text-xs transition"
+                activeProps={{ className: "bg-surface-muted font-semibold text-accent" }}
                 inactiveProps={{
-                  className: "text-text-muted hover:bg-surface-muted hover:text-text",
+                  className: "text-text-muted hover:bg-surface-muted/60 hover:text-text",
                 }}
                 activeOptions={{ exact: item.to === "/" }}
               >
-                <item.icon />
+                <item.icon className="size-6" />
+                {label(item)}
               </Link>
             ))}
           </nav>
-          <div className="mt-auto flex flex-col items-center gap-3">
+          <div className="mt-auto flex flex-col items-center gap-4">
             <ThemeCycleButton />
-            <span className="bg-accent-gradient rotate-180 rounded-full px-1.5 py-4 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-accent-foreground [writing-mode:vertical-rl]">
-              {personal ? "Pessoal" : "Grimo"}
-            </span>
+            {me && (
+              <Link to="/me" aria-label="Seu perfil" title={me.name}>
+                <Avatar
+                  src={me.image}
+                  name={me.name}
+                  size="size-11"
+                  className="bg-accent-gradient font-semibold text-accent-foreground shadow-md shadow-accent/30"
+                />
+              </Link>
+            )}
           </div>
         </aside>
 
@@ -130,11 +137,6 @@ function TopBar() {
               <span className="block text-text-muted">{greetingFor(new Date())},</span>
               <strong className="font-semibold">{me.name}</strong>
             </span>
-            <Avatar
-              src={me.image}
-              name={me.name}
-              className="bg-accent-gradient font-semibold text-accent-foreground"
-            />
           </Link>
         )}
       </div>
