@@ -1,9 +1,12 @@
-import { useShelf } from "@grimo/client";
+import { shelfQuery, useShelf } from "@grimo/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Screen } from "@/components/layout/screen";
 import { ShelfBoard } from "@/features/shelves";
 
 export const Route = createFileRoute("/_app/shelves")({
+  loader: ({ context: { queryClient, api } }) => {
+    void queryClient.prefetchQuery(shelfQuery(api));
+  },
   component: ShelvesPage,
 });
 

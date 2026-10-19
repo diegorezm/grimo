@@ -1,14 +1,13 @@
-import { queryKeys, useInstance } from "@grimo/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInstance } from "@grimo/client";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export function AuthForm() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { data: instance } = useInstance();
   const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   // Personal instance without an account yet → this form creates the owner account.
@@ -38,7 +37,8 @@ export function AuthForm() {
 
     setPending(false);
     if (error) return setError(error.message ?? "Algo deu errado");
-    await queryClient.invalidateQueries({ queryKey: queryKeys.instance });
+    // New session: start from an empty cache so nothing from a previous account shows up.
+    await clearCache();
     await navigate({ to: "/" });
   }
 

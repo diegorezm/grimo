@@ -1,11 +1,21 @@
-import { ApiProvider, createQueryClient } from "@grimo/client";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { ApiProvider, createPersistOptions, createQueryClient } from "@grimo/client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { type AuthClient, getClients } from "@/lib/clients";
 import { useServerStore } from "@/lib/server";
 
 const queryClient = createQueryClient();
 const AuthClientContext = createContext<AuthClient | null>(null);
+const ClearCacheContext = createContext<() => Promise<void>>(async () => {});
 
 /** Better Auth client for the currently selected server. */
 export function useAuthClient() {
@@ -14,22 +24,38 @@ export function useAuthClient() {
   return client;
 }
 
+/** Drops every cached query, in memory and on disk (sign-in, sign-out). */
+export function useClearCache() {
+  return useContext(ClearCacheContext);
+}
+
 export function AppProviders({ children }: { children: ReactNode }) {
   const serverUrl = useServerStore((state) => state.serverUrl);
   const hydrated = useHydrated();
   const { authClient, api } = getClients(serverUrl);
+  // One persisted cache per server, so switching servers never mixes their data.
+  const persistOptions = useMemo(() => createPersistOptions(AsyncStorage, serverUrl), [serverUrl]);
 
-  // Switching servers = different data; drop everything cached from the previous one.
+  // Switching servers = different data; drop what is in memory from the previous one.
   useEffect(() => {
     queryClient.clear();
   }, [serverUrl]);
 
+  const clearCache = useCallback(async () => {
+    queryClient.clear();
+    await persistOptions.persister.removeClient();
+  }, [persistOptions]);
+
   if (!hydrated) return null;
   return (
     <AuthClientContext.Provider value={authClient}>
-      <ApiProvider client={api}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      </ApiProvider>
+      <ClearCacheContext.Provider value={clearCache}>
+        <ApiProvider client={api}>
+          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+            {children}
+          </PersistQueryClientProvider>
+        </ApiProvider>
+      </ClearCacheContext.Provider>
     </AuthClientContext.Provider>
   );
 }

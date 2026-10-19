@@ -1,3 +1,4 @@
+import { bookSearchQuery } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { Screen } from "@/components/layout/screen";
 import { BookSearch } from "@/features/books";
@@ -6,6 +7,10 @@ export const Route = createFileRoute("/_app/search")({
   validateSearch: (search: Record<string, unknown>): { q?: string } => ({
     q: typeof search.q === "string" && search.q ? search.q : undefined,
   }),
+  loaderDeps: ({ search }) => ({ q: search.q }),
+  loader: ({ context: { queryClient, api }, deps }) => {
+    if (deps.q) void queryClient.prefetchQuery(bookSearchQuery(api, deps.q));
+  },
   component: SearchPage,
 });
 

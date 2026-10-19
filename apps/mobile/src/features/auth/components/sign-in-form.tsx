@@ -1,16 +1,15 @@
-import { queryKeys, useInstance } from "@grimo/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInstance } from "@grimo/client";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
-import { useAuthClient } from "@/providers/app-providers";
+import { useAuthClient, useClearCache } from "@/providers/app-providers";
 import { ServerPicker } from "./server-picker";
 
 /** On success the session changes and the root layout swaps to the tabs. */
 export function SignInForm() {
   const authClient = useAuthClient();
-  const queryClient = useQueryClient();
+  const clearCache = useClearCache();
   const instance = useInstance();
   const [chosenMode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
@@ -35,7 +34,8 @@ export function SignInForm() {
           });
     setPending(false);
     if (error) return setError(error.message ?? "Algo deu errado");
-    await queryClient.invalidateQueries({ queryKey: queryKeys.instance });
+    // New session: start from an empty cache so nothing from a previous account shows up.
+    await clearCache();
   }
 
   return (

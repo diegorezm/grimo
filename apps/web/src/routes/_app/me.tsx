@@ -1,4 +1,11 @@
-import { useMe, useShelf } from "@grimo/client";
+import {
+  meQuery,
+  monthlySummaryQuery,
+  shelfQuery,
+  useMe,
+  useShelf,
+  yearOverviewQuery,
+} from "@grimo/client";
 import { finishedPerMonth, genreBreakdown } from "@grimo/core";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -7,10 +14,16 @@ import { Screen } from "@/components/layout/screen";
 import { Button } from "@/components/ui/button";
 import { BookRow, EditProfileDialog, ProfileHeader } from "@/features/profile";
 import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
-import { queryClient } from "@/lib/api";
+import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_app/me")({
+  loader: ({ context: { queryClient, api } }) => {
+    void queryClient.prefetchQuery(meQuery(api));
+    void queryClient.prefetchQuery(shelfQuery(api));
+    void queryClient.prefetchQuery(yearOverviewQuery(api));
+    void queryClient.prefetchQuery(monthlySummaryQuery(api));
+  },
   component: MePage,
 });
 
@@ -24,7 +37,7 @@ function MePage() {
 
   async function signOut() {
     await authClient.signOut();
-    queryClient.clear();
+    await clearCache();
     await navigate({ to: "/login" });
   }
 

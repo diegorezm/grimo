@@ -1,11 +1,11 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/app-shell";
-import { authClient } from "@/lib/auth-client";
+import { sessionQuery } from "@/lib/api";
 
 /** Layout for every signed-in page. */
 export const Route = createFileRoute("/_app")({
-  beforeLoad: async () => {
-    const { data } = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const data = await context.queryClient.ensureQueryData(sessionQuery);
     if (!data) throw redirect({ to: "/login" });
     return { session: data };
   },

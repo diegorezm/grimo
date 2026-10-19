@@ -1,4 +1,4 @@
-import { useInstance, useReader, useToggleFollow } from "@grimo/client";
+import { readerQuery, useInstance, useReader, useToggleFollow } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
@@ -7,6 +7,9 @@ import { ProfileHeader } from "@/features/profile";
 import { YearStats } from "@/features/stats";
 
 export const Route = createFileRoute("/_app/u/$username")({
+  loader: ({ context: { queryClient, api }, params }) => {
+    void queryClient.prefetchQuery(readerQuery(api, params.username));
+  },
   component: ReaderPage,
 });
 
