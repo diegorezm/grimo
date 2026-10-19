@@ -1,6 +1,6 @@
 // Generates theme.css (Tailwind v4) from src/index.ts. Run: pnpm --filter @grimo/tokens generate
 import { writeFileSync } from "node:fs";
-import { colors, fontSize, fonts, radius, shelfColors } from "../src/index.ts";
+import { colors, fontSize, fonts, radius, shelfBadges, shelfColors } from "../src/index.ts";
 
 const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`).replace(/_/g, "-");
 const vars = (entries: [string, string][], indent = "  ") =>
@@ -9,15 +9,23 @@ const vars = (entries: [string, string][], indent = "  ") =>
 const light = Object.entries(colors.light).map(
   ([k, v]) => [`color-${kebab(k)}`, v] as [string, string],
 );
-const dark = Object.entries(colors.dark).map(
-  ([k, v]) => [`color-${kebab(k)}`, v] as [string, string],
-);
+const badges = (scheme: keyof typeof shelfBadges) =>
+  Object.entries(shelfBadges[scheme]).flatMap(([shelf, c]) =>
+    Object.entries(c).map(
+      ([part, v]) => [`color-shelf-${kebab(shelf)}-${part}`, v] as [string, string],
+    ),
+  );
+const dark = [
+  ...Object.entries(colors.dark).map(([k, v]) => [`color-${kebab(k)}`, v] as [string, string]),
+  ...badges("dark"),
+];
 
 const theme = [
   ...light,
   ...Object.entries(shelfColors).map(
     ([k, v]) => [`color-shelf-${kebab(k)}`, v] as [string, string],
   ),
+  ...badges("light"),
   ...Object.entries(radius).map(([k, v]) => [`radius-${k}`, `${v}px`] as [string, string]),
   ...Object.entries(fontSize).map(([k, v]) => [`text-${k}`, `${v / 16}rem`] as [string, string]),
   ["font-serif", `"${fonts.serif}", Georgia, serif`],

@@ -2,12 +2,14 @@ import { useShelf, useShelfTabStore } from "@grimo/client";
 import { SHELF_LABELS, SHELF_STATUSES } from "@grimo/core";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Card, Text } from "@/components/ui";
-import { radius, spacing } from "@/constants/theme";
+import { radius, shelfBadges, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 
 export function ShelfBoard() {
   const theme = useTheme();
+  const badges = shelfBadges[useColorScheme() === "dark" ? "dark" : "light"];
   const { status, setStatus } = useShelfTabStore();
   const shelf = useShelf(status);
 
@@ -24,10 +26,14 @@ export function ShelfBoard() {
             onPress={() => setStatus(s)}
             style={[
               styles.tab,
-              { backgroundColor: s === status ? theme.primary : theme.surfaceMuted },
+              {
+                backgroundColor: badges[s].bg,
+                borderColor: s === status ? badges[s].fg : badges[s].border,
+                opacity: s === status ? 1 : 0.8,
+              },
             ]}
           >
-            <Text variant="small" color={s === status ? "primaryForeground" : "text"}>
+            <Text variant="label" style={{ color: badges[s].fg }}>
               {SHELF_LABELS[s]}
             </Text>
           </Pressable>
@@ -61,7 +67,12 @@ export function ShelfBoard() {
 const styles = StyleSheet.create({
   root: { gap: spacing[3] },
   tabs: { gap: spacing[1] },
-  tab: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
+  tab: {
+    borderWidth: 1.5,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
   row: { flexDirection: "row" },
   info: { flex: 1, gap: spacing[1] },
 });

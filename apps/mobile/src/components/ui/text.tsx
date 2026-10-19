@@ -14,8 +14,8 @@ export function Text({ style, variant = "body", color = "text", ...rest }: TextP
 }
 
 const styles = StyleSheet.create({
-  body: { fontSize: fontSize.md, lineHeight: 22 },
-  small: { fontSize: fontSize.sm, lineHeight: 18 },
+  body: { fontFamily: Fonts.sans, fontSize: fontSize.md, lineHeight: 22 },
+  small: { fontFamily: Fonts.sans, fontSize: fontSize.sm, lineHeight: 18 },
   label: {
     fontFamily: Fonts.mono,
     fontSize: 11,

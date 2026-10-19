@@ -3,10 +3,19 @@ import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces/600SemiBold";
 import { Fraunces_700Bold } from "@expo-google-fonts/fraunces/700Bold";
 import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
 import { IBMPlexMono_600SemiBold } from "@expo-google-fonts/ibm-plex-mono/600SemiBold";
+import { Nunito_400Regular } from "@expo-google-fonts/nunito/400Regular";
+import { Nunito_700Bold } from "@expo-google-fonts/nunito/700Bold";
 import { colors } from "@grimo/tokens";
 
 // Colors/spacing/radius come from @grimo/tokens (shared with web). Only fonts live here.
-export { fontSize, radius, shelfColors, spacing, storyCard } from "@grimo/tokens";
+export {
+  fontSize,
+  radius,
+  shelfBadges,
+  shelfColors,
+  spacing,
+  storyCard,
+} from "@grimo/tokens";
 
 export const Colors = colors;
 export type ThemeColor = keyof typeof colors.light;
@@ -17,6 +26,8 @@ export const fontAssets = {
   Fraunces_700Bold,
   IBMPlexMono_500Medium,
   IBMPlexMono_600SemiBold,
+  Nunito_400Regular,
+  Nunito_700Bold,
 };
 
 export const Fonts = {
@@ -24,4 +35,6 @@ export const Fonts = {
   serifBold: "Fraunces_700Bold",
   mono: "IBMPlexMono_500Medium",
   monoBold: "IBMPlexMono_600SemiBold",
+  sans: "Nunito_400Regular",
+  sansBold: "Nunito_700Bold",
 } as const satisfies Record<string, keyof typeof fontAssets>;

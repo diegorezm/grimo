@@ -8,7 +8,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <fieldset
       className={cn(
-        "inline-flex rounded-md border border-border p-0.5 font-mono text-[11px] uppercase",
+        "glass inline-flex rounded-full p-1 font-mono text-[11px] uppercase",
         className,
       )}
     >
@@ -20,7 +20,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           aria-pressed={preference === option}
           onClick={() => setThemePreference(option)}
           className={cn(
-            "rounded-sm px-2 py-1 tracking-wider transition",
+            "rounded-full px-2.5 py-1 tracking-wider transition",
             preference === option
               ? "bg-primary text-primary-foreground"
               : "text-text-muted hover:text-text",
