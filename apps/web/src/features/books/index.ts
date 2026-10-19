@@ -5,3 +5,4 @@ export { BookDetailBody, BookDetailSkeleton, BookShelfActions } from "./componen
 export { BookPeek } from "./components/book-peek";
 export { BookPeekLink } from "./components/book-peek-link";
 export { BookSearch } from "./components/book-search";
+export { PageLogger } from "./components/page-logger";

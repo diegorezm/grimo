@@ -33,7 +33,6 @@ export function ProfileHeader({
           >
             {tiles.map((src, i) => (
               <img
-                // biome-ignore lint/suspicious/noArrayIndexKey: covers repeat on purpose
                 key={i}
                 src={src}
                 alt=""
