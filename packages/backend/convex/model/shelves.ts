@@ -1,0 +1,189 @@
+import {
+  type BookInput,
+  planShelfTransition,
+  type ShelfStatus,
+  type UpdateShelfEntryInput,
+} from "@grimo/core";
+import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { recordActivity } from "./content";
+import { notFound } from "./errors";
+
+/** Shelf entry as clients see it. */
+export const entryView = (entry: Doc<"shelfEntries">) => ({
+  id: entry._id,
+  bookId: entry.bookId,
+  status: entry.status,
+  currentPage: entry.currentPage,
+  rating: entry.rating,
+  startedAt: entry.startedAt,
+  finishedAt: entry.finishedAt,
+  createdAt: entry._creationTime,
+  updatedAt: entry.updatedAt,
+});
+
+export const bookView = (book: Doc<"books">) => ({
+  id: book._id,
+  openLibraryId: book.openLibraryId,
+  title: book.title,
+  authors: book.authors,
+  coverUrl: book.coverUrl,
+  pageCount: book.pageCount,
+  publishedYear: book.publishedYear,
+  genres: book.genres,
+});
+
+/** `{ entry, book }` rows for these entries (entries whose book is gone are dropped). */
+export async function withBooks(ctx: QueryCtx | MutationCtx, entries: Doc<"shelfEntries">[]) {
+  const rows = await Promise.all(
+    entries.map(async (entry) => {
+      const book = await ctx.db.get(entry.bookId);
+      return book ? { entry: entryView(entry), book: bookView(book) } : null;
+    }),
+  );
+  return rows.filter((row) => row !== null);
+}
+
+/** Saves the book locally (or refreshes title/authors/cover) and returns its id. */
+export async function upsertBook(ctx: MutationCtx, input: BookInput) {
+  const existing = await ctx.db
+    .query("books")
+    .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", input.openLibraryId))
+    .unique();
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      title: input.title,
+      authors: input.authors,
+      coverUrl: input.coverUrl,
+    });
+    return existing._id;
+  }
+  return ctx.db.insert("books", input);
+}
+
+const toMs = (date: Date | null | undefined) =>
+  date === undefined ? undefined : date === null ? null : date.getTime();
+
+/** Converts a planned patch (Dates) to fields to store (epoch ms). */
+function storedPatch(set: UpdateShelfEntryInput) {
+  const patch: Partial<Doc<"shelfEntries">> = {};
+  if (set.status !== undefined) patch.status = set.status;
+  if (set.currentPage !== undefined) patch.currentPage = set.currentPage;
+  if (set.rating !== undefined) patch.rating = set.rating;
+  const startedAt = toMs(set.startedAt);
+  if (startedAt !== undefined) patch.startedAt = startedAt;
+  const finishedAt = toMs(set.finishedAt);
+  if (finishedAt !== undefined) patch.finishedAt = finishedAt;
+  return patch;
+}
+
+/** Reading log + feed activity for a shelf change. */
+async function recordSideEffects(
+  ctx: MutationCtx,
+  entry: Doc<"shelfEntries">,
+  pagesRead: number,
+  activity: Doc<"activities">["kind"] | null,
+  now: number,
+) {
+  if (pagesRead > 0) {
+    await ctx.db.insert("readingLogs", {
+      userId: entry.userId,
+      shelfEntryId: entry._id,
+      page: entry.currentPage,
+      pagesRead,
+      createdAt: now,
+    });
+  }
+  if (activity) {
+    await recordActivity(ctx, {
+      actorId: entry.userId,
+      kind: activity,
+      bookId: entry.bookId,
+      data: { status: entry.status, page: entry.currentPage },
+      createdAt: now,
+    });
+  }
+}
+
+export async function updateShelfEntry(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  entryId: Id<"shelfEntries">,
+  patch: UpdateShelfEntryInput,
+  now = Date.now(),
+) {
+  const entry = await ctx.db.get(entryId);
+  if (!entry || entry.userId !== userId) throw notFound("Livro na estante");
+  const book = await ctx.db.get(entry.bookId);
+
+  const plan = planShelfTransition(
+    {
+      status: entry.status,
+      currentPage: entry.currentPage,
+      startedAt: entry.startedAt === null ? null : new Date(entry.startedAt),
+    },
+    patch,
+    book?.pageCount ?? null,
+    new Date(now),
+  );
+  await ctx.db.patch(entryId, { ...storedPatch(plan.set), updatedAt: now });
+  const updated = (await ctx.db.get(entryId))!;
+  await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now);
+  return updated;
+}
+
+export async function addToShelf(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  input: { book: BookInput; status: ShelfStatus },
+  now = Date.now(),
+) {
+  const bookId = await upsertBook(ctx, input.book);
+  const existing = await ctx.db
+    .query("shelfEntries")
+    .withIndex("by_user_book", (q) => q.eq("userId", userId).eq("bookId", bookId))
+    .unique();
+  if (existing) return updateShelfEntry(ctx, userId, existing._id, { status: input.status }, now);
+
+  const plan = planShelfTransition(
+    { status: null, currentPage: 0, startedAt: null },
+    { status: input.status },
+    input.book.pageCount,
+    new Date(now),
+  );
+  const entryId = await ctx.db.insert("shelfEntries", {
+    userId,
+    bookId,
+    status: input.status,
+    currentPage: 0,
+    rating: null,
+    startedAt: null,
+    finishedAt: null,
+    ...storedPatch(plan.set),
+    updatedAt: now,
+  });
+  const user = await ctx.db.get(userId);
+  if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
+
+  const entry = (await ctx.db.get(entryId))!;
+  // Adding a book is always worth a feed entry ("shelved"/"finished").
+  await recordSideEffects(ctx, entry, plan.pagesRead, plan.activity ?? "shelved", now);
+  return entry;
+}
+
+export async function removeFromShelf(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  entryId: Id<"shelfEntries">,
+) {
+  const entry = await ctx.db.get(entryId);
+  if (!entry || entry.userId !== userId) return;
+  const logs = await ctx.db
+    .query("readingLogs")
+    .withIndex("by_entry", (q) => q.eq("shelfEntryId", entryId))
+    .collect();
+  for (const log of logs) await ctx.db.delete(log._id);
+  await ctx.db.delete(entryId);
+  const user = await ctx.db.get(userId);
+  if (user) await ctx.db.patch(userId, { bookCount: Math.max(0, user.bookCount - 1) });
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@grimo/backend",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "seed": "convex run seed:run",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@convex-dev/better-auth": "catalog:",
+    "@grimo/core": "workspace:*",
+    "better-auth": "catalog:",
+    "convex": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@grimo/tsconfig": "workspace:*",
+    "@types/node": "^24.0.0",
+    "convex-test": "^0.0.62",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

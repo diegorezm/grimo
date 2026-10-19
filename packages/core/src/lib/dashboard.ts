@@ -38,7 +38,7 @@ export function timeAgo(date: Date, now: Date = new Date()): string {
 
 /** Books finished in each month of `year` (index 0 = January), by local time. */
 export function finishedPerMonth(
-  entries: { status: ShelfStatus; finishedAt: Date | string | null }[],
+  entries: { status: ShelfStatus; finishedAt: Date | string | number | null }[],
   year: number,
 ): number[] {
   const months = Array.from({ length: 12 }, () => 0);

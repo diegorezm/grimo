@@ -7,25 +7,19 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @grimo/web dev",
-    "dev:api": "pnpm --filter @grimo/api-worker dev",
+    "dev": "turbo run dev --filter=@grimo/web --filter=@grimo/backend",
+    "dev:backend": "pnpm --filter @grimo/backend dev",
     "dev:mobile": "pnpm --filter @grimo/mobile start",
-    "dev:server": "pnpm --filter @grimo/web build:static && pnpm --filter @grimo/server dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "biome check .",
     "format": "biome check --write .",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
-    "db:generate": "pnpm --filter @grimo/db generate",
-    "db:migrate": "pnpm --filter @grimo/api-worker db:migrate:local",
-    "db:migrate:remote": "pnpm --filter @grimo/api-worker db:migrate:remote",
-    "db:studio": "pnpm --filter @grimo/db studio",
-    "db:seed": "node scripts/seed.ts",
+    "seed": "pnpm --filter @grimo/backend seed",
     "tokens:generate": "pnpm --filter @grimo/tokens generate",
     "tokens:icons": "pnpm --filter @grimo/tokens icons",
-    "cf-typegen": "turbo run cf-typegen",
-    "deploy": "turbo run deploy --filter=@grimo/api-worker --filter=@grimo/web"
+    "deploy": "pnpm --filter @grimo/backend deploy && pnpm --filter @grimo/web build && pnpm --filter @grimo/web deploy"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

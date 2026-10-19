@@ -1,0 +1,119 @@
+import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { authorOf } from "./readers";
+
+type Ctx = QueryCtx | MutationCtx;
+
+/** The book fields shown next to a post or activity. */
+export const bookSummary = (book: Doc<"books">) => ({
+  id: book._id,
+  openLibraryId: book.openLibraryId,
+  title: book.title,
+  authors: book.authors,
+  coverUrl: book.coverUrl,
+});
+
+/** A post as seen by `viewerId` (null when signed out). */
+export async function postView(ctx: Ctx, post: Doc<"posts">, viewerId: Id<"users"> | null) {
+  const liked = viewerId
+    ? await ctx.db
+        .query("postLikes")
+        .withIndex("by_post_user", (q) => q.eq("postId", post._id).eq("userId", viewerId))
+        .unique()
+    : null;
+  return {
+    id: post._id,
+    kind: post.kind,
+    body: post.body,
+    rating: post.rating,
+    hasSpoilers: post.hasSpoilers,
+    createdAt: post._creationTime,
+    likeCount: post.likeCount,
+    commentCount: post.commentCount,
+    likedByMe: liked !== null,
+  };
+}
+
+/** Joins actor, target reader, book and post into a feed item. Drops orphans. */
+export async function activityView(
+  ctx: Ctx,
+  activity: Doc<"activities">,
+  viewerId: Id<"users"> | null,
+) {
+  const [actor, target, book, post] = await Promise.all([
+    ctx.db.get(activity.actorId),
+    activity.targetUserId ? ctx.db.get(activity.targetUserId) : null,
+    activity.bookId ? ctx.db.get(activity.bookId) : null,
+    activity.postId ? ctx.db.get(activity.postId) : null,
+  ]);
+  if (!actor) return null;
+  if (activity.postId && !post) return null;
+  return {
+    id: activity._id,
+    kind: activity.kind,
+    data: activity.data,
+    createdAt: activity.createdAt,
+    actor: authorOf(actor),
+    target: target ? { id: target._id, name: target.name, username: target.username } : null,
+    book: book ? bookSummary(book) : null,
+    post: post ? await postView(ctx, post, viewerId) : null,
+  };
+}
+
+export type ActivityView = NonNullable<Awaited<ReturnType<typeof activityView>>>;
+
+/**
+ * The newest `limit` activities of these actors, merged from one index range per actor.
+ * `hasMore` tells the client a bigger `limit` would show more.
+ */
+export async function listActivities(
+  ctx: Ctx,
+  actorIds: Id<"users">[],
+  viewerId: Id<"users"> | null,
+  limit: number,
+) {
+  const perActor = await Promise.all(
+    actorIds.map((actorId) =>
+      ctx.db
+        .query("activities")
+        .withIndex("by_actor_created", (q) => q.eq("actorId", actorId))
+        .order("desc")
+        .take(limit + 1),
+    ),
+  );
+  const newest = perActor
+    .flat()
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, limit + 1);
+  const views = await Promise.all(
+    newest.slice(0, limit).map((activity) => activityView(ctx, activity, viewerId)),
+  );
+  return {
+    items: views.filter((view): view is ActivityView => view !== null),
+    hasMore: newest.length > limit,
+  };
+}
+
+/** Feed event. `createdAt` defaults to now (the seed backdates it). */
+export function recordActivity(
+  ctx: MutationCtx,
+  activity: {
+    actorId: Id<"users">;
+    kind: Doc<"activities">["kind"];
+    bookId?: Id<"books"> | null;
+    postId?: Id<"posts"> | null;
+    targetUserId?: Id<"users"> | null;
+    data?: Record<string, unknown> | null;
+    createdAt?: number;
+  },
+) {
+  return ctx.db.insert("activities", {
+    actorId: activity.actorId,
+    kind: activity.kind,
+    bookId: activity.bookId ?? null,
+    postId: activity.postId ?? null,
+    targetUserId: activity.targetUserId ?? null,
+    data: activity.data ?? null,
+    createdAt: activity.createdAt ?? Date.now(),
+  });
+}

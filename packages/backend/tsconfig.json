@@ -1,0 +1,6 @@
+{
+  "extends": "@grimo/tsconfig/base.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src", "convex", "test", "vitest.config.ts"],
+  "exclude": ["convex/_generated"]
+}

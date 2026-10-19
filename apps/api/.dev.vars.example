@@ -1,3 +1,0 @@
-# Copy to .dev.vars (gitignored). In production: `wrangler secret put BETTER_AUTH_SECRET`.
-# Generate one with: openssl rand -base64 32
-BETTER_AUTH_SECRET=change-me-to-a-long-random-string

@@ -31,7 +31,7 @@ export interface GroupableActivity {
   data: Record<string, unknown> | null;
   actor: { id: string };
   book?: { id: string | null } | null;
-  createdAt: string | Date;
+  createdAt: string | number | Date;
 }
 
 /** One feed entry: `items` newest first; `items[0]` is the one to show for single-book kinds. */

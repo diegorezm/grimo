@@ -1,0 +1,164 @@
+import { ACTIVITY_KINDS, POST_KINDS, SHELF_STATUSES } from "@grimo/core";
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+/** `v.union(v.literal(...))` from a core constant, so enums have one source of truth. */
+const literals = <T extends string>(values: readonly T[]) =>
+  v.union(...values.map((value) => v.literal(value)));
+
+export const shelfStatus = literals(SHELF_STATUSES);
+export const postKind = literals(POST_KINDS);
+export const activityKind = literals(ACTIVITY_KINDS);
+
+/** A book as returned by search: enough to save it locally. */
+export const bookInput = v.object({
+  openLibraryId: v.string(),
+  title: v.string(),
+  authors: v.array(v.string()),
+  coverUrl: v.union(v.string(), v.null()),
+  pageCount: v.union(v.number(), v.null()),
+  publishedYear: v.union(v.number(), v.null()),
+  genres: v.array(v.string()),
+});
+
+/** Open Library work page (synopsis, cover, authors). */
+export const workDetails = v.object({
+  title: v.union(v.string(), v.null()),
+  description: v.union(v.string(), v.null()),
+  coverUrl: v.union(v.string(), v.null()),
+  genres: v.array(v.string()),
+  publishedYear: v.union(v.number(), v.null()),
+  authors: v.array(v.string()),
+});
+
+/**
+ * Dates are epoch milliseconds. Accounts (email, password, sessions) live in the Better Auth
+ * component; `users` is the app-side reader, created by its trigger (convex/auth.ts).
+ */
+export default defineSchema({
+  users: defineTable({
+    /** Better Auth user id (the JWT `sub`). */
+    authId: v.string(),
+    name: v.string(),
+    /** Lowercase, unique (enforced by Better Auth's username plugin). */
+    username: v.string(),
+    image: v.union(v.string(), v.null()),
+    bio: v.union(v.string(), v.null()),
+    favoriteGenres: v.array(v.string()),
+    /** Denormalized counters, kept by the follow/shelf mutations. */
+    followers: v.number(),
+    following: v.number(),
+    bookCount: v.number(),
+    /** `name username`, for the reader search index. */
+    searchText: v.string(),
+  })
+    .index("by_authId", ["authId"])
+    .index("by_username", ["username"])
+    .searchIndex("search", { searchField: "searchText" }),
+
+  readingGoals: defineTable({
+    userId: v.id("users"),
+    year: v.number(),
+    target: v.number(),
+  }).index("by_user_year", ["userId", "year"]),
+
+  /** Local copy of books users interacted with (source: Open Library). Not a catalog. */
+  books: defineTable({
+    openLibraryId: v.string(),
+    title: v.string(),
+    authors: v.array(v.string()),
+    coverUrl: v.union(v.string(), v.null()),
+    pageCount: v.union(v.number(), v.null()),
+    publishedYear: v.union(v.number(), v.null()),
+    genres: v.array(v.string()),
+  }).index("by_openLibraryId", ["openLibraryId"]),
+
+  /** A book on a reader's shelf. One per (user, book). */
+  shelfEntries: defineTable({
+    userId: v.id("users"),
+    bookId: v.id("books"),
+    status: shelfStatus,
+    currentPage: v.number(),
+    rating: v.union(v.number(), v.null()),
+    startedAt: v.union(v.number(), v.null()),
+    finishedAt: v.union(v.number(), v.null()),
+    updatedAt: v.number(),
+  })
+    .index("by_user_book", ["userId", "bookId"])
+    .index("by_user_updated", ["userId", "updatedAt"])
+    .index("by_user_status_updated", ["userId", "status", "updatedAt"])
+    .index("by_user_status_finished", ["userId", "status", "finishedAt"])
+    .index("by_book", ["bookId"]),
+
+  /** Append-only progress log: source of truth for "pages read". */
+  readingLogs: defineTable({
+    userId: v.id("users"),
+    shelfEntryId: v.id("shelfEntries"),
+    page: v.number(),
+    pagesRead: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_entry", ["shelfEntryId"]),
+
+  follows: defineTable({
+    followerId: v.id("users"),
+    followingId: v.id("users"),
+  })
+    .index("by_follower_following", ["followerId", "followingId"])
+    .index("by_following", ["followingId"]),
+
+  /** Reviews (book + rating) and free-form reading notes. */
+  posts: defineTable({
+    authorId: v.id("users"),
+    bookId: v.union(v.id("books"), v.null()),
+    kind: postKind,
+    rating: v.union(v.number(), v.null()),
+    body: v.string(),
+    hasSpoilers: v.boolean(),
+    likeCount: v.number(),
+    commentCount: v.number(),
+  })
+    .index("by_author", ["authorId"])
+    .index("by_book_kind", ["bookId", "kind"]),
+
+  postLikes: defineTable({
+    postId: v.id("posts"),
+    userId: v.id("users"),
+  }).index("by_post_user", ["postId", "userId"]),
+
+  postComments: defineTable({
+    postId: v.id("posts"),
+    authorId: v.id("users"),
+    body: v.string(),
+  }).index("by_post", ["postId"]),
+
+  /** Feed events. The feed is fan-out-on-read: activities of the people you follow. */
+  activities: defineTable({
+    actorId: v.id("users"),
+    kind: activityKind,
+    bookId: v.union(v.id("books"), v.null()),
+    postId: v.union(v.id("posts"), v.null()),
+    targetUserId: v.union(v.id("users"), v.null()),
+    /** Small denormalized extras (e.g. `{ status, page }` for progress). */
+    data: v.union(v.record(v.string(), v.any()), v.null()),
+    createdAt: v.number(),
+  })
+    .index("by_actor_created", ["actorId", "createdAt"])
+    .index("by_post", ["postId"])
+    .index("by_actor_target", ["actorId", "targetUserId"]),
+
+  /** Open Library search results, reused for 24 h (see `books.search`). */
+  bookSearchCache: defineTable({
+    query: v.string(),
+    items: v.array(bookInput),
+    fetchedAt: v.number(),
+  }).index("by_query", ["query"]),
+
+  /** Open Library work pages; `details: null` means Open Library doesn't know the id. */
+  workCache: defineTable({
+    openLibraryId: v.string(),
+    details: v.union(workDetails, v.null()),
+    fetchedAt: v.number(),
+  }).index("by_openLibraryId", ["openLibraryId"]),
+});
