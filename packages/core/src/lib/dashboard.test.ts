@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { countByShelf, greetingFor, readingPercent, timeAgo } from "./dashboard";
+import {
+  countByShelf,
+  finishedPerMonth,
+  genreBreakdown,
+  greetingFor,
+  readingPercent,
+  timeAgo,
+} from "./dashboard";
 
 describe("greetingFor", () => {
   it("follows the time of day", () => {
@@ -32,5 +39,37 @@ describe("timeAgo", () => {
     expect(timeAgo(new Date(2026, 9, 18, 11, 30), now)).toBe("há 30 min");
     expect(timeAgo(new Date(2026, 9, 18, 9), now)).toBe("há 3 h");
     expect(timeAgo(new Date(2026, 9, 16, 12), now)).toBe("há 2 d");
+  });
+});
+
+describe("finishedPerMonth", () => {
+  it("counts only books read in that year", () => {
+    const months = finishedPerMonth(
+      [
+        { status: "read", finishedAt: new Date(2026, 0, 19) },
+        { status: "read", finishedAt: new Date(2026, 9, 3) },
+        { status: "read", finishedAt: new Date(2026, 9, 12) },
+        { status: "read", finishedAt: new Date(2025, 9, 12) },
+        { status: "reading", finishedAt: null },
+      ],
+      2026,
+    );
+    expect(months[0]).toBe(1);
+    expect(months[9]).toBe(2);
+    expect(months.reduce((a, b) => a + b)).toBe(3);
+  });
+});
+
+describe("genreBreakdown", () => {
+  it("ranks genres by frequency and limits the list", () => {
+    const books = [
+      { genres: ["fantasy"] },
+      { genres: ["fantasy", "classics"] },
+      { genres: ["horror"] },
+    ];
+    expect(genreBreakdown(books, 2)).toEqual([
+      { genre: "fantasy", count: 2 },
+      { genre: "classics", count: 1 },
+    ]);
   });
 });

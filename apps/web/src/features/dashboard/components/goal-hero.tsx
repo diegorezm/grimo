@@ -49,7 +49,7 @@ export function GoalHero() {
           <p className="text-text-muted">Defina uma meta no seu perfil e acompanhe aqui.</p>
         )}
         <Link
-          to="/me"
+          to={goal ? "/card" : "/me"}
           className="bg-accent-gradient mt-2 w-fit rounded-full px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-accent-foreground shadow-md shadow-accent/30 hover:opacity-90"
         >
           {goal ? "Ver resumo do mês" : "Definir meta"}

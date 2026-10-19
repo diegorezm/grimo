@@ -35,3 +35,32 @@ export function timeAgo(date: Date, now: Date = new Date()): string {
   if (hours < 24) return `há ${hours} h`;
   return `há ${Math.floor(hours / 24)} d`;
 }
+
+/** Books finished in each month of `year` (index 0 = January), by local time. */
+export function finishedPerMonth(
+  entries: { status: ShelfStatus; finishedAt: Date | string | null }[],
+  year: number,
+): number[] {
+  const months = Array.from({ length: 12 }, () => 0);
+  for (const { status, finishedAt } of entries) {
+    if (status !== "read" || !finishedAt) continue;
+    const date = new Date(finishedAt);
+    if (date.getFullYear() === year) months[date.getMonth()]! += 1;
+  }
+  return months;
+}
+
+/** Most read genres across `books`, most frequent first. */
+export function genreBreakdown(
+  books: { genres: string[] }[],
+  limit = 5,
+): { genre: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const { genres } of books) {
+    for (const genre of genres) counts.set(genre, (counts.get(genre) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([genre, count]) => ({ genre, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}

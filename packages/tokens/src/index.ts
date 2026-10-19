@@ -164,3 +164,68 @@ export const fonts = {
 
 /** Instagram Stories canvas for the shareable monthly card. */
 export const storyCard = { width: 1080, height: 1920 } as const;
+
+/**
+ * Fixed palettes for the shareable card. Independent of light/dark: the exported image must look
+ * the same for everyone. `bg`/`ink`/`muted` for the base, `accent`/`accent2` for the ribbon,
+ * highlights and charts, `paper` for raised surfaces on the card.
+ */
+export const cardPalettes = {
+  noite: {
+    label: "Noite",
+    bg: "#17121E",
+    paper: "#262030",
+    ink: "#F3EAF2",
+    muted: "#B3A6B8",
+    accent: "#EBA9BC",
+    accent2: "#B79AE6",
+  },
+  brasa: {
+    label: "Brasa",
+    bg: "#141210",
+    paper: "#24201C",
+    ink: "#FFFFFF",
+    muted: "#B8ADA3",
+    accent: "#FF5A1F",
+    accent2: "#FFB38A",
+  },
+  lavanda: {
+    label: "Lavanda",
+    bg: "#E9DFF7",
+    paper: "#FFFBF5",
+    ink: "#3A2E3F",
+    muted: "#7A6B78",
+    accent: "#8B66D6",
+    accent2: "#E7A1B5",
+  },
+  oceano: {
+    label: "Oceano",
+    bg: "#0F2A3D",
+    paper: "#173A52",
+    ink: "#EAF4F8",
+    muted: "#9DB8C6",
+    accent: "#4FC3B5",
+    accent2: "#F2CB4E",
+  },
+  pessego: {
+    label: "Pêssego",
+    bg: "#FFE3D3",
+    paper: "#FFF6EF",
+    ink: "#4A2A20",
+    muted: "#94675A",
+    accent: "#F0683A",
+    accent2: "#E58FB0",
+  },
+  oliva: {
+    label: "Oliva",
+    bg: "#E9E4D6",
+    paper: "#F6F2E8",
+    ink: "#2B2B26",
+    muted: "#6E6B5E",
+    accent: "#5F7034",
+    accent2: "#C9A04B",
+  },
+} as const;
+
+export type CardPaletteKey = keyof typeof cardPalettes;
+export type CardPalette = (typeof cardPalettes)[CardPaletteKey];

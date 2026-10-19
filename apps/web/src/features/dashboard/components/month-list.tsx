@@ -1,4 +1,5 @@
 import { useMonthlySummary } from "@grimo/client";
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { BookOpenIcon, HeartIcon, PagesIcon } from "@/components/ui/icons";
 import { BookCover } from "@/features/books";
@@ -14,9 +15,17 @@ export function MonthList() {
 
   return (
     <section aria-labelledby="month-title" className="flex flex-col gap-3">
-      <h2 id="month-title" className="text-2xl font-medium italic">
-        Este mês
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="month-title" className="text-2xl font-medium italic">
+          Este mês
+        </h2>
+        <Link
+          to="/card"
+          className="rounded-full border border-border px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted transition hover:bg-surface-muted hover:text-text"
+        >
+          Criar card
+        </Link>
+      </div>
       <ul className="flex flex-col gap-2.5">
         <Row
           icon={<BookOpenIcon />}
