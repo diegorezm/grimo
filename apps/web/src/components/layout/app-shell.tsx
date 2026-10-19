@@ -7,7 +7,8 @@ import { HomeIcon, PeopleIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/compo
 import { Logo } from "@/components/ui/logo";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
-const nav = [
+/** Main sections (also drawn by the landing page demo). */
+export const APP_NAV = [
   { to: "/", label: "Início", icon: HomeIcon },
   { to: "/shelves", label: "Estantes", icon: ShelvesIcon },
   { to: "/search", label: "Buscar", icon: SearchIcon },
@@ -31,7 +32,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
             <Logo className="h-10" />
           </Link>
           <nav aria-label="Seções" className="flex flex-col gap-1">
-            {nav.map((item) => (
+            {APP_NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -71,7 +72,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
       </div>
 
       <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-lg justify-around gap-1 rounded-full p-1.5 font-mono text-[10px] uppercase tracking-wider lg:hidden">
-        {nav.map((item) => (
+        {APP_NAV.map((item) => (
           <Link
             key={item.to}
             to={item.to}

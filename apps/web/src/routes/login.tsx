@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { BookStack } from "@/components/ui/book-stack";
@@ -50,6 +50,12 @@ function LoginPage() {
       </aside>
 
       <main className="relative grid place-items-center px-4 py-16">
+        <Link
+          to="/welcome"
+          className="absolute top-6 left-5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text"
+        >
+          ← Conheça o Grimo
+        </Link>
         <ThemeToggle className="absolute top-5 right-5" />
         {returning ? <Spinner label="Entrando com Google…" /> : <AuthForm redirectTo={redirect} />}
       </main>

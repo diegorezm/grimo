@@ -17,6 +17,7 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Tela web                                 | `apps/web/src/routes/` (fina) → `apps/web/src/features/` |
 | Tela mobile                              | `apps/mobile/src/app/` (fina) → `apps/mobile/src/features/` |
 | Dados de exemplo                         | `packages/backend/convex/seed.ts` + `model/seedData.ts` |
+| Landing page (visitante)                 | `apps/web/src/features/landing/` (rota `/welcome`; `/` deslogado cai nela) |
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |
 

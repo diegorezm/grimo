@@ -33,7 +33,8 @@ export const Route = createFileRoute("/_app")({
     const data = await context.queryClient.ensureQueryData(sessionQuery);
     if (!data) {
       if (isPublicPath(location.pathname)) return { session: null };
-      throw redirect({ to: "/login" });
+      // The home of a visitor is the landing page; deep links go to sign-in.
+      throw redirect(location.pathname === "/" ? { to: "/welcome" } : { to: "/login" });
     }
     return { session: data };
   },
