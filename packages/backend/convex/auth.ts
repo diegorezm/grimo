@@ -24,7 +24,18 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
     user: {
       onCreate: async (ctx, authUser) => {
         const name = authUser.name;
-        const handle = (authUser.username ?? authUser.email.split("@")[0] ?? "").toLowerCase();
+        // The username plugin guarantees uniqueness; without one, make up a free handle
+        // (never derived from the email, which is private).
+        let handle = authUser.username?.toLowerCase() ?? "";
+        while (
+          !handle ||
+          (await ctx.db
+            .query("users")
+            .withIndex("by_username", (q) => q.eq("username", handle))
+            .first())
+        ) {
+          handle = `leitor_${Math.random().toString(36).slice(2, 8)}`;
+        }
         await ctx.db.insert("users", {
           authId: authUser._id,
           name,
@@ -44,12 +55,12 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           .withIndex("by_authId", (q) => q.eq("authId", authUser._id))
           .unique();
         if (!user) return;
+        // The name is the reader's (edited via users.updateMe); auth only owns handle and image.
         const handle = (authUser.username ?? user.username).toLowerCase();
         await ctx.db.patch(user._id, {
-          name: authUser.name,
           username: handle,
           image: authUser.image ?? null,
-          searchText: `${authUser.name} ${handle}`,
+          searchText: `${user.name} ${handle}`,
         });
       },
       onDelete: async (ctx, authUser) => {

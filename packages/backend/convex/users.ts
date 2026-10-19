@@ -128,11 +128,9 @@ export const connections = query({
             .take(take + 1)
         : await ctx.db
             .query("follows")
-            .withIndex("by_follower_following", (q) => q.eq("followerId", reader._id))
-            .collect()
-            .then((all) =>
-              all.sort((a, b) => b._creationTime - a._creationTime).slice(0, take + 1),
-            );
+            .withIndex("by_follower", (q) => q.eq("followerId", reader._id))
+            .order("desc")
+            .take(take + 1);
     const cards = await Promise.all(
       rows.slice(0, take).map(async (row) => {
         const other = await ctx.db.get(kind === "followers" ? row.followerId : row.followingId);

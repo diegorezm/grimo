@@ -59,6 +59,7 @@ export const saveSearch = internalMutation({
 export const loadWork = action({
   args: { openLibraryId: v.string() },
   handler: async (ctx, { openLibraryId }) => {
+    if (!/^OL\d+W$/.test(openLibraryId)) return null;
     const cached = await ctx.runQuery(internal.books.cachedWork, { openLibraryId });
     if (cached && Date.now() - cached.fetchedAt < WORK_TTL) return null;
     const details = await fetchWork(openLibraryId);

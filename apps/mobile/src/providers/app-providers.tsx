@@ -1,46 +1,52 @@
-import { createPersistOptions, DataProvider } from "@grimo/client";
-import { createContext, type ReactNode, useCallback, useContext, useEffect } from "react";
+import { createAppCache, DataProvider } from "@grimo/client";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { cacheStorage } from "@/lib/cache-storage";
 import { type AuthClient, authClient, cache, queryClient, setOnUnauthorized } from "@/lib/clients";
 import { CONVEX_URL } from "@/lib/server";
 
 // One persisted cache per deployment, so pointing a build elsewhere never mixes data.
-const persistOptions = createPersistOptions(cacheStorage, CONVEX_URL);
+const appCache = createAppCache({
+  storage: cacheStorage,
+  scope: CONVEX_URL,
+  queryClient,
+  convex: cache,
+});
 
-/** Drops every cached query, in memory and on disk (sign-in, sign-out). */
-async function clearCache() {
-  queryClient.clear();
-  await persistOptions.persister.removeClient();
-}
-
-const ClearCacheContext = createContext<() => Promise<void>>(clearCache);
+const AppCacheContext = createContext(appCache);
 
 /** Better Auth client (served by Convex). */
 export function useAuthClient(): AuthClient {
   return authClient;
 }
 
-/** Drops every cached query, in memory and on disk (sign-in, sign-out). */
-export function useClearCache() {
-  return useContext(ClearCacheContext);
+/**
+ * Wipes the query cache, in memory and on disk: `clearForSignIn` on a new session,
+ * `clearForSignOut` when it ends (also stops writing to disk until the next sign-in).
+ */
+export function useAppCache() {
+  return useContext(AppCacheContext);
 }
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const signOutLocally = useCallback(() => {
-    void clearCache().then(() => authClient.signOut());
-  }, []);
-  useEffect(() => setOnUnauthorized(signOutLocally), [signOutLocally]);
+  // The server rejected the session: forget everything and show the sign-in screen.
+  useEffect(
+    () =>
+      setOnUnauthorized(() => {
+        void appCache.clearForSignOut().then(() => authClient.signOut());
+      }),
+    [],
+  );
 
   return (
-    <ClearCacheContext.Provider value={clearCache}>
+    <AppCacheContext.Provider value={appCache}>
       <DataProvider
         cache={cache}
         authClient={authClient}
         queryClient={queryClient}
-        persistOptions={persistOptions}
+        persistOptions={appCache.persistOptions}
       >
         {children}
       </DataProvider>
-    </ClearCacheContext.Provider>
+    </AppCacheContext.Provider>
   );
 }

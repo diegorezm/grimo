@@ -3,7 +3,7 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
-import { clearCache } from "@/lib/api";
+import { clearCacheForSignIn } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 /** `redirectTo`: the page to open once signed in (defaults to home). */
@@ -34,7 +34,7 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
     setPending(false);
     if (error) return setError(error.message ?? "Algo deu errado");
     // New session: start from an empty cache so nothing from a previous account shows up.
-    await clearCache();
+    await clearCacheForSignIn();
     await navigate({ to: redirectTo });
   }
 

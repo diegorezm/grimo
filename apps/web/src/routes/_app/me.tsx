@@ -14,7 +14,7 @@ import { LogOutIcon, PencilIcon } from "@/components/ui/icons";
 import { BookRow, ProfileHeader } from "@/features/profile";
 import { ShareProfileButton } from "@/features/readers";
 import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
-import { clearCache } from "@/lib/api";
+import { clearCacheForSignOut } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_app/me")({
@@ -35,8 +35,8 @@ function MePage() {
   const navigate = useNavigate();
 
   async function signOut() {
+    await clearCacheForSignOut();
     await authClient.signOut();
-    await clearCache();
     await navigate({ to: "/login" });
   }
 

@@ -29,7 +29,7 @@ cd apps/mobile && npx expo-doctor
 - Native modules need a development build (`expo run:android|ios` or EAS); Expo Go only has bundled modules.
 - Data and auth come from Convex. `src/lib/server.ts` reads `EXPO_PUBLIC_CONVEX_URL` (fixed per
   build); `src/lib/clients.ts` builds the auth client (Better Auth + `expoClient`, cookie in
-  SecureStore), the Convex client and the query client. Use `useAuthClient()` / `useClearCache()`
+  SecureStore), the Convex client and the query client. Use `useAuthClient()` / `useAppCache()`
   — never create clients in screens.
 - The query cache is persisted in MMKV (`src/lib/cache-storage.ts`) and restored before anything
   renders: the app must open offline on cached data. See "Cache" in the root AGENTS.md.

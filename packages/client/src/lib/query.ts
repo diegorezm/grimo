@@ -71,6 +71,8 @@ export type CacheStorage = AsyncStorage<string>;
 export function createPersistOptions(
   storage: CacheStorage,
   scope = "default",
+  /** Checked on every save: false writes an empty cache (signed out). */
+  enabled: () => boolean = () => true,
 ): Omit<PersistQueryClientOptions, "queryClient"> {
   return {
     persister: createAsyncStoragePersister({
@@ -83,8 +85,41 @@ export function createPersistOptions(
     dehydrateOptions: {
       // Only successful data; never the session (it belongs to the auth client).
       shouldDehydrateQuery: (query) =>
-        defaultShouldDehydrateQuery(query) && query.queryKey[0] !== "session",
+        enabled() && defaultShouldDehydrateQuery(query) && query.queryKey[0] !== "session",
     },
+  };
+}
+
+/**
+ * The app's cache on disk and in memory, and the two ways to wipe it. Both apps use this.
+ * Signing out stops persisting until the next sign-in: screens still mounted (and Convex tokens
+ * that outlive the session) could otherwise refill the cache and write it back to disk.
+ */
+export function createAppCache({
+  storage,
+  scope,
+  queryClient,
+  convex,
+}: {
+  storage: CacheStorage;
+  scope?: string;
+  queryClient: QueryClient;
+  convex: ConvexCache;
+}) {
+  let persisting = true;
+  const persistOptions = createPersistOptions(storage, scope, () => persisting);
+  async function wipe(persistAfter: boolean) {
+    persisting = persistAfter;
+    convex.reset();
+    queryClient.clear();
+    await persistOptions.persister.removeClient();
+  }
+  return {
+    persistOptions,
+    /** Signed in: start from an empty cache so nothing from a previous account shows up. */
+    clearForSignIn: () => wipe(true),
+    /** Signed out (or session rejected): forget everything, in memory and on disk. */
+    clearForSignOut: () => wipe(false),
   };
 }
 

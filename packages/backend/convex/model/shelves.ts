@@ -44,18 +44,21 @@ export async function withBooks(ctx: QueryCtx | MutationCtx, entries: Doc<"shelf
   return rows.filter((row) => row !== null);
 }
 
-/** Saves the book locally (or refreshes title/authors/cover) and returns its id. */
+/**
+ * Saves the book locally and returns its id. An existing book is shared by every reader, so
+ * client input only fills what is missing (never overwrites).
+ */
 export async function upsertBook(ctx: MutationCtx, input: BookInput) {
   const existing = await ctx.db
     .query("books")
     .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", input.openLibraryId))
     .unique();
   if (existing) {
-    await ctx.db.patch(existing._id, {
-      title: input.title,
-      authors: input.authors,
-      coverUrl: input.coverUrl,
-    });
+    const missing: Partial<Doc<"books">> = {};
+    if (!existing.coverUrl && input.coverUrl) missing.coverUrl = input.coverUrl;
+    if (!existing.pageCount && input.pageCount) missing.pageCount = input.pageCount;
+    if (existing.authors.length === 0 && input.authors.length) missing.authors = input.authors;
+    if (Object.keys(missing).length > 0) await ctx.db.patch(existing._id, missing);
     return existing._id;
   }
   return ctx.db.insert("books", input);

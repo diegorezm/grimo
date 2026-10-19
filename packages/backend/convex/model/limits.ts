@@ -5,4 +5,4 @@
 export const MAX_LIST_LIMIT = 200;
 
 export const listLimit = (limit: number) =>
-  Math.min(MAX_LIST_LIMIT, Math.max(1, Math.floor(limit)));
+  Number.isFinite(limit) ? Math.min(MAX_LIST_LIMIT, Math.max(1, Math.floor(limit))) : 20;

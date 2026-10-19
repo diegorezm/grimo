@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeStore } from "@/lib/theme";
-import { AppProviders, useAuthClient, useClearCache } from "@/providers/app-providers";
+import { AppProviders, useAppCache, useAuthClient } from "@/providers/app-providers";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -69,10 +69,10 @@ function RootNavigator() {
 
 /** The session ended (sign-out, expired, revoked): nothing from that account stays cached. */
 function useClearCacheOnSignOut(sessionId: string | null) {
-  const clearCache = useClearCache();
+  const appCache = useAppCache();
   const previous = useRef(sessionId);
   useEffect(() => {
-    if (previous.current && !sessionId) void clearCache();
+    if (previous.current && !sessionId) void appCache.clearForSignOut();
     previous.current = sessionId;
-  }, [sessionId, clearCache]);
+  }, [sessionId, appCache]);
 }

@@ -1,7 +1,7 @@
 import {
   type CacheStorage,
   ConvexCache,
-  createPersistOptions,
+  createAppCache,
   createQueryClient,
   queryKeys,
   staleTimes,
@@ -16,7 +16,7 @@ if (!import.meta.env.VITE_CONVEX_URL) {
 
 /** Session expired or revoked: forget everything and go back to the login screen. */
 export function signOutLocally() {
-  void clearCache().then(() => window.location.assign("/login"));
+  void clearCacheForSignOut().then(() => window.location.assign("/login"));
 }
 
 export const cache = new ConvexCache(new ConvexReactClient(import.meta.env.VITE_CONVEX_URL), {
@@ -46,7 +46,13 @@ const storage: CacheStorage = {
 };
 
 /** The query cache survives reloads: screens paint from it instantly and revalidate. */
-export const persistOptions = createPersistOptions(storage);
+const appCache = createAppCache({ storage, queryClient, convex: cache });
+export const { persistOptions } = appCache;
+
+/** Signed in: drop every cached query (memory and disk) so nothing from another account shows. */
+export const clearCacheForSignIn = () => appCache.clearForSignIn();
+/** Signed out: drop everything and stop writing the cache to disk until the next sign-in. */
+export const clearCacheForSignOut = () => appCache.clearForSignOut();
 
 /**
  * Better Auth session, cached (in memory only) so route guards don't hit the server on every
@@ -69,9 +75,3 @@ export const sessionQuery = queryOptions({
   staleTime: staleTimes.session,
   networkMode: "always",
 });
-
-/** Drops every cached query, in memory and on disk (sign-in, sign-out). */
-export async function clearCache() {
-  queryClient.clear();
-  await persistOptions.persister.removeClient();
-}

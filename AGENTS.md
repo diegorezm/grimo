@@ -68,7 +68,9 @@ O cache forte e persistido é parte central da experiência. **Nenhuma mudança 
   "piscar" o valor antigo). Veja `useUpdateShelfEntry`, `useToggleLike`, `useToggleFollow`.
 - Listas crescem por `limit` (`useGrowingList`: 20, 40, 60…), não por cursor: uma query reativa
   por lista, e a primeira página fica no cache persistido.
-- Login e logout limpam o cache (web: `clearCache()` de `@/lib/api`; mobile: `useClearCache()`).
+- Login e logout limpam o cache (`createAppCache`: web `clearCacheForSignIn/ForSignOut` de
+  `@/lib/api`; mobile `useAppCache()`). No logout a persistência fica desligada até o próximo
+  login: telas ainda montadas (e o JWT do Convex, que vive mais que a sessão) não regravam nada.
   Sessão rejeitada pelo servidor (401 do Better Auth ou `UNAUTHENTICATED` de uma query) limpa o
   cache e volta ao login. **Erro de rede não é logout**: offline o app segue no cache (web: o
   guard usa a última sessão salva pelo plugin cross-domain; mobile: o `expoClient` restaura a
@@ -162,6 +164,9 @@ pnpm check        # biome + typecheck (todos os workspaces) + vitest (core e con
 - `pnpm` usa `nodeLinker: hoisted` por causa do Metro/React Native. Não mude sem testar o mobile.
 - React é fixado em uma versão (`catalog`) igual à exigida pelo Expo; web e mobile precisam da mesma.
 - `routeTree.gen.ts` (web) e `convex/_generated` são gerados — não edite.
+- Escala conhecida: o feed lê `limit` atividades de cada pessoa seguida (fan-out na leitura) e
+  `books.detail` lê todas as entradas do livro. Ok para a rede de hoje; com muitos seguidores,
+  troque por fan-out na escrita (tabela `feedItems`) e contadores no livro.
 - `@convex-dev/react-query` **não** é usado de propósito: o `ConvexQueryClient` dele assina todo o
   cache restaurado e roda queries antes da auth (veja o topo de `convex-cache.ts`).
 - O SITE_URL do deployment precisa ser a origem da web (auth cross-domain + CORS). Dev:

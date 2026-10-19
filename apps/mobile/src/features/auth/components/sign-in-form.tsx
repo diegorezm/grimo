@@ -3,12 +3,12 @@ import { Image, StyleSheet, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuthClient, useClearCache } from "@/providers/app-providers";
+import { useAppCache, useAuthClient } from "@/providers/app-providers";
 
 /** On success the session changes and the root layout swaps to the tabs. */
 export function SignInForm() {
   const authClient = useAuthClient();
-  const clearCache = useClearCache();
+  const appCache = useAppCache();
   const dark = useColorScheme() === "dark";
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [form, setForm] = useState({ name: "", username: "", email: "", password: "" });
@@ -29,7 +29,7 @@ export function SignInForm() {
     setPending(false);
     if (error) return setError(error.message ?? "Algo deu errado");
     // New session: start from an empty cache so nothing from a previous account shows up.
-    await clearCache();
+    await appCache.clearForSignIn();
   }
 
   return (

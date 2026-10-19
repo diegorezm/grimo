@@ -142,6 +142,11 @@ export class ConvexCache {
     };
   }
 
+  /** Drops every subscription (sign-in/sign-out): nothing from the old session writes back. */
+  reset() {
+    for (const hash of [...this.subscriptions.keys()]) this.drop(hash);
+  }
+
   setAuth(auth: AuthState) {
     if (auth === this.auth) return;
     this.auth = auth;

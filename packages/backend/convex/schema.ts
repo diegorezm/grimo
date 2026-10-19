@@ -105,6 +105,7 @@ export default defineSchema({
     followerId: v.id("users"),
     followingId: v.id("users"),
   })
+    .index("by_follower", ["followerId"])
     .index("by_follower_following", ["followerId", "followingId"])
     .index("by_following", ["followingId"]),
 
