@@ -1,9 +1,8 @@
 import { CardCover, CardFooter, CardSparkle, Delta } from "../parts";
 import type { CardProps } from "../types";
 
-/** Bold "year in sport" style: a thick ribbon swooping behind the cover, taped band, big stats. */
+/** Bold "year in sport" style: a thick ribbon swooping behind the cover, big stats. */
 export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
-  const tape = `${data.favorite ? "LIVRO DO MÊS" : "MEU MÊS DE LEITURA"} ✦ `.repeat(6);
   const stats = [
     { label: "Livros lidos", value: data.booksRead, delta: data.deltas.books },
     { label: "Páginas", value: data.pagesRead.toLocaleString("pt-BR"), delta: data.deltas.pages },
@@ -107,26 +106,6 @@ export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
           color={palette.accent2}
           style={{ position: "absolute", top: 40, right: 60 }}
         />
-      </div>
-
-      {/* Taped band across the card. */}
-      <div
-        className="font-mono absolute whitespace-nowrap"
-        style={{
-          left: -60,
-          right: -60,
-          top: 1070,
-          transform: "rotate(-6deg)",
-          background: palette.accent2,
-          color: palette.bg,
-          fontSize: 36,
-          fontWeight: 600,
-          letterSpacing: "0.12em",
-          padding: "18px 0",
-          overflow: "hidden",
-        }}
-      >
-        {tape}
       </div>
 
       <div
