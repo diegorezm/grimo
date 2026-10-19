@@ -92,6 +92,8 @@ export const queryKeys = {
   me: ["me"] as const,
   reader: (username: string) => ["readers", username] as const,
   bookSearch: (q: string) => ["books", "search", q] as const,
+  allBooks: ["books", "detail"] as const,
+  book: (openLibraryId: string) => ["books", "detail", openLibraryId] as const,
   allShelves: ["shelves"] as const,
   shelves: (status?: string) => ["shelves", status ?? "all"] as const,
   feed: ["feed"] as const,

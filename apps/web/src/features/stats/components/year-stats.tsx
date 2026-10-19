@@ -33,9 +33,12 @@ export function YearStats({ stats }: { stats?: YearOverview }) {
       >
         {data.year} em números
       </h2>
-      <dl className="grid grid-cols-2 gap-y-6 md:grid-cols-4 md:divide-x md:divide-border">
+      <dl className="grid grid-cols-2 gap-y-6 @2xl/main:grid-cols-4 @2xl/main:divide-x @2xl/main:divide-border">
         {numbers.map(({ value, label }) => (
-          <div key={label} className="flex flex-col-reverse gap-1 md:px-6 md:first:pl-0">
+          <div
+            key={label}
+            className="flex flex-col-reverse gap-1 @2xl/main:px-6 @2xl/main:first:pl-0"
+          >
             <dt className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
               {label}
             </dt>

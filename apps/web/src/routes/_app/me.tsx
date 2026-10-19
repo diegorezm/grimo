@@ -71,7 +71,7 @@ function MePage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
+      <div className="grid grid-cols-1 gap-10 @5xl/main:grid-cols-[minmax(0,1fr)_22rem] @5xl/main:gap-8">
         <div className="flex min-w-0 flex-col gap-10">
           <YearStats />
           <BookRow
@@ -84,7 +84,7 @@ function MePage() {
             items={favorites}
             empty="Avalie os livros que terminar e os melhores aparecem aqui."
           />
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-2">
             <ReadingRhythm
               counts={finishedPerMonth(
                 items.map(({ entry }) => entry),
@@ -98,7 +98,7 @@ function MePage() {
 
         <aside
           aria-labelledby="monthly-title"
-          className="flex flex-col items-center gap-4 rounded-xl bg-surface-muted/70 p-5 lg:sticky lg:top-6 lg:self-start"
+          className="flex flex-col items-center gap-4 rounded-xl bg-surface-muted/70 p-5 @5xl/main:sticky @5xl/main:top-6 @5xl/main:self-start"
         >
           <div className="w-full">
             <h2 id="monthly-title" className="text-xl font-medium italic">

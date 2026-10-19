@@ -11,7 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
-import { BookCover } from "@/features/books";
+import { BookCover, BookPeekLink } from "@/features/books";
 import { cn } from "@/utils/cn";
 
 /**
@@ -89,12 +89,26 @@ function ActivityLine({ item }: { item: FeedItem }) {
       <p className="min-w-0 flex-1 leading-snug">
         <ActorName actor={actor} />{" "}
         <span className="text-text-muted">{describeActivity(item.kind, item.data)}</span>
-        {book?.title && <span className="font-serif italic"> {book.title}</span>}
+        {book?.title && book.openLibraryId && (
+          <>
+            {" "}
+            <BookPeekLink
+              openLibraryId={book.openLibraryId}
+              className="font-serif italic hover:underline"
+            >
+              {book.title}
+            </BookPeekLink>
+          </>
+        )}
         <span className="ml-1.5 font-mono text-[10px] text-text-muted">
           {timeAgo(new Date(item.createdAt))}
         </span>
       </p>
-      {book?.title && <BookCover src={book.coverUrl} title={book.title} className="w-6" />}
+      {book?.title && book.openLibraryId && (
+        <BookPeekLink openLibraryId={book.openLibraryId}>
+          <BookCover src={book.coverUrl} title={book.title} className="w-6" />
+        </BookPeekLink>
+      )}
     </li>
   );
 }
@@ -120,11 +134,14 @@ function PostBubble({ item, mine }: { item: FeedItem; mine: boolean }) {
             <ActorName actor={actor} />
           </p>
         )}
-        {book?.title && (
-          <div className="flex items-center gap-2.5">
+        {book?.title && book.openLibraryId && (
+          <BookPeekLink
+            openLibraryId={book.openLibraryId}
+            className="flex items-center gap-2.5 hover:underline"
+          >
             <BookCover src={book.coverUrl} title={book.title} className="w-8" />
             <span className="font-serif text-sm font-medium italic leading-snug">{book.title}</span>
-          </div>
+          </BookPeekLink>
         )}
         <p className="whitespace-pre-line leading-relaxed">{post.body}</p>
         <div

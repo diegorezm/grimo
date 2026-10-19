@@ -13,7 +13,11 @@ export function ShelfTiles({
   onSelect: (status: ShelfStatus) => void;
 }) {
   return (
-    <div role="tablist" aria-label="Estantes" className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div
+      role="tablist"
+      aria-label="Estantes"
+      className="grid grid-cols-2 gap-3 @2xl/main:grid-cols-4"
+    >
       {SHELF_STATUSES.map((status) => {
         const active = status === selected;
         return (

@@ -31,7 +31,11 @@ export function useCreatePost() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (json: CreatePostInput) => parseResponse(api.posts.$post({ json })),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.allBooks }),
+      ]),
   });
 }
 

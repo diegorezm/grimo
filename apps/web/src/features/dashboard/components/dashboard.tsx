@@ -20,19 +20,19 @@ export function Dashboard() {
   const counts = countByShelf(items.map(({ entry }) => entry));
 
   return (
-    <div className="grid grid-cols-1 gap-8 px-4 pt-2 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6 lg:px-8 lg:pt-6 lg:pb-8">
+    <div className="grid grid-cols-1 gap-8 px-4 pt-2 @5xl/main:grid-cols-[minmax(0,1fr)_22rem] @5xl/main:gap-6 lg:px-8 lg:pt-6 lg:pb-8">
       <div className="flex min-w-0 flex-col gap-9">
         <ShelfTiles counts={counts} selected={status} onSelect={setStatus} />
         <ShelfCarousel
           status={status}
           items={items.filter(({ entry }) => entry.status === status)}
         />
-        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] xl:items-start">
+        <div className="grid grid-cols-1 gap-8 @6xl/main:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] @6xl/main:items-start">
           <GoalHero />
           <MonthList />
         </div>
       </div>
-      <FeedPanel className="h-[36rem] lg:sticky lg:top-6 lg:h-[calc(100dvh-8.5rem)]" />
+      <FeedPanel className="h-[36rem] @5xl/main:sticky @5xl/main:top-6 @5xl/main:h-[calc(100dvh-8.5rem)]" />
     </div>
   );
 }

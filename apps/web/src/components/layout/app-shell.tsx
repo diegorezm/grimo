@@ -19,7 +19,8 @@ type NavItem = (typeof nav)[number];
  * Desktop: full-screen app — icon sidebar on the left, search bar on top.
  * Mobile: compact header and a floating glass tab bar.
  */
-export function AppShell({ children }: { children: ReactNode }) {
+/** `aside` is a side peek shown beside the page (see `SidePeek`). */
+export function AppShell({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   const { data: instance } = useInstance();
   const { data: me } = useMe();
   const personal = instance?.mode === "personal";
@@ -65,10 +66,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        {/* `@container/main`: screens adapt to the space left when a side peek is open. */}
+        <div className="@container/main flex min-w-0 flex-1 flex-col">
           <TopBar />
           <main className="flex-1 pb-32 lg:pb-0">{children}</main>
         </div>
+        {aside}
       </div>
 
       <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-md justify-around gap-1 rounded-full p-1.5 font-mono text-[11px] uppercase tracking-wider lg:hidden">

@@ -21,12 +21,12 @@ export function useShelf(status?: ShelfStatus) {
   return useQuery(shelfQuery(useApi(), status));
 }
 
-/** Shelf changes affect shelves, feed and stats — refresh all of them. */
+/** Shelf changes affect shelves, book pages, feed and stats — refresh all of them. */
 function useInvalidateReading() {
   const queryClient = useQueryClient();
   return () =>
     Promise.all(
-      [queryKeys.allShelves, queryKeys.feed, queryKeys.stats].map((queryKey) =>
+      [queryKeys.allShelves, queryKeys.allBooks, queryKeys.feed, queryKeys.stats].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     );

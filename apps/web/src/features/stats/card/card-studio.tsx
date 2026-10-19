@@ -43,8 +43,8 @@ export function CardStudio() {
   const cardProps = { data, palette, showCover: studio.showCover, showDeltas: studio.showDeltas };
 
   return (
-    <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[auto_minmax(0,1fr)]">
-      <div className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
+    <div className="grid grid-cols-1 items-start gap-10 @4xl/main:grid-cols-[auto_minmax(0,1fr)]">
+      <div className="flex flex-col items-center gap-4 @4xl/main:sticky @4xl/main:top-6">
         <StoryCanvas ref={preview} scale={0.36} className="rounded-xl shadow-xl shadow-shadow">
           <Card {...cardProps} />
         </StoryCanvas>

@@ -21,11 +21,11 @@ export function Screen({
 }) {
   return (
     <div className="flex flex-col gap-8 px-4 pt-2 pb-8 lg:px-8 lg:pt-6">
-      {title && (
+      {(title || back) && (
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             {back && <BackButton label={back} />}
-            <h1 className="text-3xl font-medium italic lg:text-4xl">{title}</h1>
+            {title && <h1 className="text-3xl font-medium italic lg:text-4xl">{title}</h1>}
             {subtitle && <p className="mt-1 text-text-muted">{subtitle}</p>}
           </div>
           {actions}

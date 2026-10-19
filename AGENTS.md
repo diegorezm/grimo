@@ -74,6 +74,11 @@ apps/server (Node: libSQL + disco)  ┘        → @grimo/db (Drizzle, SQLite)  
 - Rotas/telas são finas: só compõem features.
 - `lib/` = configuração de libs de terceiros (auth client, api client). `utils/` = funções puras.
 - Estado de servidor = TanStack Query. Estado de cliente global = zustand, mínimo e dentro da feature.
+- Detalhe de um item (livro, e futuramente resenha, leitor…) abre em **side peek**, estilo Notion:
+  um parâmetro de busca na rota `/_app` (ex.: `?book=<openLibraryId>`) renderiza o painel ao lado
+  da tela atual (`SidePeek` em `components/layout`), com botão para abrir como página cheia
+  (`/books/$openLibraryId`). Links para abrir: `BookPeekLink`. As telas se adaptam ao espaço com
+  container queries (`@container/main`, ex.: `@5xl/main:grid-cols-…`), não breakpoints de viewport.
 
 ### Dados e cache (TanStack Query)
 

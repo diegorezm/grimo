@@ -23,3 +23,18 @@ export function bookSearchQuery(api: ApiClient, q: string) {
 export function useBookSearch(q: string) {
   return useQuery({ ...bookSearchQuery(useApi(), q), placeholderData: keepPreviousData });
 }
+
+export type BookDetail = InferResponseType<ApiClient["books"][":openLibraryId"]["$get"], 200>;
+
+/** Book page: the book, your shelf entry, community numbers and reviews. */
+export function bookQuery(api: ApiClient, openLibraryId: string) {
+  return queryOptions({
+    queryKey: queryKeys.book(openLibraryId),
+    queryFn: () => parseResponse(api.books[":openLibraryId"].$get({ param: { openLibraryId } })),
+    staleTime: staleTimes.own,
+  });
+}
+
+export function useBook(openLibraryId: string) {
+  return useQuery(bookQuery(useApi(), openLibraryId));
+}
