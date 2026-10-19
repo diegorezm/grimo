@@ -4,46 +4,100 @@ import type { ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Sparkle } from "@/components/ui/sparkle";
 
-/** Profile hero card: avatar, name, bio, favorite genres and follow counts. */
-export function ProfileHeader({ profile, actions }: { profile: Profile; actions?: ReactNode }) {
+/**
+ * Profile header: a banner (a tilted mosaic of the reader's covers, or the accent gradient),
+ * the avatar overlapping it, then name, bio, counts and favorite genres.
+ */
+export function ProfileHeader({
+  profile,
+  covers = [],
+  bookCount,
+  actions,
+}: {
+  profile: Profile;
+  covers?: string[];
+  bookCount?: number;
+  actions?: ReactNode;
+}) {
+  // Repeat covers so the mosaic always fills the banner.
+  const tiles =
+    covers.length > 0 ? Array.from({ length: 24 }, (_, i) => covers[i % covers.length]!) : [];
+
   return (
-    <section className="relative flex flex-col gap-6 overflow-hidden rounded-xl bg-surface-muted p-6 sm:flex-row sm:items-center sm:p-8">
-      <Sparkle className="absolute top-5 right-1/3 size-4 opacity-80" />
-      <Sparkle className="absolute right-8 bottom-6 size-3 opacity-60" />
-      <Avatar
-        src={profile.image}
-        name={profile.name}
-        size="size-24"
-        className="bg-accent-gradient text-accent-foreground shadow-lg shadow-accent/30"
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-medium italic lg:text-4xl">{profile.name}</h1>
-            {profile.username && (
-              <p className="font-mono text-xs uppercase tracking-wider text-text-muted">
-                @{profile.username}
-              </p>
-            )}
+    <section className="flex flex-col">
+      <div className="bg-accent-gradient relative h-44 overflow-hidden rounded-xl sm:h-56">
+        {tiles.length > 0 && (
+          <div
+            aria-hidden="true"
+            className="absolute -inset-x-10 -top-24 grid -rotate-6 grid-cols-6 gap-3 opacity-90 sm:grid-cols-12"
+          >
+            {tiles.map((src, i) => (
+              <img
+                // biome-ignore lint/suspicious/noArrayIndexKey: covers repeat on purpose
+                key={i}
+                src={src}
+                alt=""
+                className="aspect-[2/3] w-full rounded-sm object-cover shadow-md"
+              />
+            ))}
           </div>
-          {actions}
+        )}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-linear-to-t from-black/45 via-black/10 to-transparent"
+        />
+        <Sparkle className="absolute top-6 right-10 size-6" />
+        <Sparkle className="absolute top-20 right-28 size-3 fill-surface" />
+      </div>
+
+      <div className="relative z-10 px-2 sm:px-8">
+        <div className="-mt-14 flex flex-wrap items-end justify-between gap-4">
+          <Avatar
+            src={profile.image}
+            name={profile.name}
+            size="size-28"
+            className="bg-accent-gradient text-accent-foreground shadow-lg ring-4 ring-surface"
+          />
+          {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
-        {profile.bio && <p className="max-w-2xl">{profile.bio}</p>}
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-          <span className="mr-2 text-text-muted">
-            <strong className="text-text">{profile.followers}</strong> seguidores ·{" "}
-            <strong className="text-text">{profile.following}</strong> seguindo
-          </span>
-          {profile.favoriteGenres.map((genre) => (
-            <span
-              key={genre}
-              className="rounded-full bg-surface px-3 py-0.5 font-mono text-[11px] uppercase tracking-wider text-text-muted"
-            >
-              {GENRE_LABELS[genre as Genre] ?? genre}
-            </span>
-          ))}
+
+        <h1 className="mt-4 text-4xl font-medium italic lg:text-5xl">{profile.name}</h1>
+        {profile.username && (
+          <p className="mt-1 font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
+            @{profile.username}
+          </p>
+        )}
+        {profile.bio && <p className="mt-4 max-w-2xl text-lg leading-relaxed">{profile.bio}</p>}
+
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <dl className="flex gap-6">
+            {bookCount !== undefined && <Count value={bookCount} label="livros" />}
+            <Count value={profile.followers} label="seguidores" />
+            <Count value={profile.following} label="seguindo" />
+          </dl>
+          {profile.favoriteGenres.length > 0 && (
+            <ul className="flex flex-wrap gap-2" aria-label="Gêneros favoritos">
+              {profile.favoriteGenres.map((genre) => (
+                <li
+                  key={genre}
+                  className="rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted"
+                >
+                  {GENRE_LABELS[genre as Genre] ?? genre}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </section>
+  );
+}
+
+function Count({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <dd className="font-serif text-xl font-medium">{value}</dd>
+      <dt className="text-sm text-text-muted">{label}</dt>
+    </div>
   );
 }

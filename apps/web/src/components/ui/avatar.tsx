@@ -6,6 +6,7 @@ const INITIAL_SIZE: Record<string, string> = {
   "size-8": "text-xs",
   "size-16": "text-2xl",
   "size-24": "text-4xl",
+  "size-28": "text-5xl",
 };
 
 /**
