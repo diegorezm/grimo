@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 import { authClient } from "@/lib/auth-client";
 
 export function AuthForm() {
@@ -45,6 +46,7 @@ export function AuthForm() {
 
   return (
     <Card className="mx-auto w-full max-w-sm p-6">
+      <Logo className="mb-4 h-16" />
       <h1 className="mb-1 text-3xl font-bold">{instance?.name ?? "Grimo"}</h1>
       <p className="mb-6 text-sm text-text-muted">
         {isSetup

@@ -1,6 +1,7 @@
 import { useInstance } from "@grimo/client";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const nav = [
@@ -17,19 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4">
       <header className="flex flex-wrap items-center justify-between gap-3 py-5">
         <Link to="/" className="flex items-center gap-2.5">
-          {/* Journal emblem: a four-point sparkle in a lilac ring. */}
-          <span className="flex size-10 items-center justify-center rounded-full border border-ornament bg-surface">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="size-5 fill-none stroke-ornament"
-            >
-              <path
-                strokeWidth="1.5"
-                d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"
-              />
-            </svg>
-          </span>
+          <Logo className="h-9" />
           <span className="font-serif text-2xl font-bold">{instance?.name ?? "Grimo"}</span>
         </Link>
         <ThemeToggle />

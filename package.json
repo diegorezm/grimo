@@ -22,6 +22,7 @@
     "db:migrate:remote": "pnpm --filter @grimo/api-worker db:migrate:remote",
     "db:studio": "pnpm --filter @grimo/db studio",
     "tokens:generate": "pnpm --filter @grimo/tokens generate",
+    "tokens:icons": "pnpm --filter @grimo/tokens icons",
     "cf-typegen": "turbo run cf-typegen",
     "deploy": "turbo run deploy --filter=@grimo/api-worker --filter=@grimo/web"
   },
