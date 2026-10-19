@@ -1,18 +1,17 @@
 import { useMe } from "@grimo/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button, Screen, Text } from "@/components/ui";
 import { AppearancePicker, ProfileHeader } from "@/features/profile";
 import { MonthlyCard, YearStats } from "@/features/stats";
-import { useAuthClient } from "@/providers/app-providers";
+import { useAuthClient, useClearCache } from "@/providers/app-providers";
 
 export default function ProfileScreen() {
   const me = useMe();
   const authClient = useAuthClient();
-  const queryClient = useQueryClient();
+  const clearCache = useClearCache();
 
   async function signOut() {
     await authClient.signOut();
-    queryClient.clear();
+    await clearCache();
   }
 
   return (

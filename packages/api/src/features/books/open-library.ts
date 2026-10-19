@@ -1,4 +1,4 @@
-import type { BookInput } from "@grimo/core";
+import { type BookInput, cleanDescription } from "@grimo/core";
 
 /**
  * Book search is proxied to Open Library (free, no key) — we only persist books
@@ -36,4 +36,66 @@ export async function searchOpenLibrary(query: string, limit = 20): Promise<Book
     publishedYear: doc.first_publish_year ?? null,
     genres: (doc.subject ?? []).slice(0, 5),
   }));
+}
+
+interface OpenLibraryWork {
+  title?: string;
+  description?: string | { value?: string };
+  covers?: number[];
+  subjects?: string[];
+  first_publish_date?: string;
+  authors?: { author?: { key?: string } }[];
+}
+
+export interface WorkDetails {
+  title: string | null;
+  description: string | null;
+  coverUrl: string | null;
+  genres: string[];
+  publishedYear: number | null;
+  authors: string[];
+}
+
+const HEADERS = { "User-Agent": "Grimo/0.1 (reading social app)" };
+
+/** Work page from Open Library (synopsis, cover, authors). `null` when unreachable. */
+export async function fetchWork(openLibraryId: string): Promise<WorkDetails | null> {
+  if (!/^OL\d+W$/.test(openLibraryId)) return null;
+  try {
+    const res = await fetch(`https://openlibrary.org/works/${openLibraryId}.json`, {
+      headers: HEADERS,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const work = (await res.json()) as OpenLibraryWork;
+    const authorKeys = (work.authors ?? [])
+      .map((a) => a.author?.key)
+      .filter((key): key is string => Boolean(key))
+      .slice(0, 3);
+    const authors = await Promise.all(
+      authorKeys.map(async (key) => {
+        const r = await fetch(`https://openlibrary.org${key}.json`, {
+          headers: HEADERS,
+          signal: AbortSignal.timeout(5000),
+        }).catch(() => null);
+        if (!r?.ok) return null;
+        return ((await r.json()) as { name?: string }).name ?? null;
+      }),
+    );
+    const raw =
+      typeof work.description === "string" ? work.description : (work.description?.value ?? null);
+    const description = raw ? cleanDescription(raw) : null;
+    const year = work.first_publish_date?.match(/\d{4}/)?.[0];
+    const cover = work.covers?.find((id) => id > 0);
+    return {
+      title: work.title ?? null,
+      description: description || null,
+      coverUrl: cover ? `https://covers.openlibrary.org/b/id/${cover}-L.jpg` : null,
+      genres: (work.subjects ?? []).slice(0, 5),
+      publishedYear: year ? Number(year) : null,
+      authors: authors.filter((name): name is string => Boolean(name)),
+    };
+  } catch {
+    return null;
+  }
 }

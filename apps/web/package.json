@@ -19,6 +19,7 @@
     "@grimo/core": "workspace:*",
     "@grimo/tokens": "workspace:*",
     "@tanstack/react-query": "catalog:",
+    "@tanstack/react-query-persist-client": "catalog:",
     "@tanstack/react-router": "^1.170.45",
     "better-auth": "catalog:",
     "html-to-image": "^1.11.13",

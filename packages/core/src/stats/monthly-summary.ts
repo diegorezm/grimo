@@ -34,6 +34,8 @@ export interface MonthlySummary {
   pagesRead: number;
   topGenre: string | null;
   favoriteBook: FinishedBook | null;
+  /** Books finished this month, best rated first (for the shareable card's shelf). */
+  books: FinishedBook[];
   goal: GoalProgress | null;
 }
 
@@ -67,6 +69,7 @@ export function computeMonthlySummary(input: MonthlySummaryInput): MonthlySummar
     pagesRead: input.pagesRead,
     topGenre: mostFrequent(input.finished.flatMap((book) => book.genres)),
     favoriteBook,
+    books: [...input.finished].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)),
     goal: input.goal ? goalProgress(input.goal.target, input.goal.finishedThisYear) : null,
   };
 }

@@ -1,39 +1,69 @@
 import { useYearOverview } from "@grimo/client";
 import { GENRE_LABELS, type Genre, goalProgress } from "@grimo/core";
-import { Card } from "@/components/ui/card";
+import { Sparkle } from "@/components/ui/sparkle";
 
-export function YearStats() {
-  const { data } = useYearOverview();
+export type YearOverview = NonNullable<ReturnType<typeof useYearOverview>["data"]>;
+
+/**
+ * The year in numbers, with the reading goal underneath. Pass `stats` to show someone else's;
+ * defaults to the signed-in reader.
+ */
+export function YearStats({ stats }: { stats?: YearOverview }) {
+  const own = useYearOverview();
+  const data = stats ?? own.data;
   if (!data) return null;
   const goal = data.goal ? goalProgress(data.goal.target, data.goal.done) : null;
+  const genre = data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—";
+
+  const numbers = [
+    { value: data.booksRead, label: "livros lidos" },
+    { value: data.pagesRead.toLocaleString("pt-BR"), label: "páginas" },
+    { value: genre, label: "gênero do ano" },
+    { value: goal ? `${goal.percent}%` : "—", label: goal ? "da meta" : "sem meta" },
+  ];
 
   return (
-    <Card className="grid grid-cols-3 gap-4 text-center">
-      <Stat label="livros lidos" value={data.booksRead} />
-      <Stat label="páginas" value={data.pagesRead} />
-      <Stat
-        label="gênero favorito"
-        value={data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—"}
-      />
-      {goal && (
-        <div className="col-span-3 flex flex-col gap-1 text-left">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-            Meta {data.year}: {goal.done}/{goal.target} livros
-          </p>
-          <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div className="h-full bg-accent" style={{ width: `${goal.percent}%` }} />
+    <section
+      aria-labelledby="year-title"
+      className="flex flex-col gap-6 rounded-xl border border-border p-6 sm:p-7"
+    >
+      <h2
+        id="year-title"
+        className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted"
+      >
+        {data.year} em números
+      </h2>
+      <dl className="grid grid-cols-2 gap-y-6 @2xl/main:grid-cols-4 @2xl/main:divide-x @2xl/main:divide-border">
+        {numbers.map(({ value, label }) => (
+          <div
+            key={label}
+            className="flex flex-col-reverse gap-1 @2xl/main:px-6 @2xl/main:first:pl-0"
+          >
+            <dt className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+              {label}
+            </dt>
+            <dd className="truncate font-serif text-4xl font-medium">{value}</dd>
           </div>
+        ))}
+      </dl>
+      {goal && (
+        <div className="flex flex-col gap-2">
+          <div className="relative h-2.5 rounded-full bg-surface-muted">
+            <div
+              className="bg-accent-gradient h-full rounded-full"
+              style={{ width: `${goal.percent}%` }}
+            />
+            <Sparkle
+              className="absolute -top-1.5 size-5.5"
+              style={{ left: `calc(${goal.percent}% - 11px)` }}
+            />
+          </div>
+          <p className="text-sm text-text-muted">
+            <strong className="text-text">{goal.done}</strong> de {goal.target} livros
+            {goal.done < goal.target ? ` · faltam ${goal.target - goal.done}` : " · meta batida ✦"}
+          </p>
         </div>
       )}
-    </Card>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <p className="truncate font-mono text-2xl font-semibold">{value}</p>
-      <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">{label}</p>
-    </div>
+    </section>
   );
 }

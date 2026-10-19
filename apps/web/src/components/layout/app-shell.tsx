@@ -1,31 +1,81 @@
-import { useInstance } from "@grimo/client";
-import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useInstance, useMe } from "@grimo/client";
+import { greetingFor } from "@grimo/core";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { HomeIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
 const nav = [
-  { to: "/", label: "Feed", personalLabel: "Diário" },
-  { to: "/search", label: "Buscar" },
-  { to: "/shelves", label: "Estantes" },
-  { to: "/me", label: "Perfil" },
+  { to: "/", label: "Início", personalLabel: "Diário", icon: HomeIcon },
+  { to: "/shelves", label: "Estantes", icon: ShelvesIcon },
+  { to: "/search", label: "Buscar", icon: SearchIcon },
+  { to: "/me", label: "Perfil", icon: UserIcon },
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+type NavItem = (typeof nav)[number];
+
+/**
+ * Desktop: full-screen app — icon sidebar on the left, search bar on top.
+ * Mobile: compact header and a floating glass tab bar.
+ */
+/** `aside` is a side peek shown beside the page (see `SidePeek`). */
+export function AppShell({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   const { data: instance } = useInstance();
+  const { data: me } = useMe();
   const personal = instance?.mode === "personal";
+  const label = (item: NavItem) =>
+    personal && "personalLabel" in item ? item.personalLabel : item.label;
+
   return (
-    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4">
-      <header className="flex flex-wrap items-center justify-between gap-3 py-5">
-        <Link to="/" className="flex items-center gap-2.5">
-          <Logo className="h-9" />
-          <span className="font-serif text-2xl font-bold">{instance?.name ?? "Grimo"}</span>
-        </Link>
-        <ThemeToggle />
-      </header>
-      {/* Bottom padding leaves room for the floating glass nav. */}
-      <main className="flex-1 pt-2 pb-32">{children}</main>
-      <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-md justify-around gap-1 rounded-full p-1.5 font-mono text-[11px] uppercase tracking-wider">
+    <div className="min-h-dvh">
+      <div className="flex min-h-dvh lg:bg-surface">
+        <aside className="sticky top-0 hidden h-dvh w-24 shrink-0 flex-col items-stretch border-r border-border py-6 lg:flex">
+          <Link to="/" aria-label={instance?.name ?? "Grimo"} className="mb-8 self-center">
+            <Logo className="h-10" />
+          </Link>
+          <nav aria-label="Seções" className="flex flex-col gap-1">
+            {nav.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex flex-col items-center gap-1.5 py-3.5 text-xs transition"
+                activeProps={{ className: "bg-surface-muted font-semibold text-accent" }}
+                inactiveProps={{
+                  className: "text-text-muted hover:bg-surface-muted/60 hover:text-text",
+                }}
+                activeOptions={{ exact: item.to === "/" }}
+              >
+                <item.icon className="size-6" />
+                {label(item)}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-auto flex flex-col items-center gap-4">
+            <ThemeCycleButton />
+            {me && (
+              <Link to="/me" aria-label="Seu perfil" title={me.name}>
+                <Avatar
+                  src={me.image}
+                  name={me.name}
+                  size="size-11"
+                  className="bg-accent-gradient font-semibold text-accent-foreground shadow-md shadow-accent/30"
+                />
+              </Link>
+            )}
+          </div>
+        </aside>
+
+        {/* `@container/main`: screens adapt to the space left when a side peek is open. */}
+        <div className="@container/main flex min-w-0 flex-1 flex-col">
+          <TopBar />
+          <main className="flex-1 pb-32 lg:pb-0">{children}</main>
+        </div>
+        {aside}
+      </div>
+
+      <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-md justify-around gap-1 rounded-full p-1.5 font-mono text-[11px] uppercase tracking-wider lg:hidden">
         {nav.map((item) => (
           <Link
             key={item.to}
@@ -35,10 +85,65 @@ export function AppShell({ children }: { children: ReactNode }) {
             inactiveProps={{ className: "text-text-muted hover:text-text" }}
             activeOptions={{ exact: item.to === "/" }}
           >
-            {personal && "personalLabel" in item ? item.personalLabel : item.label}
+            {label(item)}
           </Link>
         ))}
       </nav>
     </div>
+  );
+}
+
+function TopBar() {
+  const { data: instance } = useInstance();
+  const { data: me } = useMe();
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    void navigate({ to: "/search", search: { q: query.trim() || undefined } });
+  }
+
+  return (
+    <header className="flex items-center justify-between gap-4 px-4 py-5 lg:px-8 lg:pt-7 lg:pb-2">
+      <Link to="/" className="flex items-center gap-2.5 lg:hidden">
+        <Logo className="h-10" />
+        <span className="font-serif text-2xl font-bold">{instance?.name ?? "Grimo"}</span>
+      </Link>
+
+      <search className="hidden max-w-xl flex-1 lg:block">
+        <form
+          onSubmit={submit}
+          className="flex items-center gap-2 rounded-full bg-surface-muted p-1.5 pl-5"
+        >
+          <SearchIcon className="text-text-muted" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar livros, autores…"
+            aria-label="Buscar livros"
+            className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none placeholder:text-text-muted"
+          />
+          <button
+            type="submit"
+            className="bg-accent-gradient rounded-full px-6 py-2 font-mono text-xs font-medium uppercase tracking-wider text-accent-foreground shadow-md shadow-accent/30 hover:opacity-90"
+          >
+            Buscar
+          </button>
+        </form>
+      </search>
+
+      <div className="flex items-center gap-4">
+        <ThemeToggle className="lg:hidden" />
+        {me && (
+          <Link to="/me" className="hidden items-center gap-3 lg:flex">
+            <span className="text-right text-sm leading-tight">
+              <span className="block text-text-muted">{greetingFor(new Date())},</span>
+              <strong className="font-semibold">{me.name}</strong>
+            </span>
+          </Link>
+        )}
+      </div>
+    </header>
   );
 }

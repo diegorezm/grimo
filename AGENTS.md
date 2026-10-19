@@ -74,6 +74,30 @@ apps/server (Node: libSQL + disco)  ┘        → @grimo/db (Drizzle, SQLite)  
 - Rotas/telas são finas: só compõem features.
 - `lib/` = configuração de libs de terceiros (auth client, api client). `utils/` = funções puras.
 - Estado de servidor = TanStack Query. Estado de cliente global = zustand, mínimo e dentro da feature.
+- Detalhe de um item (livro, e futuramente resenha, leitor…) abre em **side peek**, estilo Notion:
+  um parâmetro de busca na rota `/_app` (ex.: `?book=<openLibraryId>`) renderiza o painel ao lado
+  da tela atual (`SidePeek` em `components/layout`), com botão para abrir como página cheia
+  (`/books/$openLibraryId`). Links para abrir: `BookPeekLink`. As telas se adaptam ao espaço com
+  container queries (`@container/main`, ex.: `@5xl/main:grid-cols-…`), não breakpoints de viewport.
+
+### Dados e cache (TanStack Query)
+
+Todo dado do servidor passa pelo TanStack Query, com cache forte:
+
+- Cada leitura tem uma fábrica `xxxQuery(api, …)` (`queryOptions`) em `packages/client/src/features/*/hooks.ts`;
+  o hook `useXxx` só a envolve. Os loaders das rotas usam a mesma fábrica para pré-carregar
+  (`queryClient.prefetchQuery(...)`, sem `await`). Com `defaultPreload: "intent"`, passar o mouse
+  num link já aquece o cache.
+- `staleTime` vem de `staleTimes` (`packages/client/src/lib/query.ts`): instância 1 h, busca de livros
+  24 h, dados seus 10 min, dados sociais 1 min, meses fechados 24 h. Não invente números por hook.
+- O cache inteiro é persistido (web: `localStorage`; mobile: AsyncStorage, um por servidor) por 7 dias
+  e restaurado no próximo acesso. Mudou o formato de uma resposta? Suba `CACHE_VERSION`.
+- Mutações atualizam o cache na hora (otimista + rollback em erro) e invalidam no `onSettled`.
+  Veja `useUpdateShelfEntry`, `useToggleLike` e `useToggleFollow`.
+- Login e logout chamam `clearCache()` (web: `@/lib/api`; mobile: `useClearCache()`). Um 401 em
+  qualquer query faz a web limpar o cache e voltar para `/login`.
+- A sessão (Better Auth) também fica em cache (`sessionQuery`, 5 min) para os guards de rota não
+  irem ao servidor a cada navegação. Ela nunca é persistida em disco.
 
 ### API (`packages/api`)
 
@@ -133,7 +157,8 @@ pnpm check        # biome + typecheck (todos os workspaces) + vitest
 - Mudou regra no core? Adicione/ajuste teste `*.test.ts` ao lado.
 - Mudou API, banco ou auth? Teste também o runtime self-host: `pnpm dev:server` (Node + SQLite).
 - Mudou algo no mobile? `pnpm --filter @grimo/mobile exec expo-doctor`. Leia também `apps/mobile/AGENTS.md`.
-- Mudou UI web? Rode `pnpm dev` e confira no navegador.
+- Mudou UI web? Rode `pnpm dev` e confira no navegador (`pnpm db:seed` cria dados de exemplo).
+- Novo recurso com dados (endpoint, tabela)? Atualize `scripts/seed.ts` para ele aparecer no mockup.
 
 ## Armadilhas conhecidas
 

@@ -82,6 +82,16 @@ pnpm dev                                           # web + API (runtime Cloudfla
 `pnpm dev` sobe o Vite com o plugin da Cloudflare: o Worker da web **e** o Worker da API rodam no
 mesmo processo, com D1/R2 locais (Miniflare). Não precisa de conta Cloudflare.
 
+Para ter dados de exemplo (leitores, livros com capa, estantes, resenhas, seguidores e curtidas),
+com o `pnpm dev` rodando:
+
+```bash
+pnpm db:seed                                       # entre como rafa@grimo.test / grimo-demo
+```
+
+Todas as contas de exemplo (`rafa`, `bia.lima`, `caio`, `lu.prado`, `theo`) usam a senha
+`grimo-demo` (troque com `SEED_PASSWORD`). Para outro servidor: `SEED_URL=http://localhost:3000`.
+
 Para testar o runtime de self-host (Node + SQLite):
 
 ```bash
@@ -112,6 +122,7 @@ Android, `http://10.0.2.2:5173`. O servidor também pode ser trocado na tela de 
 | `pnpm db:migrate`        | Aplica migrações no D1 local                                 |
 | `pnpm db:migrate:remote` | Aplica migrações no D1 de produção                           |
 | `pnpm db:studio`         | Drizzle Studio                                               |
+| `pnpm db:seed`           | Dados de exemplo via API (precisa do servidor rodando)       |
 | `pnpm tokens:generate`   | Regenera o `theme.css` do Tailwind a partir dos tokens       |
 | `pnpm deploy`            | Deploy da API e da web na Cloudflare                         |
 
