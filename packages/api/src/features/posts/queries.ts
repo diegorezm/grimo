@@ -11,6 +11,7 @@ export const authorColumns = {
 
 export const bookColumns = {
   id: books.id,
+  openLibraryId: books.openLibraryId,
   title: books.title,
   authors: books.authors,
   coverUrl: books.coverUrl,

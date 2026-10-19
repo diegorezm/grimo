@@ -1,4 +1,5 @@
 import { THEME_LABELS, THEME_PREFERENCES } from "@grimo/core";
+import { MoonIcon, SunIcon, SystemIcon } from "@/components/ui/icons";
 import { setThemePreference, useThemePreference } from "@/lib/theme";
 import { cn } from "@/utils/cn";
 
@@ -30,5 +31,29 @@ export function ThemeToggle({ className }: { className?: string }) {
         </button>
       ))}
     </fieldset>
+  );
+}
+
+const THEME_ICONS = { system: SystemIcon, light: SunIcon, dark: MoonIcon } as const;
+
+/** Single icon button that cycles Sistema → Claro → Escuro (for the narrow sidebar). */
+export function ThemeCycleButton({ className }: { className?: string }) {
+  const preference = useThemePreference();
+  const next =
+    THEME_PREFERENCES[(THEME_PREFERENCES.indexOf(preference) + 1) % THEME_PREFERENCES.length]!;
+  const Icon = THEME_ICONS[preference];
+  return (
+    <button
+      type="button"
+      onClick={() => setThemePreference(next)}
+      title={`Aparência: ${THEME_LABELS[preference]}`}
+      aria-label={`Aparência: ${THEME_LABELS[preference]}. Mudar para ${THEME_LABELS[next]}`}
+      className={cn(
+        "grid size-11 place-items-center rounded-md text-text-muted transition hover:bg-surface-muted hover:text-text",
+        className,
+      )}
+    >
+      <Icon />
+    </button>
   );
 }

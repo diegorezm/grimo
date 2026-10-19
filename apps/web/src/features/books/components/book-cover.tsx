@@ -9,7 +9,11 @@ export function BookCover({
   title: string;
   className?: string;
 }) {
-  const base = cn("aspect-[2/3] w-16 shrink-0 rounded-sm bg-surface-muted object-cover", className);
+  // `cn` does not merge conflicting classes, so a custom className replaces the default width.
+  const base = cn(
+    "aspect-[2/3] shrink-0 rounded-sm bg-surface-muted object-cover",
+    className ?? "w-16",
+  );
   if (src) return <img src={src} alt={title} loading="lazy" className={base} />;
   return (
     <div className={cn(base, "grid place-items-center p-1 text-center font-serif text-[10px]")}>

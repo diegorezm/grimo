@@ -1,94 +1,40 @@
-import { useMonthlySummary } from "@grimo/client";
-import { GENRE_LABELS, type Genre } from "@grimo/core";
-import { storyCard } from "@grimo/tokens";
-import { toBlob } from "html-to-image";
-import { useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useCardStudioStore } from "@grimo/client";
+import { toMonthKey } from "@grimo/core";
+import { type CardPaletteKey, cardPalettes } from "@grimo/tokens";
+import { Link } from "@tanstack/react-router";
+import { StoryCanvas } from "../card/story-canvas";
+import { CARD_COMPONENTS } from "../card/templates";
+import { useCardData } from "../card/use-card-data";
 
-const SCALE = 0.3;
-
-/**
- * "Resumo do mês" card at Instagram Stories size (1080×1920), shown scaled down.
- * Exported as PNG and shared via the Web Share API (falls back to download).
- */
-export function MonthlyCard({ month }: { month?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { data } = useMonthlySummary(month);
+/** Small preview of this month's shareable card (last style picked in the studio). */
+export function MonthlyCard() {
+  const studio = useCardStudioStore();
+  const data = useCardData(toMonthKey(new Date()));
   if (!data) return null;
-
-  async function share() {
-    if (!ref.current) return;
-    const blob = await toBlob(ref.current, { pixelRatio: 1, style: { transform: "none" } });
-    if (!blob) return;
-    const file = new File([blob], `grimo-${data!.month}.png`, { type: "image/png" });
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "Meu mês de leitura" });
-      return;
-    }
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(file);
-    link.download = file.name;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }
-
-  const genre = data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—";
+  const Card = CARD_COMPONENTS[studio.template];
+  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div
-        style={{ width: storyCard.width * SCALE, height: storyCard.height * SCALE }}
-        className="overflow-hidden rounded-xl shadow-lg"
-      >
-        <div
-          ref={ref}
-          style={{
-            width: storyCard.width,
-            height: storyCard.height,
-            transform: `scale(${SCALE})`,
-            transformOrigin: "top left",
-          }}
-          className="flex flex-col justify-between bg-inverse p-24 text-inverse-foreground"
+    <div className="flex flex-col items-center gap-4">
+      <Link to="/card" aria-label="Personalizar o card do mês">
+        <StoryCanvas
+          scale={0.28}
+          className="rounded-xl shadow-lg shadow-shadow transition hover:-translate-y-1"
         >
-          <div>
-            <p className="text-5xl opacity-80">Meu mês de leitura</p>
-            <p className="font-serif text-8xl font-bold">{data.month}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-12">
-            <Big value={data.booksRead} label="livros" />
-            <Big value={data.pagesRead} label="páginas" />
-            <Big value={genre} label="gênero mais lido" />
-            {data.goal && <Big value={`${data.goal.percent}%`} label="da meta anual" />}
-          </div>
-          {data.favoriteBook && (
-            <div className="flex items-center gap-10">
-              {data.favoriteBook.coverUrl && (
-                <img
-                  src={data.favoriteBook.coverUrl}
-                  alt=""
-                  crossOrigin="anonymous"
-                  className="h-96 rounded-lg"
-                />
-              )}
-              <div>
-                <p className="text-4xl opacity-80">Livro favorito</p>
-                <p className="font-serif text-6xl font-bold">{data.favoriteBook.title}</p>
-              </div>
-            </div>
-          )}
-          <p className="font-serif text-5xl">grimo</p>
-        </div>
-      </div>
-      <Button onClick={share}>Compartilhar card</Button>
-    </div>
-  );
-}
-
-function Big({ value, label }: { value: string | number; label: string }) {
-  return (
-    <div>
-      <p className="font-serif text-9xl font-bold">{value}</p>
-      <p className="text-4xl opacity-80">{label}</p>
+          <Card
+            data={data}
+            palette={palette}
+            showCover={studio.showCover}
+            showDeltas={studio.showDeltas}
+          />
+        </StoryCanvas>
+      </Link>
+      <Link
+        to="/card"
+        className="bg-accent-gradient rounded-full px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-accent-foreground shadow-md shadow-accent/30 hover:opacity-90"
+      >
+        Personalizar e compartilhar
+      </Link>
     </div>
   );
 }

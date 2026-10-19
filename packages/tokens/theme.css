@@ -20,6 +20,10 @@
   --color-logo-spine: #3A2E3F;
   --color-glow-a: #F6D6DF;
   --color-glow-b: #E5DAF5;
+  --color-highlight-start: #FBD3DF;
+  --color-highlight-end: #E3D6FA;
+  --color-note: #FFF6DA;
+  --color-tape: #F2A9BD;
   --color-glass: rgba(255,251,245,0.55);
   --color-glass-border: rgba(255,255,255,0.85);
   --color-shadow: rgba(120,90,140,0.20);
@@ -80,6 +84,10 @@
     --color-logo-spine: #17121E;
     --color-glow-a: rgba(231,161,181,0.12);
     --color-glow-b: rgba(156,124,214,0.16);
+    --color-highlight-start: rgba(235,169,188,0.35);
+    --color-highlight-end: rgba(183,154,230,0.35);
+    --color-note: #3B3122;
+    --color-tape: #C97A93;
     --color-glass: rgba(38,32,48,0.55);
     --color-glass-border: rgba(243,234,242,0.14);
     --color-shadow: rgba(0,0,0,0.40);
@@ -121,6 +129,10 @@
   --color-logo-spine: #17121E;
   --color-glow-a: rgba(231,161,181,0.12);
   --color-glow-b: rgba(156,124,214,0.16);
+  --color-highlight-start: rgba(235,169,188,0.35);
+  --color-highlight-end: rgba(183,154,230,0.35);
+  --color-note: #3B3122;
+  --color-tape: #C97A93;
   --color-glass: rgba(38,32,48,0.55);
   --color-glass-border: rgba(243,234,242,0.14);
   --color-shadow: rgba(0,0,0,0.40);

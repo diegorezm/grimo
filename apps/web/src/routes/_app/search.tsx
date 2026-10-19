@@ -1,6 +1,24 @@
+import { bookSearchQuery } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
+import { Screen } from "@/components/layout/screen";
 import { BookSearch } from "@/features/books";
 
 export const Route = createFileRoute("/_app/search")({
-  component: BookSearch,
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    q: typeof search.q === "string" && search.q ? search.q : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ q: search.q }),
+  loader: ({ context: { queryClient, api }, deps }) => {
+    if (deps.q) void queryClient.prefetchQuery(bookSearchQuery(api, deps.q));
+  },
+  component: SearchPage,
 });
+
+function SearchPage() {
+  const { q } = Route.useSearch();
+  return (
+    <Screen title="Buscar livros" subtitle="Encontre o próximo livro no catálogo do Open Library.">
+      <BookSearch key={q} initialQuery={q} />
+    </Screen>
+  );
+}
