@@ -1,3 +1,4 @@
+import { USERNAME_REGEX, usernameFromName } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { notFound, unauthenticated } from "./errors";
@@ -28,6 +29,23 @@ export async function readerByUsername(ctx: Ctx, username: string) {
     .unique();
   if (!reader) throw notFound("Leitor");
   return reader;
+}
+
+/** The reader using `username`, if any. */
+export const userByUsername = (ctx: Ctx, username: string) =>
+  ctx.db
+    .query("users")
+    .withIndex("by_username", (q) => q.eq("username", username))
+    .first();
+
+/** A free @ based on `name` (adds digits until nobody has it). */
+export async function freeUsername(ctx: Ctx, name: string) {
+  const base = usernameFromName(name);
+  let handle = USERNAME_REGEX.test(base) ? base : "leitor";
+  while (await userByUsername(ctx, handle)) {
+    handle = `${base.slice(0, 25)}${Math.floor(Math.random() * 9000 + 1000)}`;
+  }
+  return handle;
 }
 
 /** Who wrote a post / did an activity. */

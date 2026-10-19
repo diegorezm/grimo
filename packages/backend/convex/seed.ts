@@ -34,19 +34,14 @@ export const run = internalAction({
       throw new Error("Seed é só para desenvolvimento (SITE_URL é https).");
     }
     const auth = createAuth(ctx);
+    // Better Auth user id of each reader (new account, or the existing one on a re-run).
+    const authIds: Record<string, string> = {};
     for (const reader of readers) {
-      try {
-        await auth.api.signUpEmail({
-          body: {
-            email: emailOf(reader.username),
-            password,
-            name: reader.name,
-            username: reader.username,
-          },
-        });
-      } catch {
-        // Already exists: keep it.
-      }
+      const body = { email: emailOf(reader.username), password };
+      const result = await auth.api
+        .signUpEmail({ body: { ...body, name: reader.name } })
+        .catch(() => auth.api.signInEmail({ body }));
+      authIds[reader.username] = result.user.id;
     }
 
     // Real Open Library id + cover when available; our own data otherwise.
@@ -65,24 +60,31 @@ export const run = internalAction({
       };
     }
 
-    const result: string = await ctx.runMutation(internal.seed.populate, { books });
+    const result: string = await ctx.runMutation(internal.seed.populate, { books, authIds });
     console.log(result);
     return result;
   },
 });
 
 export const populate = internalMutation({
-  args: { books: v.record(v.string(), bookInput) },
-  handler: async (ctx, { books }) => {
+  args: { books: v.record(v.string(), bookInput), authIds: v.record(v.string(), v.string()) },
+  handler: async (ctx, { books, authIds }) => {
     const year = new Date().getFullYear();
     const users = new Map<string, Doc<"users">>();
     for (const reader of readers) {
+      const authId = authIds[reader.username] ?? "";
       const user = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", reader.username))
+        .withIndex("by_authId", (q) => q.eq("authId", authId))
         .unique();
       if (!user) throw new Error(`Conta de ${reader.username} não foi criada`);
-      users.set(reader.username, user);
+      // Demo readers skip the onboarding: their @ is the one in the seed data.
+      await ctx.db.patch(user._id, {
+        username: reader.username,
+        searchText: `${reader.name} ${reader.username}`,
+        setupDone: true,
+      });
+      users.set(reader.username, (await ctx.db.get(user._id))!);
     }
     const [main, ...others] = readers.map((reader) => ({
       reader,

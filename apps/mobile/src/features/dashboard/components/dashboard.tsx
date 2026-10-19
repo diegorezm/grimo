@@ -10,6 +10,7 @@ import { FeedItem } from "@/features/feed";
 import { ShelfTiles } from "@/features/shelves";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { FirstSteps } from "./first-steps";
 
 /** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
 export function Dashboard() {
@@ -51,6 +52,8 @@ export function Dashboard() {
             </Text>
           </View>
         </View>
+
+        <FirstSteps />
 
         {current ? (
           <CurrentRead item={current} />

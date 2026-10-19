@@ -51,6 +51,11 @@ export default defineSchema({
     bookCount: v.number(),
     /** `name username`, for the reader search index. */
     searchText: v.string(),
+    /**
+     * False until the reader confirms name and @ in the onboarding. Absent on accounts created
+     * before the onboarding existed (treated as done).
+     */
+    setupDone: v.optional(v.boolean()),
   })
     .index("by_authId", ["authId"])
     .index("by_username", ["username"])

@@ -10,4 +10,7 @@ export const env = {
   SITE_URL: vars.SITE_URL ?? "http://localhost:5173",
   /** Set by Convex: this deployment's HTTP actions URL (where /api/auth lives). */
   CONVEX_SITE_URL: vars.CONVEX_SITE_URL,
+  /** Google sign-in (OAuth client from Google Cloud). Both unset = Google sign-in disabled. */
+  GOOGLE_CLIENT_ID: vars.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: vars.GOOGLE_CLIENT_SECRET,
 };

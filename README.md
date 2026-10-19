@@ -12,7 +12,7 @@ acompanhe outros leitores e compartilhe o resumo do seu mês de leitura.
 | ------------ | ---------------------------------------------------------------------------------- |
 | Monorepo     | [pnpm workspaces](https://pnpm.io) + [Turborepo](https://turborepo.com)            |
 | Backend      | [Convex](https://convex.dev): banco, funções, tempo real e arquivos                |
-| Autenticação | [Better Auth](https://better-auth.com) no Convex (email/senha + username)          |
+| Autenticação | [Better Auth](https://better-auth.com) no Convex (email/senha e Google)            |
 | Web          | React 19 + Vite + TanStack Router/Query + Tailwind v4 (SPA estática)               |
 | Mobile       | Expo (SDK 58) + Expo Router                                                        |
 | Cache        | TanStack Query persistido (localStorage / MMKV), alimentado pelas subscriptions do Convex |
@@ -59,6 +59,17 @@ npx convex env set SITE_URL http://localhost:5173
 npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 ```
 
+Entrar com Google (opcional): crie um OAuth Client ("Web application") no Google Cloud com o
+redirect URI `<CONVEX_SITE_URL>/api/auth/callback/google` (local: `http://127.0.0.1:3211/...`) e:
+
+```bash
+npx convex env set GOOGLE_CLIENT_ID <id>
+npx convex env set GOOGLE_CLIENT_SECRET <secret>
+```
+
+Sem essas variáveis o botão "Continuar com Google" aparece desabilitado, avisando que não está
+disponível no momento.
+
 Depois, no dia a dia:
 
 ```bash
@@ -97,8 +108,8 @@ no emulador Android, `http://10.0.2.2:3210`. Um deployment na nuvem funciona igu
 ## Deploy
 
 1. Convex: `pnpm --filter @grimo/backend exec convex deploy` (pede login/projeto na primeira vez).
-   No deployment de produção, defina `SITE_URL` (origem da web, ex. `https://grimo.app`) e
-   `BETTER_AUTH_SECRET`.
+   No deployment de produção, defina `SITE_URL` (origem da web, ex. `https://grimo.app`),
+   `BETTER_AUTH_SECRET` e, para o Google, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`.
 2. Web: `VITE_CONVEX_URL=https://<prod>.convex.cloud pnpm --filter @grimo/web build`, depois
    `pnpm --filter @grimo/web deploy` (Cloudflare static assets, `apps/web/wrangler.jsonc`) ou
    qualquer host estático com fallback de SPA para `index.html`.

@@ -17,6 +17,7 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Tela web                                 | `apps/web/src/routes/` (fina) → `apps/web/src/features/` |
 | Tela mobile                              | `apps/mobile/src/app/` (fina) → `apps/mobile/src/features/` |
 | Dados de exemplo                         | `packages/backend/convex/seed.ts` + `model/seedData.ts` |
+| Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |
 
 ## Arquitetura
@@ -35,9 +36,22 @@ apps/web|mobile → @grimo/client (hooks TanStack Query) → ConvexCache (ponte)
   aplica (dados novos precisam de default ou de migração com `@convex-dev/migrations`).
 - Os tipos fluem do backend para os clientes via `api` (`@grimo/backend`) e `FunctionReturnType`.
   **Não** crie tipos de resposta à mão.
-- Auth: Better Auth rodando dentro do Convex (componente `@convex-dev/better-auth`), email/senha +
-  username. A web usa o plugin cross-domain (cookie no localStorage); o mobile usa `expoClient`
+- Auth: Better Auth rodando dentro do Convex (componente `@convex-dev/better-auth`), email/senha e
+  Google. A web usa o plugin cross-domain (cookie no localStorage); o mobile usa `expoClient`
   (cookie no SecureStore, scheme `grimo://`). O JWT do Better Auth autentica o cliente Convex.
+- Entrar com Google: `socialProviders.google` só liga com `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`
+  no deployment; `auth.providers` diz aos clientes, que mostram o botão desabilitado se não houver.
+- Entrar e criar conta são o mesmo formulário (`continueWithEmail` no client): tenta entrar; se o
+  email + senha não for uma conta, cria uma. Nome e @ não vão no cadastro: conta nova nasce com
+  `setupDone: false` (`me.needsSetup`) e o onboarding pede nome (o do Google, se veio de lá) e @.
+- O @ é do app, não do Better Auth (sem o plugin `username`): fica em `users.username`, único,
+  validado e gravado por `users.completeSetup`; `users.usernameAvailable` dá o retorno ao vivo.
+- Todo input do usuário passa por schema Zod do core (`emailCredentialsSchema`,
+  `setupProfileSchema`, `updateProfileSchema`…), no cliente e de novo no servidor (`parse`), com
+  mensagens em pt-BR (`firstIssue`). Formulários usam `noValidate`: quem valida é o schema.
+- Ativação = livro na estante "Lendo" com a página marcada. O cadastro leva ao `/onboarding`
+  (nome e @ → livro → página → meta, com 12 pré-selecionado) e o painel mostra "Primeiros passos"
+  até tudo estar feito. No mobile, `needsSetup` mostra a tela `setup` antes das abas. Não adicione tour de funcionalidades: o onboarding faz o usuário usar o produto.
 - Não há mais modos de instância (pessoal/comunidade): é uma instância só, social, com cadastro
   aberto.
 

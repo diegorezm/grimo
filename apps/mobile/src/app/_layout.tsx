@@ -1,3 +1,4 @@
+import { useMe } from "@grimo/client";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -28,6 +29,8 @@ export default function RootLayout() {
 function RootNavigator() {
   const { data: session, isPending } = useAuthClient().useSession();
   useClearCacheOnSignOut(session?.session.id ?? null);
+  // A new account confirms name and @ first (`needsSetup`); cached, so this works offline too.
+  const needsSetup = useMe({ enabled: Boolean(session) }).data?.needsSetup ?? false;
   const [fontsLoaded] = useFonts(fontAssets);
   useThemeStore(); // subscribes so the saved appearance is applied on startup
   const ready = fontsLoaded && !isPending;
@@ -39,7 +42,10 @@ function RootNavigator() {
   if (!ready) return null;
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={Boolean(session)}>
+      <Stack.Protected guard={Boolean(session) && needsSetup}>
+        <Stack.Screen name="setup" />
+      </Stack.Protected>
+      <Stack.Protected guard={Boolean(session) && !needsSetup}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="book/[id]" />
         {/* Native sheets: on iOS 26 they get the system liquid glass. */}

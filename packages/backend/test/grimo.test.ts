@@ -94,3 +94,37 @@ describe("social", () => {
     expect(all.items.map((item) => item.post?.body)).toEqual(["2", "1", "0"]);
   });
 });
+
+describe("setup", () => {
+  it("new accounts confirm name and a free @", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const fresh = await reader(t, "leitor1234");
+    await t.run((ctx) => ctx.db.patch(fresh.id, { name: "", setupDone: false }));
+
+    expect((await fresh.as.query(api.users.me, {})).needsSetup).toBe(true);
+    expect((await rafa.as.query(api.users.me, {})).needsSetup).toBe(false);
+
+    expect(await fresh.as.query(api.users.usernameAvailable, { username: "rafa" })).toEqual({
+      valid: true,
+      available: false,
+    });
+    expect(await fresh.as.query(api.users.usernameAvailable, { username: "A!" })).toEqual({
+      valid: false,
+      available: false,
+    });
+    await expect(
+      fresh.as.mutation(api.users.completeSetup, { name: "Ana", username: "rafa" }),
+    ).rejects.toThrow(/já tem dono/);
+    await expect(
+      fresh.as.mutation(api.users.completeSetup, { name: " ", username: "ana" }),
+    ).rejects.toThrow();
+
+    await fresh.as.mutation(api.users.completeSetup, { name: "Ana Prado", username: "Ana.Prado" });
+    expect(await fresh.as.query(api.users.me, {})).toMatchObject({
+      name: "Ana Prado",
+      username: "ana.prado",
+      needsSetup: false,
+    });
+  });
+});

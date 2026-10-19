@@ -1,3 +1,4 @@
+export * from "./auth";
 export * from "./books";
 export * from "./lib/dashboard";
 export * from "./lib/date";

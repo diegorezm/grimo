@@ -1,5 +1,5 @@
 import { api, type Id } from "@grimo/backend";
-import type { UpdateProfileInput } from "@grimo/core";
+import type { SetupProfileInput, UpdateProfileInput } from "@grimo/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useRef } from "react";
@@ -9,7 +9,10 @@ import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
 import { PAGE_SIZE } from "../../lib/query";
 
-export type Profile = FunctionReturnType<typeof api.users.me>;
+/** The signed-in reader (`needsSetup`: the onboarding hasn't asked for name and @ yet). */
+export type Me = FunctionReturnType<typeof api.users.me>;
+/** A reader's public profile. */
+export type Profile = Omit<Me, "needsSetup">;
 export type ReaderPage = FunctionReturnType<typeof api.users.byUsername>;
 export type ReaderActivityPage = FunctionReturnType<typeof api.users.activity>;
 export type ConnectionKind = "followers" | "following";
@@ -38,7 +41,30 @@ export function useUpdateMe() {
   return useMutation({
     mutationKey: updateMeMutationKey,
     mutationFn: (input: UpdateProfileInput) => convex.mutation(api.users.updateMe, input),
-    onSuccess: (profile) => queryClient.setQueryData(meQuery().queryKey, profile),
+    onSuccess: (profile) =>
+      queryClient.setQueryData(meQuery().queryKey, (me) => (me ? { ...me, ...profile } : me)),
+  });
+}
+
+/** Whether an @ is valid and free (yours counts as free). Skipped until it looks valid. */
+export function useUsernameAvailable(username: string) {
+  const value = username.trim().toLowerCase();
+  return useQuery({
+    ...convexQuery(api.users.usernameAvailable, { username: value }, "optional"),
+    enabled: value.length >= 3,
+  });
+}
+
+/** Onboarding: saves name and @ and ends the setup (the app opens normally afterwards). */
+export function useCompleteSetup() {
+  const { convex } = useConvexCache();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetupProfileInput) => convex.mutation(api.users.completeSetup, input),
+    onSuccess: (_result, input) =>
+      queryClient.setQueryData(meQuery().queryKey, (me) =>
+        me ? { ...me, ...input, needsSetup: false } : me,
+      ),
   });
 }
 

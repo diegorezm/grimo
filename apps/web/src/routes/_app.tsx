@@ -1,4 +1,12 @@
-import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
+import { useMe } from "@grimo/client";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  redirect,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
@@ -49,6 +57,7 @@ function AppLayout() {
 
 function SignedInLayout({ book, panel }: { book?: string; panel?: "profile" }) {
   useSessionGuard();
+  useSetupGuard();
   const aside = book ? (
     <BookPeek key={book} openLibraryId={book} />
   ) : panel === "profile" ? (
@@ -71,6 +80,15 @@ function useSessionGuard() {
   useEffect(() => {
     if (signedOut) signOutLocally();
   }, [signedOut]);
+}
+
+/** A new account (no name or @ yet) goes through the onboarding first. */
+function useSetupGuard() {
+  const needsSetup = useMe().data?.needsSetup ?? false;
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (needsSetup) void navigate({ to: "/onboarding", replace: true });
+  }, [needsSetup, navigate]);
 }
 
 /** Signed out, a book link opens an invitation instead of the book page. */

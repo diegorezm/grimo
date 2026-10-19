@@ -1,4 +1,4 @@
-import { updateProfileSchema } from "@grimo/core";
+import { setupProfileSchema, USERNAME_REGEX, updateProfileSchema } from "@grimo/core";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
@@ -12,6 +12,7 @@ import {
   readerByUsername,
   readerCard,
   requireViewer,
+  userByUsername,
 } from "./model/readers";
 import { withBooks } from "./model/shelves";
 import { yearOverview } from "./model/stats";
@@ -19,7 +20,42 @@ import { yearOverview } from "./model/stats";
 /** The signed-in reader's profile. */
 export const me = query({
   args: {},
-  handler: async (ctx) => profileOf(ctx, await requireViewer(ctx)),
+  handler: async (ctx) => {
+    const viewer = await requireViewer(ctx);
+    // New accounts confirm name and @ in the onboarding before anything else.
+    return { ...(await profileOf(ctx, viewer)), needsSetup: viewer.setupDone === false };
+  },
+});
+
+/** Whether `username` is valid and free (your own @ counts as free). For live feedback. */
+export const usernameAvailable = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+    if (!USERNAME_REGEX.test(username)) return { valid: false, available: false };
+    const [owner, viewer] = await Promise.all([userByUsername(ctx, username), getViewer(ctx)]);
+    return { valid: true, available: !owner || owner._id === viewer?._id };
+  },
+});
+
+/** Onboarding: the reader's name and @. Ends the setup (`needsSetup` turns false). */
+export const completeSetup = mutation({
+  args: { name: v.string(), username: v.string() },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const { name, username } = parse(setupProfileSchema, args);
+    const owner = await userByUsername(ctx, username);
+    if (owner && owner._id !== viewer._id) {
+      throw appError("INVALID", "Esse @ já tem dono. Que tal outro?");
+    }
+    await ctx.db.patch(viewer._id, {
+      name,
+      username,
+      searchText: `${name} ${username}`,
+      setupDone: true,
+    });
+    return null;
+  },
 });
 
 /** Profile fields + the current year's reading goal. Used by the seed too. */
