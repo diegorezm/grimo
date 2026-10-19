@@ -36,6 +36,24 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="book/[id]" />
+        {/* Native sheets: on iOS 26 they get the system liquid glass. */}
+        <Stack.Screen
+          name="progress/[id]"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.55, 0.8],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
+          name="review/[id]"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.85],
+            sheetGrabberVisible: true,
+          }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" />

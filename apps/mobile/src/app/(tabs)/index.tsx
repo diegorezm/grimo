@@ -1,10 +1,5 @@
-import { Screen } from "@/components/ui";
-import { FeedList } from "@/features/feed";
+import { Dashboard } from "@/features/dashboard";
 
-export default function FeedScreen() {
-  return (
-    <Screen scroll={false}>
-      <FeedList />
-    </Screen>
-  );
+export default function HomeScreen() {
+  return <Dashboard />;
 }
