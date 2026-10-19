@@ -8,7 +8,6 @@ import {
 import {
   GENRE_LABELS,
   type Genre,
-  readingPercent,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
@@ -18,15 +17,14 @@ import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { Stars } from "@/components/ui/stars";
 import { cn } from "@/utils/cn";
 import { Book3D } from "./book-3d";
+import { PageLogger } from "./page-logger";
 
 /** Header, your reading, synopsis and reviews of a book. */
 export function BookDetailBody({ detail }: { detail: BookDetail }) {
   const { book, entry, community } = detail;
-  const percent = entry ? readingPercent(entry.currentPage, book.pageCount) : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -72,12 +70,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             Sua leitura
           </h2>
           {entry.status === "reading" ? (
-            <ReadingProgress
-              entryId={entry.id}
-              page={entry.currentPage}
-              pageCount={book.pageCount}
-              percent={percent}
-            />
+            <PageLogger entryId={entry.id} page={entry.currentPage} pageCount={book.pageCount} />
           ) : (
             <RatingRow entryId={entry.id} rating={entry.rating} />
           )}
@@ -93,41 +86,6 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return <li className="rounded-full border border-border px-2.5 py-0.5">{children}</li>;
-}
-
-function ReadingProgress({
-  entryId,
-  page,
-  pageCount,
-  percent,
-}: {
-  entryId: string;
-  page: number;
-  pageCount: number | null;
-  percent: number | null;
-}) {
-  const update = useUpdateShelfEntry();
-  return (
-    <div className="flex flex-col gap-3">
-      {percent !== null && <ProgressBar percent={percent} />}
-      <label className="flex items-center gap-2 text-sm text-text-muted">
-        Estou na página
-        <input
-          key={page}
-          type="number"
-          min={0}
-          max={pageCount ?? undefined}
-          defaultValue={page}
-          className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-text outline-none focus:border-accent"
-          onBlur={(e) => {
-            const next = Number(e.target.value);
-            if (next !== page) update.mutate({ id: entryId, currentPage: next });
-          }}
-        />
-        {pageCount && `de ${pageCount}`}
-      </label>
-    </div>
-  );
 }
 
 function RatingRow({ entryId, rating }: { entryId: string; rating: number | null }) {

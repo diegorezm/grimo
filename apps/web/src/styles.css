@@ -76,3 +76,44 @@
     animation: none;
   }
 }
+
+/*
+ * Reading slider: the track fills with the accent gradient up to `--progress` (set inline, 0–100%).
+ */
+@utility range-reading {
+  appearance: none;
+  height: 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-start),
+    var(--color-accent) var(--progress, 0%),
+    var(--color-surface-muted) var(--progress, 0%)
+  );
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    border: 3px solid var(--color-accent);
+    box-shadow: 0 4px 10px var(--color-shadow);
+    transition: transform 120ms;
+  }
+  &::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    border: 3px solid var(--color-accent);
+    box-shadow: 0 4px 10px var(--color-shadow);
+  }
+  &:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+}

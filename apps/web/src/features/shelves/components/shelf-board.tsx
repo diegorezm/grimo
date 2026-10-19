@@ -1,10 +1,9 @@
 import { type ShelfItem, useShelf, useShelfTabStore, useUpdateShelfEntry } from "@grimo/client";
-import { countByShelf, readingPercent, SHELF_LABELS, SHELF_STATUSES } from "@grimo/core";
+import { countByShelf, SHELF_LABELS, SHELF_STATUSES } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { Stars } from "@/components/ui/stars";
-import { BookCard } from "@/features/books";
+import { BookCard, PageLogger } from "@/features/books";
 import { ShelfTiles } from "./shelf-tiles";
 
 /** All shelves: tiles on top pick the shelf; its books stand in a grid below. */
@@ -46,29 +45,17 @@ export function ShelfBoard() {
 
 function ShelfBook({ item: { entry, book } }: { item: ShelfItem }) {
   const update = useUpdateShelfEntry();
-  const percent = readingPercent(entry.currentPage, book.pageCount);
 
   return (
     <BookCard book={book} ribbon={entry.status === "reading"}>
       {entry.status === "reading" && (
-        <div className="mt-2 flex flex-col gap-1.5">
-          {percent !== null && <ProgressBar percent={percent} />}
-          <label className="flex items-center gap-1.5 font-mono text-[11px] text-text-muted">
-            p.
-            <input
-              type="number"
-              min={0}
-              max={book.pageCount ?? undefined}
-              defaultValue={entry.currentPage}
-              aria-label={`Página atual de ${book.title}`}
-              className="w-14 rounded-md border border-border bg-surface px-1.5 py-0.5 text-text outline-none focus:border-accent"
-              onBlur={(e) => {
-                const page = Number(e.target.value);
-                if (page !== entry.currentPage) update.mutate({ id: entry.id, currentPage: page });
-              }}
-            />
-            {book.pageCount && `de ${book.pageCount}`}
-          </label>
+        <div className="mt-2">
+          <PageLogger
+            entryId={entry.id}
+            page={entry.currentPage}
+            pageCount={book.pageCount}
+            compact
+          />
         </div>
       )}
       {entry.status === "read" && (
