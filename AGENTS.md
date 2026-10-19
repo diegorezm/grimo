@@ -133,7 +133,8 @@ pnpm check        # biome + typecheck (todos os workspaces) + vitest
 - Mudou regra no core? Adicione/ajuste teste `*.test.ts` ao lado.
 - Mudou API, banco ou auth? Teste também o runtime self-host: `pnpm dev:server` (Node + SQLite).
 - Mudou algo no mobile? `pnpm --filter @grimo/mobile exec expo-doctor`. Leia também `apps/mobile/AGENTS.md`.
-- Mudou UI web? Rode `pnpm dev` e confira no navegador.
+- Mudou UI web? Rode `pnpm dev` e confira no navegador (`pnpm db:seed` cria dados de exemplo).
+- Novo recurso com dados (endpoint, tabela)? Atualize `scripts/seed.ts` para ele aparecer no mockup.
 
 ## Armadilhas conhecidas
 

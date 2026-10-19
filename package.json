@@ -21,6 +21,7 @@
     "db:migrate": "pnpm --filter @grimo/api-worker db:migrate:local",
     "db:migrate:remote": "pnpm --filter @grimo/api-worker db:migrate:remote",
     "db:studio": "pnpm --filter @grimo/db studio",
+    "db:seed": "node scripts/seed.ts",
     "tokens:generate": "pnpm --filter @grimo/tokens generate",
     "cf-typegen": "turbo run cf-typegen",
     "deploy": "turbo run deploy --filter=@grimo/api-worker --filter=@grimo/web"
