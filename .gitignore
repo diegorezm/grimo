@@ -12,3 +12,5 @@ routeTree.gen.ts
 
 # Self-hosted server data (SQLite + uploads)
 data/
+
+.tanstack/

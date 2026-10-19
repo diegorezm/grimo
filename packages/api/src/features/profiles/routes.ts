@@ -1,13 +1,44 @@
-import { updateProfileSchema } from "@grimo/core";
-import { activities, follows, profiles, readingGoals, user as users } from "@grimo/db";
+import { cursorQuerySchema, searchReadersSchema, updateProfileSchema } from "@grimo/core";
+import {
+  activities,
+  type Database,
+  follows,
+  profiles,
+  readingGoals,
+  user as users,
+} from "@grimo/db";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { AppEnv } from "../../env";
 import { requireSocial, requireUser } from "../../lib/context";
 import { notFound } from "../../lib/errors";
+import { listActivities } from "../feed/service";
 import { getYearOverview } from "../stats/service";
-import { getProfile } from "./service";
+import {
+  getProfile,
+  getProfileBooks,
+  listConnections,
+  searchReaders,
+  suggestReaders,
+} from "./service";
+
+/** Id of the reader with this username, or 404. */
+async function findReaderId(db: Database, username: string) {
+  const target = await db.query.user.findFirst({
+    where: eq(users.username, username.toLowerCase()),
+    columns: { id: true },
+  });
+  if (!target) throw notFound("Leitor");
+  return target.id;
+}
+
+const isFollowing = (db: Database, followerId: string, followingId: string) =>
+  db.query.follows
+    .findFirst({
+      where: and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)),
+    })
+    .then(Boolean);
 
 /** `/me` — the signed-in reader. */
 export const meRoutes = new Hono<AppEnv>()
@@ -47,27 +78,63 @@ export const meRoutes = new Hono<AppEnv>()
     return c.json((await getProfile(db, user.id))!);
   });
 
-/** `/users` — public reader profiles and follows. */
+/**
+ * `/users` — readers. Profiles and their activity are public (shareable links work signed out);
+ * search, suggestions and follow lists are social features.
+ */
 export const usersRoutes = new Hono<AppEnv>()
+  .get("/", zValidator("query", searchReadersSchema), async (c) => {
+    requireSocial(c);
+    const viewer = requireUser(c);
+    const query = c.req.valid("query");
+    return c.json(await searchReaders(c.get("db"), { viewerId: viewer.id, ...query }));
+  })
+  .get("/suggestions", zValidator("query", cursorQuerySchema), async (c) => {
+    requireSocial(c);
+    const viewer = requireUser(c);
+    const query = c.req.valid("query");
+    return c.json(await suggestReaders(c.get("db"), { viewerId: viewer.id, ...query }));
+  })
   .get("/:username", async (c) => {
     const db = c.get("db");
     const viewer = c.get("user");
-    const target = await db.query.user.findFirst({
-      where: eq(users.username, c.req.param("username").toLowerCase()),
-      columns: { id: true },
-    });
-    if (!target) throw notFound("Leitor");
+    const targetId = await findReaderId(db, c.req.param("username"));
 
-    const [profile, stats, following] = await Promise.all([
-      getProfile(db, target.id),
-      getYearOverview(db, target.id, new Date().getUTCFullYear()),
-      viewer
-        ? db.query.follows.findFirst({
-            where: and(eq(follows.followerId, viewer.id), eq(follows.followingId, target.id)),
-          })
-        : undefined,
+    const [profile, stats, books, following, followsYou] = await Promise.all([
+      getProfile(db, targetId),
+      getYearOverview(db, targetId, new Date().getUTCFullYear()),
+      getProfileBooks(db, targetId),
+      viewer ? isFollowing(db, viewer.id, targetId) : false,
+      viewer ? isFollowing(db, targetId, viewer.id) : false,
     ]);
-    return c.json({ profile: profile!, stats, isFollowing: Boolean(following) });
+    return c.json({ profile: profile!, stats, books, isFollowing: following, followsYou });
+  })
+  .get("/:username/activity", zValidator("query", cursorQuerySchema), async (c) => {
+    const db = c.get("db");
+    const targetId = await findReaderId(db, c.req.param("username"));
+    return c.json(
+      await listActivities(db, {
+        viewerId: c.get("user")?.id ?? null,
+        where: eq(activities.actorId, targetId),
+        ...c.req.valid("query"),
+      }),
+    );
+  })
+  .get("/:username/followers", zValidator("query", cursorQuerySchema), async (c) => {
+    requireSocial(c);
+    const db = c.get("db");
+    const userId = await findReaderId(db, c.req.param("username"));
+    const viewerId = c.get("user")?.id ?? null;
+    const query = c.req.valid("query");
+    return c.json(await listConnections(db, { userId, kind: "followers", viewerId, ...query }));
+  })
+  .get("/:username/following", zValidator("query", cursorQuerySchema), async (c) => {
+    requireSocial(c);
+    const db = c.get("db");
+    const userId = await findReaderId(db, c.req.param("username"));
+    const viewerId = c.get("user")?.id ?? null;
+    const query = c.req.valid("query");
+    return c.json(await listConnections(db, { userId, kind: "following", viewerId, ...query }));
   })
   .post("/:id/follow", async (c) => {
     requireSocial(c);
@@ -90,9 +157,20 @@ export const usersRoutes = new Hono<AppEnv>()
   })
   .delete("/:id/follow", async (c) => {
     const viewer = requireUser(c);
-    await c
-      .get("db")
+    const targetId = c.req.param("id");
+    const db = c.get("db");
+    await db
       .delete(follows)
-      .where(and(eq(follows.followerId, viewer.id), eq(follows.followingId, c.req.param("id"))));
+      .where(and(eq(follows.followerId, viewer.id), eq(follows.followingId, targetId)));
+    // An unfollow takes back the "começou a seguir" line from the feeds.
+    await db
+      .delete(activities)
+      .where(
+        and(
+          eq(activities.actorId, viewer.id),
+          eq(activities.kind, "followed"),
+          eq(activities.targetUserId, targetId),
+        ),
+      );
     return c.json({ following: false });
   });

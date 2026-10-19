@@ -1,5 +1,4 @@
 import { ApiProvider, createPersistOptions, createQueryClient } from "@grimo/client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import {
   createContext,
@@ -10,6 +9,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { cacheStorage } from "@/lib/cache-storage";
 import { type AuthClient, getClients } from "@/lib/clients";
 import { useServerStore } from "@/lib/server";
 
@@ -34,7 +34,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const hydrated = useHydrated();
   const { authClient, api } = getClients(serverUrl);
   // One persisted cache per server, so switching servers never mixes their data.
-  const persistOptions = useMemo(() => createPersistOptions(AsyncStorage, serverUrl), [serverUrl]);
+  const persistOptions = useMemo(() => createPersistOptions(cacheStorage, serverUrl), [serverUrl]);
 
   // Switching servers = different data; drop what is in memory from the previous one.
   useEffect(() => {

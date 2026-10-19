@@ -1,3 +1,4 @@
+import { coverUrl } from "@grimo/core";
 import { Image } from "expo-image";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
@@ -20,7 +21,7 @@ export function BookCover({
     <View style={[styles.frame, size, { shadowColor: theme.shadow }]}>
       {src ? (
         <Image
-          source={src}
+          source={coverUrl(src, "M")}
           style={[styles.image, size, { backgroundColor: theme.surfaceMuted }]}
           contentFit="cover"
           transition={150}

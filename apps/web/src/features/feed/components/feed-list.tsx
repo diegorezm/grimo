@@ -1,6 +1,6 @@
 import { useFeed, useInstance } from "@grimo/client";
 import { Spinner } from "@/components/feedback/spinner";
-import { Button } from "@/components/ui/button";
+import { LoadMore } from "@/components/ui/load-more";
 import { FeedItem } from "./feed-item";
 
 export function FeedList() {
@@ -24,15 +24,7 @@ export function FeedList() {
       {items.map((item) => (
         <FeedItem key={item.id} item={item} />
       ))}
-      {feed.hasNextPage && (
-        <Button
-          variant="secondary"
-          onClick={() => feed.fetchNextPage()}
-          disabled={feed.isFetchingNextPage}
-        >
-          Carregar mais
-        </Button>
-      )}
+      <LoadMore {...feed} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { cn } from "@/utils/cn";
 const INITIAL_SIZE: Record<string, string> = {
   "size-7": "text-xs",
   "size-8": "text-xs",
+  "size-12": "text-lg",
   "size-16": "text-2xl",
   "size-24": "text-4xl",
   "size-28": "text-5xl",

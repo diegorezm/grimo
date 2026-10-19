@@ -1,9 +1,16 @@
 import type { UpdateProfileInput } from "@grimo/core";
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  queryOptions,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { InferResponseType } from "hono/client";
 import type { ApiClient } from "../../lib/api-client";
 import { useApi } from "../../lib/api-context";
-import { parseResponse, queryKeys, staleTimes } from "../../lib/query";
+import { PAGE_SIZE, parseResponse, queryKeys, staleTimes } from "../../lib/query";
 
 export type Profile = InferResponseType<ApiClient["me"]["$get"], 200>;
 export type ReaderPage = InferResponseType<ApiClient["users"][":username"]["$get"], 200>;
@@ -49,11 +56,136 @@ export function useReader(username: string) {
   return useQuery(readerQuery(useApi(), username));
 }
 
-/** Follow/unfollow, reflected on the reader page immediately (rolled back on error). */
-export function useToggleFollow(username: string) {
+export type ReaderActivityPage = InferResponseType<
+  ApiClient["users"][":username"]["activity"]["$get"],
+  200
+>;
+
+/** A reader's own activity (posts, progress, finished books…), newest first. */
+export function readerActivityQuery(api: ApiClient, username: string) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.readerActivity(username),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      parseResponse(
+        api.users[":username"].activity.$get({
+          param: { username },
+          query: { cursor: pageParam, limit: PAGE_SIZE },
+        }),
+      ),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    staleTime: staleTimes.social,
+  });
+}
+
+export function useReaderActivity(username: string) {
+  return useInfiniteQuery(readerActivityQuery(useApi(), username));
+}
+
+export type ConnectionKind = "followers" | "following";
+export type ReaderCard = InferResponseType<
+  ApiClient["users"][":username"]["followers"]["$get"],
+  200
+>["items"][number];
+
+/** Who follows a reader, or whom they follow. */
+export function readerConnectionsQuery(api: ApiClient, username: string, kind: ConnectionKind) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.readerConnections(username, kind),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => {
+      const input = { param: { username }, query: { cursor: pageParam, limit: PAGE_SIZE } };
+      const route = api.users[":username"];
+      return parseResponse(
+        kind === "followers" ? route.followers.$get(input) : route.following.$get(input),
+      );
+    },
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    staleTime: staleTimes.social,
+  });
+}
+
+export function useReaderConnections(username: string, kind: ConnectionKind) {
+  return useInfiniteQuery(readerConnectionsQuery(useApi(), username, kind));
+}
+
+/** Readers whose name or @username contains `q`, a page at a time. */
+export function readerSearchQuery(api: ApiClient, q: string) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.readerSearch(q),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      parseResponse(api.users.$get({ query: { q, cursor: pageParam, limit: PAGE_SIZE } })),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    staleTime: staleTimes.social,
+    enabled: q.trim().length > 0,
+  });
+}
+
+export function useReaderSearch(q: string) {
+  return useInfiniteQuery(readerSearchQuery(useApi(), q));
+}
+
+export type ReaderSuggestion = InferResponseType<
+  ApiClient["users"]["suggestions"]["$get"],
+  200
+>["items"][number];
+
+/** Everyone you don't follow yet, best matches first, a page at a time. */
+export function readerSuggestionsQuery(api: ApiClient) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.readerSuggestions,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      parseResponse(api.users.suggestions.$get({ query: { cursor: pageParam, limit: PAGE_SIZE } })),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    staleTime: staleTimes.social,
+  });
+}
+
+export function useReaderSuggestions() {
+  return useInfiniteQuery(readerSuggestionsQuery(useApi()));
+}
+
+type FollowState = { id: string; isFollowing: boolean; followers: number };
+
+/** Sets `isFollowing` (and the follower count) of `userId` wherever it appears in `data`. */
+function patchFollow(data: unknown, userId: string, follow: boolean): unknown {
+  if (!data || typeof data !== "object") return data;
+  const patch = <T extends FollowState>(reader: T): T =>
+    reader.id === userId && reader.isFollowing !== follow
+      ? { ...reader, isFollowing: follow, followers: reader.followers + (follow ? 1 : -1) }
+      : reader;
+
+  if ("pages" in data && Array.isArray(data.pages)) {
+    return { ...data, pages: data.pages.map((page) => patchFollow(page, userId, follow)) };
+  }
+  if ("items" in data && Array.isArray(data.items)) {
+    return {
+      ...data,
+      items: data.items.map((item: FollowState) => ("isFollowing" in item ? patch(item) : item)),
+    };
+  }
+  if ("profile" in data && "isFollowing" in data) {
+    const page = data as ReaderPage;
+    if (page.profile.id !== userId || page.isFollowing === follow) return page;
+    return {
+      ...page,
+      isFollowing: follow,
+      profile: { ...page.profile, followers: page.profile.followers + (follow ? 1 : -1) },
+    };
+  }
+  return data;
+}
+
+/**
+ * Follow/unfollow from anywhere (profile, search, suggestions, follower lists): every cached
+ * reader list and page shows the new state immediately (rolled back on error).
+ */
+export function useToggleFollow() {
   const api = useApi();
   const queryClient = useQueryClient();
-  const key = queryKeys.reader(username);
+  const readers = { queryKey: queryKeys.allReaders };
   return useMutation({
     mutationFn: ({
       userId,
@@ -68,25 +200,22 @@ export function useToggleFollow(username: string) {
         ? parseResponse(route.$post({ param }))
         : parseResponse(route.$delete({ param }));
     },
-    onMutate: async ({ follow }) => {
-      await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<ReaderPage>(key);
-      if (previous && previous.isFollowing !== follow) {
-        queryClient.setQueryData<ReaderPage>(key, {
-          ...previous,
-          isFollowing: follow,
-          profile: {
-            ...previous.profile,
-            followers: previous.profile.followers + (follow ? 1 : -1),
-          },
-        });
-      }
-      return () => queryClient.setQueryData(key, previous);
+    onMutate: async ({ userId, follow }) => {
+      await queryClient.cancelQueries(readers);
+      const previous = queryClient.getQueriesData(readers);
+      queryClient.setQueriesData(readers, (data) => patchFollow(data, userId, follow));
+      return () => {
+        for (const [key, data] of previous) queryClient.setQueryData(key, data);
+      };
     },
     onError: (_error, _input, rollback) => rollback?.(),
     onSettled: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: key }),
+        // Suggestions and search keep the reader in place (now "Seguindo") until they go stale.
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.allReaders,
+          predicate: ({ queryKey }) => queryKey[1] !== "suggestions" && queryKey[1] !== "search",
+        }),
         queryClient.invalidateQueries({ queryKey: queryKeys.feed }),
         queryClient.invalidateQueries({ queryKey: queryKeys.me }),
       ]),

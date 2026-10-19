@@ -5,26 +5,33 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Stars } from "@/components/ui/stars";
 import { BookCard } from "@/features/books";
 
-/** A titled, horizontally scrolling row of books (progress for reads in progress, stars otherwise). */
+/**
+ * A titled, horizontally scrolling row of books (progress for reads in progress, stars
+ * otherwise). `shelfLink` adds "Ver estante" (your own profile).
+ */
 export function BookRow({
   title,
   items,
   empty,
+  shelfLink = false,
 }: {
   title: string;
   items: ShelfItem[];
   empty: string;
+  shelfLink?: boolean;
 }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-2xl font-medium italic">{title}</h2>
-        <Link
-          to="/shelves"
-          className="font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text"
-        >
-          Ver estante →
-        </Link>
+        {shelfLink && (
+          <Link
+            to="/shelves"
+            className="font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text"
+          >
+            Ver estante →
+          </Link>
+        )}
       </div>
       {items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border px-6 py-8 text-center text-sm text-text-muted">

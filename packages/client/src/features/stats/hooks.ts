@@ -21,8 +21,8 @@ export function monthlySummaryQuery(api: ApiClient, month = toMonthKey(new Date(
   });
 }
 
-export function useYearOverview(year?: number) {
-  return useQuery(yearOverviewQuery(useApi(), year));
+export function useYearOverview(year?: number, options: { enabled?: boolean } = {}) {
+  return useQuery({ ...yearOverviewQuery(useApi(), year), ...options });
 }
 
 export function useMonthlySummary(month?: string) {

@@ -27,6 +27,12 @@ export function FeedItem({ item }: { item: FeedItemData }) {
           <Text variant="small" color="textMuted">
             {describeActivity(item.kind, item.data)}
           </Text>
+          {item.target?.name && (
+            <Text variant="small" style={styles.bold}>
+              {" "}
+              {item.target.name}
+            </Text>
+          )}
         </Text>
         <Text variant="label" color="textMuted">
           {timeAgo(new Date(item.createdAt))}
