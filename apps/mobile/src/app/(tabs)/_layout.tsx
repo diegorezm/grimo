@@ -1,16 +1,19 @@
 import { useInstance } from "@grimo/client";
-import { NativeTabs } from "expo-router/native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { Platform } from "react-native";
 import { useTheme } from "@/hooks/use-theme";
 
 export default function TabsLayout() {
   const theme = useTheme();
   const personal = useInstance().data?.mode === "personal";
+  const ios = Platform.OS === "ios";
   return (
+    // On iOS 26 NativeTabs is the system liquid glass capsule: no background, only a tint.
     <NativeTabs
-      backgroundColor={theme.background}
-      // iOS 26+ renders NativeTabs as system liquid glass; we only tint it.
       tintColor={theme.accent}
-      indicatorColor={theme.surfaceMuted}
+      minimizeBehavior="onScrollDown"
+      backgroundColor={ios ? undefined : theme.background}
+      indicatorColor={ios ? undefined : theme.surfaceMuted}
       labelStyle={{ selected: { color: theme.accent } }}
     >
       <NativeTabs.Trigger name="index">

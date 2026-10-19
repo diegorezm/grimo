@@ -23,6 +23,7 @@
     "db:studio": "pnpm --filter @grimo/db studio",
     "db:seed": "node scripts/seed.ts",
     "tokens:generate": "pnpm --filter @grimo/tokens generate",
+    "tokens:icons": "pnpm --filter @grimo/tokens icons",
     "cf-typegen": "turbo run cf-typegen",
     "deploy": "turbo run deploy --filter=@grimo/api-worker --filter=@grimo/web"
   },

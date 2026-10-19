@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { HomeIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/components/ui/icons";
+import { Logo } from "@/components/ui/logo";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
 const nav = [
@@ -32,7 +33,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
       <div className="flex min-h-dvh lg:bg-surface">
         <aside className="sticky top-0 hidden h-dvh w-24 shrink-0 flex-col items-stretch border-r border-border py-6 lg:flex">
           <Link to="/" aria-label={instance?.name ?? "Grimo"} className="mb-8 self-center">
-            <Emblem />
+            <Logo className="h-10" />
           </Link>
           <nav aria-label="Seções" className="flex flex-col gap-1">
             {nav.map((item) => (
@@ -106,7 +107,7 @@ function TopBar() {
   return (
     <header className="flex items-center justify-between gap-4 px-4 py-5 lg:px-8 lg:pt-7 lg:pb-2">
       <Link to="/" className="flex items-center gap-2.5 lg:hidden">
-        <Emblem />
+        <Logo className="h-10" />
         <span className="font-serif text-2xl font-bold">{instance?.name ?? "Grimo"}</span>
       </Link>
 
@@ -144,16 +145,5 @@ function TopBar() {
         )}
       </div>
     </header>
-  );
-}
-
-/** Journal emblem: a four-point sparkle in a lilac ring. */
-function Emblem() {
-  return (
-    <span className="flex size-11 items-center justify-center rounded-full border border-ornament bg-surface">
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-ornament">
-        <path strokeWidth="1.5" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
-      </svg>
-    </span>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 import { clearCache } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
@@ -44,11 +45,7 @@ export function AuthForm() {
 
   return (
     <div className="mx-auto w-full max-w-sm">
-      <span className="mb-8 flex size-12 items-center justify-center rounded-full border border-ornament bg-surface">
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6 fill-none stroke-ornament">
-          <path strokeWidth="1.5" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
-        </svg>
-      </span>
+      <Logo className="mb-6 h-16" />
       <h1 className="text-4xl font-medium italic">
         {mode === "sign-in" ? `Bem-vindo ao ${instance?.name ?? "Grimo"}` : "Crie sua conta"}
       </h1>

@@ -16,6 +16,8 @@
   --color-accent-foreground: #FFFFFF;
   --color-gold: #D6AE55;
   --color-ornament: #B9A0C9;
+  --color-logo-cover: #3A2E3F;
+  --color-logo-spine: #3A2E3F;
   --color-glow-a: #F6D6DF;
   --color-glow-b: #E5DAF5;
   --color-highlight-start: #FBD3DF;
@@ -78,6 +80,8 @@
     --color-accent-foreground: #17121E;
     --color-gold: #E9C870;
     --color-ornament: #8D78A4;
+    --color-logo-cover: #8D78A4;
+    --color-logo-spine: #17121E;
     --color-glow-a: rgba(231,161,181,0.12);
     --color-glow-b: rgba(156,124,214,0.16);
     --color-highlight-start: rgba(235,169,188,0.35);
@@ -121,6 +125,8 @@
   --color-accent-foreground: #17121E;
   --color-gold: #E9C870;
   --color-ornament: #8D78A4;
+  --color-logo-cover: #8D78A4;
+  --color-logo-spine: #17121E;
   --color-glow-a: rgba(231,161,181,0.12);
   --color-glow-b: rgba(156,124,214,0.16);
   --color-highlight-start: rgba(235,169,188,0.35);
