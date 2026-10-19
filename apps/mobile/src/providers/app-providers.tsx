@@ -1,68 +1,52 @@
-import { ApiProvider, createPersistOptions, createQueryClient } from "@grimo/client";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createAppCache, DataProvider } from "@grimo/client";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { cacheStorage } from "@/lib/cache-storage";
-import { type AuthClient, getClients } from "@/lib/clients";
-import { useServerStore } from "@/lib/server";
+import { type AuthClient, authClient, cache, queryClient, setOnUnauthorized } from "@/lib/clients";
+import { CONVEX_URL } from "@/lib/server";
 
-const queryClient = createQueryClient();
-const AuthClientContext = createContext<AuthClient | null>(null);
-const ClearCacheContext = createContext<() => Promise<void>>(async () => {});
+// One persisted cache per deployment, so pointing a build elsewhere never mixes data.
+const appCache = createAppCache({
+  storage: cacheStorage,
+  scope: CONVEX_URL,
+  queryClient,
+  convex: cache,
+});
 
-/** Better Auth client for the currently selected server. */
-export function useAuthClient() {
-  const client = useContext(AuthClientContext);
-  if (!client) throw new Error("useAuthClient must be used inside <AppProviders>");
-  return client;
+const AppCacheContext = createContext(appCache);
+
+/** Better Auth client (served by Convex). */
+export function useAuthClient(): AuthClient {
+  return authClient;
 }
 
-/** Drops every cached query, in memory and on disk (sign-in, sign-out). */
-export function useClearCache() {
-  return useContext(ClearCacheContext);
+/**
+ * Wipes the query cache, in memory and on disk: `clearForSignIn` on a new session,
+ * `clearForSignOut` when it ends (also stops writing to disk until the next sign-in).
+ */
+export function useAppCache() {
+  return useContext(AppCacheContext);
 }
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const serverUrl = useServerStore((state) => state.serverUrl);
-  const hydrated = useHydrated();
-  const { authClient, api } = getClients(serverUrl);
-  // One persisted cache per server, so switching servers never mixes their data.
-  const persistOptions = useMemo(() => createPersistOptions(cacheStorage, serverUrl), [serverUrl]);
-
-  // Switching servers = different data; drop what is in memory from the previous one.
-  useEffect(() => {
-    queryClient.clear();
-  }, [serverUrl]);
-
-  const clearCache = useCallback(async () => {
-    queryClient.clear();
-    await persistOptions.persister.removeClient();
-  }, [persistOptions]);
-
-  if (!hydrated) return null;
-  return (
-    <AuthClientContext.Provider value={authClient}>
-      <ClearCacheContext.Provider value={clearCache}>
-        <ApiProvider client={api}>
-          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-            {children}
-          </PersistQueryClientProvider>
-        </ApiProvider>
-      </ClearCacheContext.Provider>
-    </AuthClientContext.Provider>
+  // The server rejected the session: forget everything and show the sign-in screen.
+  useEffect(
+    () =>
+      setOnUnauthorized(() => {
+        void appCache.clearForSignOut().then(() => authClient.signOut());
+      }),
+    [],
   );
-}
 
-/** Waits until the saved server URL is loaded from SecureStore. */
-function useHydrated() {
-  const [hydrated, setHydrated] = useState(useServerStore.persist.hasHydrated());
-  useEffect(() => useServerStore.persist.onFinishHydration(() => setHydrated(true)), []);
-  return hydrated;
+  return (
+    <AppCacheContext.Provider value={appCache}>
+      <DataProvider
+        cache={cache}
+        authClient={authClient}
+        queryClient={queryClient}
+        persistOptions={appCache.persistOptions}
+      >
+        {children}
+      </DataProvider>
+    </AppCacheContext.Provider>
+  );
 }

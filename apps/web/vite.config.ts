@@ -1,29 +1,24 @@
 import { fileURLToPath } from "node:url";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
-// `vite build --mode self-host` (pnpm build:static) builds a plain static SPA in dist/static,
-// served by apps/server. Any other mode targets Cloudflare Workers.
+// A plain SPA: data and auth come from Convex, so `dist/` deploys to any static host
+// (`pnpm --filter @grimo/web deploy` publishes it as Cloudflare static assets).
 export default defineConfig(({ mode }) => {
-  const selfHost = mode === "self-host";
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  // In dev, fall back to the deployment `convex dev` wrote to packages/backend/.env.local.
+  const backend = loadEnv(
+    mode,
+    fileURLToPath(new URL("../../packages/backend", import.meta.url)),
+    "CONVEX_",
+  );
+  const convexUrl = env.VITE_CONVEX_URL || backend.CONVEX_URL || "";
   return {
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+    define: { "import.meta.env.VITE_CONVEX_URL": JSON.stringify(convexUrl) },
     server: { port: 5173, host: true },
-    build: selfHost ? { outDir: "dist/static" } : undefined,
-    plugins: [
-      tanstackRouter({ target: "react", autoCodeSplitting: true }),
-      react(),
-      tailwindcss(),
-      !selfHost &&
-        cloudflare({
-          // In dev the API worker runs inside this Vite server, so `pnpm dev` is one process.
-          // State is shared with `apps/api` so `pnpm db:migrate` applies to the same local D1.
-          auxiliaryWorkers: [{ configPath: "../api/wrangler.jsonc", devOnly: true }],
-          persistState: { path: "../api/.wrangler/state" },
-        }),
-    ],
+    plugins: [tanstackRouter({ target: "react", autoCodeSplitting: true }), react(), tailwindcss()],
   };
 });

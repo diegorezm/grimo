@@ -1,11 +1,14 @@
 // Platform-agnostic data layer shared by web and mobile. No DOM / React Native imports here.
 export * from "./features/books";
 export * from "./features/feed";
-export * from "./features/instance";
+export * from "./features/onboarding";
 export * from "./features/posts";
 export * from "./features/profiles";
 export * from "./features/shelves";
 export * from "./features/stats";
-export * from "./lib/api-client";
-export * from "./lib/api-context";
+export * from "./lib/auth";
+export * from "./lib/convex-cache";
+export * from "./lib/list";
+export * from "./lib/mutation";
+export * from "./lib/provider";
 export * from "./lib/query";

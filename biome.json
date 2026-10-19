@@ -9,8 +9,7 @@
     "includes": [
       "**",
       "!**/routeTree.gen.ts",
-      "!**/worker-configuration.d.ts",
-      "!**/migrations",
+      "!**/convex/_generated",
       "!packages/tokens/theme.css",
       "!apps/mobile/assets"
     ]

@@ -9,12 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "wrangler deploy",
-    "typecheck": "tsr generate && tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
-    "cf-typegen": "wrangler types",
-    "build:static": "vite build --mode self-host"
+    "typecheck": "tsr generate && tsc --noEmit"
   },
   "dependencies": {
-    "@grimo/auth": "workspace:*",
+    "@convex-dev/better-auth": "catalog:",
     "@grimo/client": "workspace:*",
     "@grimo/core": "workspace:*",
     "@grimo/tokens": "workspace:*",
@@ -22,12 +20,12 @@
     "@tanstack/react-query-persist-client": "catalog:",
     "@tanstack/react-router": "^1.170.45",
     "better-auth": "catalog:",
+    "convex": "catalog:",
     "html-to-image": "^1.11.13",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.64.0",
     "@grimo/tsconfig": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-cli": "^1.167.45",

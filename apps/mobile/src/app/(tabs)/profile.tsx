@@ -2,16 +2,16 @@ import { useMe } from "@grimo/client";
 import { Button, Screen, Text } from "@/components/ui";
 import { AppearancePicker, ProfileHeader } from "@/features/profile";
 import { MonthlyCard, YearStats } from "@/features/stats";
-import { useAuthClient, useClearCache } from "@/providers/app-providers";
+import { useAppCache, useAuthClient } from "@/providers/app-providers";
 
 export default function ProfileScreen() {
   const me = useMe();
   const authClient = useAuthClient();
-  const clearCache = useClearCache();
+  const appCache = useAppCache();
 
   async function signOut() {
+    await appCache.clearForSignOut();
     await authClient.signOut();
-    await clearCache();
   }
 
   return (

@@ -2,15 +2,12 @@ node_modules/
 dist/
 .turbo/
 .wrangler/
-.dev.vars
+# Local Convex deployment (anonymous dev backend data)
+.convex/
 .env
 .env*.local
 *.tsbuildinfo
 .DS_Store
-worker-configuration.d.ts
 routeTree.gen.ts
-
-# Self-hosted server data (SQLite + uploads)
-data/
 
 .tanstack/

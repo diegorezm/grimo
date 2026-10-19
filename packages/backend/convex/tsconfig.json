@@ -1,0 +1,11 @@
+{
+  /* Convex functions. `convex dev` typechecks with this file too. */
+  "extends": "@grimo/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "allowImportingTsExtensions": false
+  },
+  "include": ["./**/*"],
+  "exclude": ["./_generated"]
+}

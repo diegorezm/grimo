@@ -6,8 +6,8 @@ import { ProfileForm, ProfileFormActions } from "@/features/profile";
 
 /** Edit profile expanded from the side peek. */
 export const Route = createFileRoute("/_app/settings/profile")({
-  loader: ({ context: { queryClient, api } }) => {
-    void queryClient.prefetchQuery(meQuery(api));
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(meQuery());
   },
   component: EditProfilePage,
 });

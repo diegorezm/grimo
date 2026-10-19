@@ -1,11 +1,4 @@
-import {
-  type FeedItem,
-  useCreatePost,
-  useFeed,
-  useInstance,
-  useMe,
-  useToggleLike,
-} from "@grimo/client";
+import { type FeedItem, useCreatePost, useFeed, useMe, useToggleLike } from "@grimo/client";
 import { describeActivity, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
@@ -22,8 +15,7 @@ import { cn } from "@/utils/cn";
 export function FeedPanel({ className }: { className?: string }) {
   const feed = useFeed();
   const { data: me } = useMe();
-  const social = useInstance().data?.social ?? true;
-  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = feed.data?.items ?? [];
 
   return (
     <aside
@@ -32,20 +24,14 @@ export function FeedPanel({ className }: { className?: string }) {
     >
       <header className="flex items-center justify-between px-5 pt-5 pb-3">
         <h2 id="feed-panel-title" className="text-xl font-medium italic">
-          {social ? "Atividade" : "Seu diário"}
+          Atividade
         </h2>
-        {social ? (
-          <Link
-            to="/people"
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted hover:text-accent"
-          >
-            Encontrar leitores →
-          </Link>
-        ) : (
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted">
-            Só você
-          </span>
-        )}
+        <Link
+          to="/people"
+          className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted hover:text-accent"
+        >
+          Encontrar leitores →
+        </Link>
       </header>
 
       <ol className="flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto px-4 pb-4 [scrollbar-width:thin]">
@@ -53,14 +39,12 @@ export function FeedPanel({ className }: { className?: string }) {
         {!feed.isPending && items.length === 0 && (
           <li className="flex flex-col items-center gap-3 py-10 text-center text-sm text-text-muted">
             Nada por aqui ainda. Que tal escrever uma nota?
-            {social && (
-              <Link
-                to="/people"
-                className="font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"
-              >
-                Encontrar leitores →
-              </Link>
-            )}
+            <Link
+              to="/people"
+              className="font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"
+            >
+              Encontrar leitores →
+            </Link>
           </li>
         )}
         {items.map((item) =>

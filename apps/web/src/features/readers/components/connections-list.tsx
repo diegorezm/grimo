@@ -8,16 +8,14 @@ export function ConnectionsList({
   username,
   kind,
   viewerId,
-  social,
 }: {
   username: string;
   kind: ConnectionKind;
   /** The signed-in reader (null when signed out): no follow button for yourself. */
   viewerId: string | null;
-  social: boolean;
 }) {
   const connections = useReaderConnections(username, kind);
-  const items = connections.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = connections.data?.items ?? [];
 
   if (connections.isPending) return <Spinner />;
   if (items.length === 0) {
@@ -35,7 +33,7 @@ export function ConnectionsList({
           <ReaderTile
             key={reader.id}
             reader={reader}
-            canFollow={social && viewerId !== null && reader.id !== viewerId}
+            canFollow={viewerId !== null && reader.id !== viewerId}
           />
         ))}
       </ReaderGrid>

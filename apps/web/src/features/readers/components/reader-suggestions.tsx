@@ -6,7 +6,7 @@ import { ReaderGrid, ReaderTile } from "./reader-tile";
 /** Readers to follow: people followed by people you follow come first. Scrolls for more. */
 export function ReaderSuggestions() {
   const suggestions = useReaderSuggestions();
-  const items = suggestions.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = suggestions.data?.items ?? [];
 
   if (suggestions.isPending) return <Spinner />;
   if (items.length === 0) {

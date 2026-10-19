@@ -1,23 +1,24 @@
-import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
-import type { InferResponseType } from "hono/client";
-import type { ApiClient } from "../../lib/api-client";
-import { useApi } from "../../lib/api-context";
-import { PAGE_SIZE, parseResponse, queryKeys, staleTimes } from "../../lib/query";
+import { api } from "@grimo/backend";
+import { useQuery } from "@tanstack/react-query";
+import type { FunctionReturnType } from "convex/server";
+import { convexQuery } from "../../lib/convex-cache";
+import { useGrowingList } from "../../lib/list";
+import { PAGE_SIZE } from "../../lib/query";
 
-export type FeedPage = InferResponseType<ApiClient["feed"]["$get"], 200>;
+export type FeedPage = FunctionReturnType<typeof api.feed.list>;
 export type FeedItem = FeedPage["items"][number];
 
-export function feedQuery(api: ApiClient) {
-  return infiniteQueryOptions({
-    queryKey: queryKeys.feed,
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      parseResponse(api.feed.$get({ query: { cursor: pageParam, limit: PAGE_SIZE } })),
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
-    staleTime: staleTimes.social,
-  });
+/** First page of the feed (route loaders prefetch it). */
+export function feedQuery() {
+  return convexQuery(api.feed.list, { limit: PAGE_SIZE }, "required");
 }
 
+/** My activities + the people I follow, newest first. Live: new activity shows up by itself. */
 export function useFeed() {
-  return useInfiniteQuery(feedQuery(useApi()));
+  return useGrowingList(api.feed.list, {}, "required");
+}
+
+/** Just the newest items (dashboard previews), sharing the feed's first page in the cache. */
+export function useFeedPreview() {
+  return useQuery(feedQuery());
 }

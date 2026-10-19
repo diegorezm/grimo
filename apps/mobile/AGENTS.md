@@ -16,7 +16,7 @@ Before touching any Expo / React Native API:
 pnpm dev:mobile                                          # expo start
 pnpm --filter @grimo/mobile exec expo install <package>  # ALWAYS use for new deps (SDK-compatible versions)
 pnpm --filter @grimo/mobile typecheck
-pnpm --filter @grimo/mobile exec expo-doctor
+cd apps/mobile && npx expo-doctor
 ```
 
 ## Rules
@@ -27,6 +27,9 @@ pnpm --filter @grimo/mobile exec expo-doctor
 - Styling: `StyleSheet` + tokens from `@/constants/theme` (re-exported from `@grimo/tokens`). No hard-coded colors.
 - `ios/` and `android/` are generated (CNG). Never edit by hand — use `app.json` + config plugins.
 - Native modules need a development build (`expo run:android|ios` or EAS); Expo Go only has bundled modules.
-- The server is chosen by the user (self-hosting!): `src/lib/server.ts` stores it, `src/lib/clients.ts`
-  builds auth/API clients per server. Use `useAuthClient()` — never create clients in screens.
-  `EXPO_PUBLIC_API_URL` is only the default server.
+- Data and auth come from Convex. `src/lib/server.ts` reads `EXPO_PUBLIC_CONVEX_URL` (fixed per
+  build); `src/lib/clients.ts` builds the auth client (Better Auth + `expoClient`, cookie in
+  SecureStore), the Convex client and the query client. Use `useAuthClient()` / `useAppCache()`
+  — never create clients in screens.
+- The query cache is persisted in MMKV (`src/lib/cache-storage.ts`) and restored before anything
+  renders: the app must open offline on cached data. See "Cache" in the root AGENTS.md.

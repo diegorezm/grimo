@@ -2,6 +2,7 @@ import { useShelf, useShelfTabStore } from "@grimo/client";
 import { countByShelf } from "@grimo/core";
 import { Spinner } from "@/components/feedback/spinner";
 import { FeedPanel } from "@/features/feed";
+import { OnboardingChecklist } from "@/features/onboarding";
 import { ShelfTiles } from "@/features/shelves";
 import { GoalHero } from "./goal-hero";
 import { MonthList } from "./month-list";
@@ -22,6 +23,7 @@ export function Dashboard() {
   return (
     <div className="grid grid-cols-1 gap-8 px-4 pt-2 @5xl/main:grid-cols-[minmax(0,1fr)_22rem] @5xl/main:gap-6 lg:px-8 lg:pt-6 lg:pb-8">
       <div className="flex min-w-0 flex-col gap-9">
+        <OnboardingChecklist />
         <ShelfTiles counts={counts} selected={status} onSelect={setStatus} />
         <ShelfCarousel
           status={status}

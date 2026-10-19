@@ -1,14 +1,17 @@
-import { ApiProvider } from "@grimo/client";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { DataProvider } from "@grimo/client";
 import type { ReactNode } from "react";
-import { api, persistOptions, queryClient } from "@/lib/api";
+import { cache, persistOptions, queryClient } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <ApiProvider client={api}>
-      <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-        {children}
-      </PersistQueryClientProvider>
-    </ApiProvider>
+    <DataProvider
+      cache={cache}
+      authClient={authClient}
+      queryClient={queryClient}
+      persistOptions={persistOptions}
+    >
+      {children}
+    </DataProvider>
   );
 }

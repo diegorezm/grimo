@@ -16,7 +16,7 @@ export function ReaderActivity({
   interactive: boolean;
 }) {
   const activity = useReaderActivity(username);
-  const items = activity.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = activity.data?.items ?? [];
   const groups = groupActivities(items);
 
   if (activity.isPending) return <Spinner />;

@@ -1,11 +1,9 @@
-import { useInstance } from "@grimo/client";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { Platform } from "react-native";
 import { useTheme } from "@/hooks/use-theme";
 
 export default function TabsLayout() {
   const theme = useTheme();
-  const personal = useInstance().data?.mode === "personal";
   const ios = Platform.OS === "ios";
   return (
     // On iOS 26 NativeTabs is the system liquid glass capsule: no background, only a tint.
@@ -17,7 +15,7 @@ export default function TabsLayout() {
       labelStyle={{ selected: { color: theme.accent } }}
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>{personal ? "Diário" : "Feed"}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="house" md="home" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="search">

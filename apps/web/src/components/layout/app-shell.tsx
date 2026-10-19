@@ -1,4 +1,4 @@
-import { useInstance, useMe } from "@grimo/client";
+import { useMe } from "@grimo/client";
 import { greetingFor } from "@grimo/core";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
@@ -7,15 +7,14 @@ import { HomeIcon, PeopleIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/compo
 import { Logo } from "@/components/ui/logo";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
-const nav = [
-  { to: "/", label: "Início", personalLabel: "Diário", icon: HomeIcon },
+/** Main sections (also drawn by the landing page demo). */
+export const APP_NAV = [
+  { to: "/", label: "Início", icon: HomeIcon },
   { to: "/shelves", label: "Estantes", icon: ShelvesIcon },
   { to: "/search", label: "Buscar", icon: SearchIcon },
-  { to: "/people", label: "Leitores", icon: PeopleIcon, social: true },
+  { to: "/people", label: "Leitores", icon: PeopleIcon },
   { to: "/me", label: "Perfil", icon: UserIcon },
 ] as const;
-
-type NavItem = (typeof nav)[number];
 
 /**
  * Desktop: full-screen app — icon sidebar on the left, search bar on top.
@@ -23,22 +22,17 @@ type NavItem = (typeof nav)[number];
  */
 /** `aside` is a side peek shown beside the page (see `SidePeek`). */
 export function AppShell({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
-  const { data: instance } = useInstance();
   const { data: me } = useMe();
-  const personal = instance?.mode === "personal";
-  const label = (item: NavItem) =>
-    personal && "personalLabel" in item ? item.personalLabel : item.label;
-  const items = nav.filter((item) => !("social" in item) || instance?.social);
 
   return (
     <div className="min-h-dvh">
       <div className="flex min-h-dvh lg:bg-surface">
         <aside className="sticky top-0 hidden h-dvh w-24 shrink-0 flex-col items-stretch border-r border-border py-6 lg:flex">
-          <Link to="/" aria-label={instance?.name ?? "Grimo"} className="mb-8 self-center">
+          <Link to="/" aria-label="Grimo" className="mb-8 self-center">
             <Logo className="h-10" />
           </Link>
           <nav aria-label="Seções" className="flex flex-col gap-1">
-            {items.map((item) => (
+            {APP_NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -50,7 +44,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
                 activeOptions={{ exact: item.to === "/" }}
               >
                 <item.icon className="size-6" />
-                {label(item)}
+                {item.label}
               </Link>
             ))}
           </nav>
@@ -78,7 +72,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
       </div>
 
       <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-lg justify-around gap-1 rounded-full p-1.5 font-mono text-[10px] uppercase tracking-wider lg:hidden">
-        {items.map((item) => (
+        {APP_NAV.map((item) => (
           <Link
             key={item.to}
             to={item.to}
@@ -87,7 +81,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
             inactiveProps={{ className: "text-text-muted hover:text-text" }}
             activeOptions={{ exact: item.to === "/" }}
           >
-            {label(item)}
+            {item.label}
           </Link>
         ))}
       </nav>
@@ -96,7 +90,6 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
 }
 
 function TopBar() {
-  const { data: instance } = useInstance();
   const { data: me } = useMe();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -110,7 +103,7 @@ function TopBar() {
     <header className="flex items-center justify-between gap-4 px-4 py-5 lg:px-8 lg:pt-7 lg:pb-2">
       <Link to="/" className="flex items-center gap-2.5 lg:hidden">
         <Logo className="h-10" />
-        <span className="font-serif text-2xl font-bold">{instance?.name ?? "Grimo"}</span>
+        <span className="font-serif text-2xl font-bold">Grimo</span>
       </Link>
 
       <search className="hidden max-w-xl flex-1 lg:block">

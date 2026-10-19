@@ -1,4 +1,4 @@
-import { useAddToShelf, useBook, useInstance, useUpdateShelfEntry } from "@grimo/client";
+import { useAddToShelf, useBook, useUpdateShelfEntry } from "@grimo/client";
 import {
   readingPercent,
   SHELF_LABELS,
@@ -20,7 +20,6 @@ import { BookCover } from "./book-cover";
 export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const social = useInstance().data?.social ?? false;
   const { data, isPending, isError } = useBook(openLibraryId);
 
   if (isPending) {
@@ -95,32 +94,30 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           </Card>
         )}
 
-        {social && (
-          <View style={styles.section}>
-            <View style={styles.between}>
-              <Text variant="heading">Resenhas</Text>
-              <Text variant="label" color="textMuted">
-                {community.averageRating ? `★ ${community.averageRating} · ` : ""}
-                {community.readers} leitores
-              </Text>
-            </View>
-            {book.id && entry && (
-              <Button
-                variant="secondary"
-                title="Escrever resenha"
-                onPress={() =>
-                  router.push({ pathname: "/review/[id]", params: { id: openLibraryId } })
-                }
-              />
-            )}
-            {reviews.length === 0 && (
-              <Text color="textMuted">Ninguém resenhou este livro ainda.</Text>
-            )}
-            {reviews.map((review) => (
-              <Review key={review.id} review={review} />
-            ))}
+        <View style={styles.section}>
+          <View style={styles.between}>
+            <Text variant="heading">Resenhas</Text>
+            <Text variant="label" color="textMuted">
+              {community.averageRating ? `★ ${community.averageRating} · ` : ""}
+              {community.readers} leitores
+            </Text>
           </View>
-        )}
+          {book.id && entry && (
+            <Button
+              variant="secondary"
+              title="Escrever resenha"
+              onPress={() =>
+                router.push({ pathname: "/review/[id]", params: { id: openLibraryId } })
+              }
+            />
+          )}
+          {reviews.length === 0 && (
+            <Text color="textMuted">Ninguém resenhou este livro ainda.</Text>
+          )}
+          {reviews.map((review) => (
+            <Review key={review.id} review={review} />
+          ))}
+        </View>
       </ScrollView>
 
       <View style={[styles.topBar, { top: insets.top + spacing[2] }]}>

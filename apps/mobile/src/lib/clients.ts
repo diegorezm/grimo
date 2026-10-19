@@ -1,47 +1,35 @@
 import { expoClient } from "@better-auth/expo/client";
-import { AUTH_BASE_PATH, sharedAuthClientPlugins } from "@grimo/auth/client";
-import { createApiClient } from "@grimo/client";
+import { ConvexCache, createQueryClient, sharedAuthClientPlugins } from "@grimo/client";
 import { createAuthClient } from "better-auth/react";
+import { ConvexReactClient } from "convex/react";
 import * as SecureStore from "expo-secure-store";
+import { CONVEX_SITE_URL, CONVEX_URL } from "./server";
 
-/** Auth + API clients bound to one server. Each server keeps its own session. */
-function createClients(serverUrl: string) {
-  const authClient = createAuthClient({
-    baseURL: serverUrl,
-    basePath: AUTH_BASE_PATH,
-    plugins: [
-      ...sharedAuthClientPlugins(),
-      // Session cookie lives in SecureStore, namespaced per server.
-      expoClient({
-        scheme: "grimo",
-        storagePrefix: `grimo_${serverUrl.replace(/[^a-zA-Z0-9]/g, "_")}`,
-        storage: SecureStore,
-      }),
-    ],
-  });
+/**
+ * Better Auth, served by Convex. The session cookie (and the last session, so the app opens
+ * offline) lives in SecureStore.
+ */
+export const authClient = createAuthClient({
+  baseURL: CONVEX_SITE_URL,
+  plugins: [
+    ...sharedAuthClientPlugins(),
+    expoClient({ scheme: "grimo", storagePrefix: "grimo", storage: SecureStore }),
+  ],
+});
 
-  const api = createApiClient({
-    baseUrl: serverUrl,
-    credentials: "omit",
-    headers: async (): Promise<Record<string, string>> => {
-      const cookie = await authClient.getCookie();
-      return cookie ? { Cookie: cookie } : {};
-    },
-  });
+export type AuthClient = typeof authClient;
 
-  return { authClient, api };
-}
+/** Set by AppProviders: what to do when the server rejects the session. */
+let onUnauthorized = () => {};
+export const setOnUnauthorized = (handler: () => void) => {
+  onUnauthorized = handler;
+};
 
-export type Clients = ReturnType<typeof createClients>;
-export type AuthClient = Clients["authClient"];
-
-const cache = new Map<string, Clients>();
-
-export function getClients(serverUrl: string): Clients {
-  let clients = cache.get(serverUrl);
-  if (!clients) {
-    clients = createClients(serverUrl);
-    cache.set(serverUrl, clients);
-  }
-  return clients;
-}
+export const cache = new ConvexCache(
+  new ConvexReactClient(CONVEX_URL, { unsavedChangesWarning: false }),
+  { onUnauthorized: () => onUnauthorized() },
+);
+export const queryClient = createQueryClient({
+  convex: cache,
+  onUnauthorized: () => onUnauthorized(),
+});

@@ -1,4 +1,4 @@
-import { readerSearchQuery, readerSuggestionsQuery, useInstance, useMe } from "@grimo/client";
+import { readerSearchQuery, readerSuggestionsQuery, useMe } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
 import { Screen } from "@/components/layout/screen";
 import { Avatar } from "@/components/ui/avatar";
@@ -9,9 +9,9 @@ export const Route = createFileRoute("/_app/people")({
     q: typeof search.q === "string" && search.q ? search.q : undefined,
   }),
   loaderDeps: ({ search }) => ({ q: search.q }),
-  loader: ({ context: { queryClient, api }, deps }) => {
-    if (deps.q) void queryClient.prefetchInfiniteQuery(readerSearchQuery(api, deps.q));
-    else void queryClient.prefetchInfiniteQuery(readerSuggestionsQuery(api));
+  loader: ({ context: { queryClient }, deps }) => {
+    if (deps.q) void queryClient.prefetchQuery(readerSearchQuery(deps.q));
+    else void queryClient.prefetchQuery(readerSuggestionsQuery());
   },
   component: PeoplePage,
 });
@@ -19,18 +19,7 @@ export const Route = createFileRoute("/_app/people")({
 function PeoplePage() {
   const { q } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { data: instance } = useInstance();
   const { data: me } = useMe();
-
-  if (instance && !instance.social) {
-    return (
-      <Screen title="Leitores">
-        <p className="text-text-muted">
-          Este Grimo é pessoal: seguir outros leitores está desativado.
-        </p>
-      </Screen>
-    );
-  }
 
   return (
     <Screen title="Leitores" subtitle="Encontre quem lê o que você lê e acompanhe as leituras.">

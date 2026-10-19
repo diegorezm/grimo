@@ -1,4 +1,4 @@
-import { useFeed, useInstance, useMe, useShelf, useYearOverview } from "@grimo/client";
+import { useFeed, useMe, useShelf, useYearOverview } from "@grimo/client";
 import { goalProgress, greetingFor, readingPercent } from "@grimo/core";
 import { router } from "expo-router";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
@@ -10,19 +10,19 @@ import { FeedItem } from "@/features/feed";
 import { ShelfTiles } from "@/features/shelves";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { FirstSteps } from "./first-steps";
 
 /** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
 export function Dashboard() {
   const theme = useTheme();
   const dark = useColorScheme() === "dark";
   const me = useMe();
-  const social = useInstance().data?.social ?? false;
   const reading = useShelf("reading");
   const year = useYearOverview();
   const feed = useFeed();
   const books = reading.data?.items ?? [];
   const [current, ...others] = books;
-  const activity = (feed.data?.pages.flatMap((page) => page.items) ?? []).slice(0, 5);
+  const activity = (feed.data?.items ?? []).slice(0, 5);
   const goal = year.data?.goal ? goalProgress(year.data.goal.target, year.data.goal.done) : null;
 
   function refresh() {
@@ -48,10 +48,12 @@ export function Dashboard() {
               {greetingFor(new Date())}
             </Text>
             <Text variant="display" numberOfLines={1}>
-              {me.data?.name.split(" ")[0] ?? (social ? "Início" : "Diário")}
+              {me.data?.name.split(" ")[0] ?? "Início"}
             </Text>
           </View>
         </View>
+
+        <FirstSteps />
 
         {current ? (
           <CurrentRead item={current} />
@@ -97,7 +99,7 @@ export function Dashboard() {
           <ShelfTiles onSelect={() => router.navigate("/shelves")} />
         </View>
 
-        {social && activity.length > 0 && (
+        {activity.length > 0 && (
           <View style={styles.section}>
             <Text variant="heading">Da sua rede</Text>
             {activity.map((item) => (
