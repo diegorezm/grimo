@@ -1,5 +1,6 @@
 import { useRemoveAvatar, useUploadAvatar } from "@grimo/client";
 import { AVATAR_SIZE } from "@grimo/core";
+import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -50,10 +51,25 @@ export function AvatarPicker({ image, name }: { image: string | null; name: stri
     context.resize({ width: AVATAR_SIZE, height: AVATAR_SIZE });
     const rendered = await context.renderAsync();
     const photo = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.8 });
-    const body = await (await fetch(photo.uri)).blob();
+    const info = await FileSystem.getInfoAsync(photo.uri);
 
     upload.mutate(
-      { body, contentType: "image/jpeg" },
+      {
+        contentType: "image/jpeg",
+        size: info.exists ? info.size : 0,
+        // Native upload straight from the file (React Native Blobs are unreliable as bodies).
+        send: async (url) => {
+          const res = await FileSystem.uploadAsync(url, photo.uri, {
+            httpMethod: "POST",
+            uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+            headers: { "Content-Type": "image/jpeg" },
+          });
+          if (res.status < 200 || res.status >= 300) {
+            throw new Error("Não foi possível enviar a foto");
+          }
+          return res.body;
+        },
+      },
       { onError: (error) => Alert.alert("Não foi possível trocar a foto", error.message) },
     );
   }

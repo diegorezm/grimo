@@ -49,7 +49,19 @@ export function AvatarUpload({ image, name }: { image: string | null; name: stri
     setError(null);
     try {
       const body = await squareJpeg(file);
-      await upload.mutateAsync({ body, contentType: "image/jpeg" });
+      await upload.mutateAsync({
+        contentType: "image/jpeg",
+        size: body.size,
+        send: async (url) => {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "image/jpeg" },
+            body,
+          });
+          if (!res.ok) throw new Error("Não foi possível enviar a foto");
+          return res.text();
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível trocar a foto");
     }

@@ -46,31 +46,30 @@ export function useUpdateMe() {
   });
 }
 
-/** A photo ready to upload: the file's bytes and its MIME type. */
+/**
+ * A photo ready to upload. `send` POSTs the bytes to the upload URL (with `contentType` as
+ * Content-Type) and returns the response body: each platform sends files its own way
+ * (web: `fetch` with a Blob; React Native: a native file upload, since RN Blobs are unreliable).
+ */
 export interface AvatarFile {
-  body: Blob;
   contentType: string;
+  size: number;
+  send: (uploadUrl: string) => Promise<string>;
 }
 
 /**
- * Uploads a profile photo: gets an upload URL, POSTs the bytes to Convex file storage and
- * makes it the reader's photo. Platforms only pick and shrink the image (web: File, mobile: URI).
+ * Uploads a profile photo: checks it, gets an upload URL, sends the file to Convex file storage
+ * and makes it the reader's photo. Platforms only pick, shrink and send the image.
  */
 export function useUploadAvatar() {
   const { convex } = useConvexCache();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ body, contentType }: AvatarFile) => {
-      const problem = avatarProblem({ contentType, size: body.size });
+    mutationFn: async ({ contentType, size, send }: AvatarFile) => {
+      const problem = avatarProblem({ contentType, size });
       if (problem) throw new Error(problem);
       const uploadUrl = await convex.mutation(api.users.avatarUploadUrl, {});
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": contentType },
-        body,
-      });
-      if (!res.ok) throw new Error("Não foi possível enviar a foto");
-      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+      const { storageId } = JSON.parse(await send(uploadUrl)) as { storageId: Id<"_storage"> };
       return convex.mutation(api.users.setAvatar, { storageId });
     },
     onSuccess: (profile) =>
