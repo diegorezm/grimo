@@ -16,14 +16,20 @@ const MOBILE_SCHEME = "grimo://";
 /** `http://localhost:<any port>` or `http://127.0.0.1:<any port>`. */
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
+/** Expo Go identifies the app as `exp://<LAN IP>:<port>` instead of the app scheme. */
+const EXPO_GO_ORIGIN = /^exp:\/\/[\w.-]+(:\d+)?$/;
+
 /**
  * Origins allowed to call auth (and CORS). In local dev (SITE_URL on localhost) any localhost
- * port is accepted too, so the web app works whichever port Vite picks.
+ * port is accepted too, so the web app works whichever port Vite picks, and so is Expo Go.
  */
 function trustedOrigins(request?: Request) {
   const origins = [siteUrl, MOBILE_SCHEME];
-  const origin = request?.headers.get("origin");
-  if (LOCAL_ORIGIN.test(siteUrl) && origin && LOCAL_ORIGIN.test(origin)) origins.push(origin);
+  const origin = request?.headers.get("origin") ?? request?.headers.get("expo-origin");
+  const dev = LOCAL_ORIGIN.test(siteUrl);
+  if (dev && origin && (LOCAL_ORIGIN.test(origin) || EXPO_GO_ORIGIN.test(origin))) {
+    origins.push(origin);
+  }
   return origins;
 }
 
