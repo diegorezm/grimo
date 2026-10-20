@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkle } from "@/components/ui/sparkle";
 import { cn } from "@/utils/cn";
+import { AvatarUpload } from "./avatar-upload";
 
 const MAX_GENRES = 5;
 const MAX_BIO = 280;
@@ -53,6 +54,8 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
         <h1 className="text-3xl font-medium italic sm:text-4xl">Editar perfil</h1>
         <p className="mt-1 text-text-muted">Como os outros leitores veem você.</p>
       </header>
+
+      <AvatarUpload image={profile.image} name={profile.name} />
 
       <Section number="01" title="Sobre você" hint="Seu nome e uma frase sobre o que você lê.">
         <Field label="Nome">

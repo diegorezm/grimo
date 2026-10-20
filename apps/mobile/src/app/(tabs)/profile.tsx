@@ -17,7 +17,7 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      {me.data && <ProfileHeader profile={me.data} />}
+      {me.data && <ProfileHeader profile={me.data} editable />}
       <YearStats />
       <Text variant="heading">Resumo do mês</Text>
       <MonthlyCard />

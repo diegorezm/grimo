@@ -345,3 +345,23 @@ describe("account", () => {
     vi.useRealTimers();
   });
 });
+
+describe("avatar", () => {
+  // convex-test does not keep a file's content type (real uploads get it from the request), so
+  // only the rejection path can run here; the accepted path is checked against a deployment.
+  it("rejects files that are not photos", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const file = await t.run((ctx) =>
+      ctx.storage.store(new Blob(["%PDF"], { type: "application/pdf" })),
+    );
+    await expect(rafa.as.mutation(api.users.setAvatar, { storageId: file })).rejects.toThrow(/JPG/);
+  });
+
+  it("removing the photo clears the image", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const profile = await rafa.as.mutation(api.users.removeAvatar, {});
+    expect(profile.image).toBeNull();
+  });
+});
