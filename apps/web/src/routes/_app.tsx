@@ -12,6 +12,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
 import { BookPeek } from "@/features/books";
+import { LegalGate } from "@/features/legal";
 import { ProfilePeek } from "@/features/profile";
 import { sessionQuery, signOutLocally } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -67,6 +68,8 @@ function SignedInLayout({ book, panel }: { book?: string; panel?: "profile" }) {
   return (
     <AppShell aside={aside}>
       <Outlet />
+      {/* Terms changed (or never accepted): agree again before going on. */}
+      <LegalGate />
     </AppShell>
   );
 }

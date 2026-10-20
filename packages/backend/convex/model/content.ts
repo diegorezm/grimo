@@ -1,6 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { authorOf } from "./readers";
+import { blockedIds, isHidden } from "./safety";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -46,7 +47,8 @@ export async function activityView(
     activity.bookId ? ctx.db.get(activity.bookId) : null,
     activity.postId ? ctx.db.get(activity.postId) : null,
   ]);
-  if (!actor) return null;
+  if (!actor || isHidden(actor)) return null;
+  if (target && isHidden(target)) return null;
   if (activity.postId && !post) return null;
   return {
     id: activity._id,
@@ -72,6 +74,8 @@ export async function listActivities(
   viewerId: Id<"users"> | null,
   limit: number,
 ) {
+  // Nothing from (or about) readers the viewer blocked or was blocked by.
+  const blocked = await blockedIds(ctx, viewerId);
   const perActor = await Promise.all(
     actorIds.map((actorId) =>
       ctx.db
@@ -83,6 +87,11 @@ export async function listActivities(
   );
   const newest = perActor
     .flat()
+    .filter(
+      (activity) =>
+        !blocked.has(activity.actorId) &&
+        !(activity.targetUserId && blocked.has(activity.targetUserId)),
+    )
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, limit + 1);
   const views = await Promise.all(

@@ -20,6 +20,7 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Landing page (visitante)                 | `apps/web/src/features/landing/` (rota `/welcome`; `/` deslogado cai nela) |
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |
+| LGPD, termos, idade (16+), App Store     | `docs/legal/README.md` (decisões e checklist: leia antes de mexer em cadastro ou dados pessoais) |
 
 ## Arquitetura
 
@@ -92,6 +93,22 @@ O cache forte e persistido é parte central da experiência. **Nenhuma mudança 
   sessão do SecureStore).
 - A sessão fica em cache em memória (`sessionQuery`, 5 min) e **nunca** é persistida no cache de
   queries.
+
+## Dados pessoais e termos (LGPD)
+
+Decisões e checklist em [docs/legal/README.md](docs/legal/README.md). Ao mexer em dados:
+
+- **Tabela ou campo novo com dado de usuário?** Inclua em `account.exportData` (cópia dos dados)
+  e em `account.purge` (exclusão da conta, corrigindo contadores), e atualize a Política
+  (`apps/web/src/features/legal/components/privacy.tsx`) e `docs/legal/ropa.md`.
+- **Mudou o texto dos Termos ou da Política de um jeito que o usuário precisa concordar de novo?**
+  Suba `TERMS_VERSION`/`PRIVACY_VERSION` (`packages/core/src/legal/documents.ts`): todos veem o
+  aceite de novo (`me.legal`). Correção de digitação não sobe versão.
+- **Conteúdo de um leitor aparecendo para outro?** Respeite bloqueios e contas ocultas
+  (`blockedIds`, `isHidden` em `convex/model/safety.ts`).
+- Nada de analytics, pixel ou fonte/script de terceiros sem antes transformar o aviso de cookies
+  em consentimento de verdade (`CookieNotice`).
+- O app é 16+: não crie fluxo que pule o onboarding (`completeSetup`) ou o aceite (`legal.accept`).
 
 ## Regra de ouro: compartilhar o máximo possível
 

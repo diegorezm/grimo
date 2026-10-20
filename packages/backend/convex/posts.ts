@@ -3,8 +3,9 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity } from "./model/content";
-import { notFound, parse } from "./model/errors";
+import { appError, notFound, parse } from "./model/errors";
 import { authorOf, getViewer, requireViewer } from "./model/readers";
+import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
 import { postKind } from "./schema";
 
 /** Creates a review or note (and its feed activity). Used by the seed too. */
@@ -36,14 +37,23 @@ export async function createPost(
   return postId;
 }
 
+/** A post `userId` may like or comment on: it exists and nobody blocked anybody. */
+async function interactablePost(ctx: MutationCtx, userId: Id<"users">, postId: Id<"posts">) {
+  const post = await ctx.db.get(postId);
+  if (!post) throw notFound("Post");
+  if (await isBlockedBetween(ctx, userId, post.authorId)) {
+    throw appError("FORBIDDEN", "Não é possível interagir com esse post.");
+  }
+  return post;
+}
+
 export async function setLike(
   ctx: MutationCtx,
   userId: Id<"users">,
   postId: Id<"posts">,
   like: boolean,
 ) {
-  const post = await ctx.db.get(postId);
-  if (!post) throw notFound("Post");
+  const post = await interactablePost(ctx, userId, postId);
   const existing = await ctx.db
     .query("postLikes")
     .withIndex("by_post_user", (q) => q.eq("postId", postId).eq("userId", userId))
@@ -64,8 +74,7 @@ export async function addComment(
   postId: Id<"posts">,
   body: string,
 ) {
-  const post = await ctx.db.get(postId);
-  if (!post) throw notFound("Post");
+  const post = await interactablePost(ctx, authorId, postId);
   const id = await ctx.db.insert("postComments", { postId, authorId, body });
   await ctx.db.patch(postId, { commentCount: post.commentCount + 1 });
   return id;
@@ -98,7 +107,7 @@ export const get = query({
     const post = id ? await ctx.db.get(id) : null;
     if (!post) throw notFound("Post");
     const viewer = await getViewer(ctx);
-    const [author, book, view, comments] = await Promise.all([
+    const [author, book, view, comments, blocked] = await Promise.all([
       ctx.db.get(post.authorId),
       post.bookId ? ctx.db.get(post.bookId) : null,
       postView(ctx, post, viewer?._id ?? null),
@@ -106,12 +115,13 @@ export const get = query({
         .query("postComments")
         .withIndex("by_post", (q) => q.eq("postId", post._id))
         .collect(),
+      blockedIds(ctx, viewer?._id ?? null),
     ]);
-    if (!author) throw notFound("Post");
+    if (!author || isHidden(author) || blocked.has(author._id)) throw notFound("Post");
     const commentViews = await Promise.all(
       comments.map(async (comment) => {
         const commenter = await ctx.db.get(comment.authorId);
-        return commenter
+        return commenter && !isHidden(commenter) && !blocked.has(commenter._id)
           ? {
               id: comment._id,
               body: comment.body,

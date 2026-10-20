@@ -30,7 +30,10 @@ function RootNavigator() {
   const { data: session, isPending } = useAuthClient().useSession();
   useClearCacheOnSignOut(session?.session.id ?? null);
   // A new account confirms name and @ first (`needsSetup`); cached, so this works offline too.
-  const needsSetup = useMe({ enabled: Boolean(session) }).data?.needsSetup ?? false;
+  // Then, when the Terms or Privacy Policy changed (or the reader is under 16): `legal`.
+  const me = useMe({ enabled: Boolean(session) }).data;
+  const needsSetup = me?.needsSetup ?? false;
+  const needsLegal = !needsSetup && Boolean(me?.legal.needsAcceptance || me?.legal.underage);
   const [fontsLoaded] = useFonts(fontAssets);
   useThemeStore(); // subscribes so the saved appearance is applied on startup
   const ready = fontsLoaded && !isPending;
@@ -45,9 +48,21 @@ function RootNavigator() {
       <Stack.Protected guard={Boolean(session) && needsSetup}>
         <Stack.Screen name="setup" />
       </Stack.Protected>
-      <Stack.Protected guard={Boolean(session) && !needsSetup}>
+      <Stack.Protected guard={Boolean(session) && needsLegal}>
+        <Stack.Screen name="legal" />
+      </Stack.Protected>
+      <Stack.Protected guard={Boolean(session) && !needsSetup && !needsLegal}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="book/[id]" />
+        <Stack.Screen name="account" />
+        <Stack.Screen
+          name="report"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.75],
+            sheetGrabberVisible: true,
+          }}
+        />
         {/* Native sheets: on iOS 26 they get the system liquid glass. */}
         <Stack.Screen
           name="progress/[id]"

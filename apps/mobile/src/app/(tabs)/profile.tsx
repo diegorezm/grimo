@@ -1,4 +1,5 @@
 import { useMe } from "@grimo/client";
+import { router } from "expo-router";
 import { Button, Screen, Text } from "@/components/ui";
 import { AppearancePicker, ProfileHeader } from "@/features/profile";
 import { MonthlyCard, YearStats } from "@/features/stats";
@@ -21,6 +22,11 @@ export default function ProfileScreen() {
       <Text variant="heading">Resumo do mês</Text>
       <MonthlyCard />
       <AppearancePicker />
+      <Button
+        variant="secondary"
+        title="Conta e privacidade"
+        onPress={() => router.push("/account")}
+      />
       <Button variant="ghost" title="Sair" onPress={signOut} />
     </Screen>
   );

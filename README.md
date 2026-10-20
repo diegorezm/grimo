@@ -70,6 +70,13 @@ npx convex env set GOOGLE_CLIENT_SECRET <secret>
 Sem essas variáveis o botão "Continuar com Google" aparece desabilitado, avisando que não está
 disponível no momento.
 
+Entrar com Apple (exigido pela App Store quando há login com Google): `APPLE_CLIENT_ID` (Services
+ID), `APPLE_CLIENT_SECRET` (JWT gerado com a chave da Apple) e `APPLE_BUNDLE_ID` (app iOS), com o
+redirect `<CONVEX_SITE_URL>/api/auth/callback/apple`. `auth.providers` diz aos apps se está ligado.
+
+Termos, privacidade, idade mínima (16+), exclusão de conta e moderação: veja
+[docs/legal/README.md](docs/legal/README.md).
+
 Depois, no dia a dia:
 
 ```bash

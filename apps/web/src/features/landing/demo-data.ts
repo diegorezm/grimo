@@ -159,6 +159,7 @@ const ME: Me = {
   followers: 38,
   following: 41,
   needsSetup: false,
+  legal: { needsAcceptance: false, needsAge: false, underage: false },
 };
 
 const OVERVIEW: YearOverview = {

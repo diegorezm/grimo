@@ -1,0 +1,45 @@
+import { z } from "zod";
+
+/** What can be reported. */
+export const REPORT_TARGETS = ["post", "comment", "user"] as const;
+export type ReportTarget = (typeof REPORT_TARGETS)[number];
+
+export const REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "hate",
+  "sexual",
+  "violence",
+  "spoiler",
+  "copyright",
+  "underage",
+  "other",
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
+  spam: "Spam ou golpe",
+  harassment: "Assédio ou bullying",
+  hate: "Discurso de ódio",
+  sexual: "Conteúdo sexual",
+  violence: "Violência ou ameaça",
+  spoiler: "Spoiler sem aviso",
+  copyright: "Violação de direitos autorais",
+  underage: "Parece ter menos de 16 anos",
+  other: "Outro motivo",
+};
+
+export const REPORT_STATUSES = ["open", "dismissed", "actioned"] as const;
+
+export const reportSchema = z
+  .object({
+    target: z.enum(REPORT_TARGETS),
+    targetId: z.string().min(1),
+    reason: z.enum(REPORT_REASONS),
+    details: z.string().trim().max(1000).optional(),
+  })
+  .refine((report) => report.reason !== "other" || Boolean(report.details), {
+    message: "Conta pra gente o que aconteceu",
+    path: ["details"],
+  });
+export type ReportInput = z.infer<typeof reportSchema>;

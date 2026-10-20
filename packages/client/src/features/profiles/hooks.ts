@@ -8,11 +8,20 @@ import { useGrowingList } from "../../lib/list";
 import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
 import { PAGE_SIZE } from "../../lib/query";
+import {
+  type AgreementInput,
+  agreementArgs,
+  applyAcceptance,
+  type LegalSource,
+} from "../legal/hooks";
 
-/** The signed-in reader (`needsSetup`: the onboarding hasn't asked for name and @ yet). */
+/**
+ * The signed-in reader. `needsSetup`: the onboarding hasn't asked for name and @ yet; `legal`:
+ * terms to accept again, age to declare, or declared under 16.
+ */
 export type Me = FunctionReturnType<typeof api.users.me>;
 /** A reader's public profile. */
-export type Profile = Omit<Me, "needsSetup">;
+export type Profile = Omit<Me, "needsSetup" | "legal">;
 export type ReaderPage = FunctionReturnType<typeof api.users.byUsername>;
 export type ReaderActivityPage = FunctionReturnType<typeof api.users.activity>;
 export type ConnectionKind = "followers" | "following";
@@ -55,15 +64,28 @@ export function useUsernameAvailable(username: string) {
   });
 }
 
-/** Onboarding: saves name and @ and ends the setup (the app opens normally afterwards). */
-export function useCompleteSetup() {
+/**
+ * Onboarding: saves name and @, the age declaration and the acceptance of the terms, and ends
+ * the setup (the app opens normally afterwards). Under 16, `result.ok` is false and `me` says
+ * `legal.underage` instead.
+ */
+export function useCompleteSetup(source: LegalSource) {
   const { convex } = useConvexCache();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: SetupProfileInput) => convex.mutation(api.users.completeSetup, input),
-    onSuccess: (_result, input) =>
+    mutationFn: ({ name, username, ...agreement }: SetupProfileInput & AgreementInput) =>
+      convex.mutation(api.users.completeSetup, {
+        name,
+        username,
+        ...agreementArgs(agreement, source),
+      }),
+    onSuccess: (result, { name, username }) =>
       queryClient.setQueryData(meQuery().queryKey, (me) =>
-        me ? { ...me, ...input, needsSetup: false } : me,
+        !me
+          ? me
+          : result.ok
+            ? { ...applyAcceptance(me, result), name, username, needsSetup: false }
+            : applyAcceptance(me, result),
       ),
   });
 }

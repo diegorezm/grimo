@@ -86,3 +86,34 @@ export async function continueWithEmail(
   }
   return fail(authErrorMessage(signUp.error));
 }
+
+/** The part of a Better Auth client that account deletion needs. */
+export interface DeleteAccountClient {
+  deleteUser: (input: { password?: string }) => AuthResult;
+}
+
+export type DeleteAccountOutcome = { status: "deleted" } | { status: "error"; message: string };
+
+/**
+ * Deletes the signed-in account (Better Auth `/delete-user`; the backend then erases the
+ * reader's data). Email accounts confirm with the password; Google/Apple accounts need a recent
+ * sign-in (last 24 h), otherwise they are asked to sign in again.
+ */
+export async function deleteAccount(
+  client: DeleteAccountClient,
+  password?: string,
+): Promise<DeleteAccountOutcome> {
+  const { error } = await client.deleteUser(password ? { password } : {});
+  if (!error) return { status: "deleted" };
+  switch (error.code) {
+    case "INVALID_PASSWORD":
+      return { status: "error", message: "Senha incorreta." };
+    case "SESSION_EXPIRED":
+      return {
+        status: "error",
+        message: "Por segurança, saia e entre de novo para excluir a conta.",
+      };
+    default:
+      return { status: "error", message: "Não foi possível excluir a conta agora. Tente de novo." };
+  }
+}

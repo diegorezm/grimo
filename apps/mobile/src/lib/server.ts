@@ -12,3 +12,12 @@ if (!CONVEX_URL) {
 }
 
 export const CONVEX_SITE_URL = convexSiteUrl(CONVEX_URL);
+
+/**
+ * The web app's origin (`EXPO_PUBLIC_SITE_URL`), where the Terms, Privacy Policy and the
+ * account deletion page live: the app opens them in the in-app browser.
+ */
+export const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL ?? "http://localhost:5173").replace(
+  /\/$/,
+  "",
+);

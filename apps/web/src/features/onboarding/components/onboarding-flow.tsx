@@ -1,4 +1,5 @@
 import {
+  type AgreementInput,
   type BookSearchResult,
   errorMessage,
   useAddToShelf,
@@ -9,7 +10,14 @@ import {
   useUpdateShelfEntry,
   useUsernameAvailable,
 } from "@grimo/client";
-import { firstIssue, setupProfileSchema, usernameFromName } from "@grimo/core";
+import {
+  firstIssue,
+  legalAcceptanceSchema,
+  PRIVACY_VERSION,
+  setupProfileSchema,
+  TERMS_VERSION,
+  usernameFromName,
+} from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useDeferredValue, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
@@ -18,6 +26,7 @@ import { SearchIcon } from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
 import { Sparkle } from "@/components/ui/sparkle";
 import { BookCover } from "@/features/books";
+import { AgreementFields, UnderageNotice } from "@/features/legal";
 import { cn } from "@/utils/cn";
 
 type Step = "profile" | "book" | "page" | "goal" | "done";
@@ -59,8 +68,9 @@ export function OnboardingFlow() {
       </header>
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 pt-4 pb-16">
         {step === null && <Spinner />}
-        {step && <Progress step={step} />}
-        {step === "profile" && me.data && (
+        {step && !me.data?.legal.underage && <Progress step={step} />}
+        {me.data?.legal.underage && <UnderageNotice />}
+        {step === "profile" && me.data && !me.data.legal.underage && (
           <ProfileStep
             initialName={me.data.name}
             initialUsername={me.data.name ? me.data.username : ""}
@@ -153,9 +163,10 @@ function ProfileStep({
   initialUsername: string;
   onDone: () => void;
 }) {
-  const completeSetup = useCompleteSetup();
+  const completeSetup = useCompleteSetup("web");
   const [name, setName] = useState(initialName);
   const [username, setUsername] = useState<string | null>(initialUsername || null);
+  const [agreement, setAgreement] = useState<AgreementInput>({ accepted: false });
   const handle = username ?? usernameFromName(name);
   const checked = useUsernameAvailable(useDeferredValue(handle));
   const taken = checked.data?.valid && !checked.data.available;
@@ -166,11 +177,22 @@ function ProfileStep({
     const input = setupProfileSchema.safeParse({ name, username: handle });
     if (!input.success) return setError(firstIssue(input.error));
     if (taken) return setError("Esse @ já tem dono. Que tal outro?");
-    setError(null);
-    completeSetup.mutate(input.data, {
-      onSuccess: onDone,
-      onError: (failure) => setError(errorMessage(failure)),
+    const legal = legalAcceptanceSchema.safeParse({
+      ...agreement,
+      birthDate: agreement.birthDate ?? "",
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
     });
+    if (!legal.success) return setError(firstIssue(legal.error));
+    setError(null);
+    completeSetup.mutate(
+      { ...input.data, ...agreement },
+      {
+        // Under 16 the cached `me` turns `legal.underage` and the step shows the way out.
+        onSuccess: (result) => result.ok && onDone(),
+        onError: (failure) => setError(errorMessage(failure)),
+      },
+    );
   }
 
   return (
@@ -225,6 +247,7 @@ function ProfileStep({
               : ""}
           </span>
         </label>
+        <AgreementFields value={agreement} onChange={setAgreement} askAge />
         {error && <p className="text-sm text-danger">{error}</p>}
         <Button type="submit" disabled={completeSetup.isPending} className="self-start py-3.5">
           {completeSetup.isPending ? "Salvando…" : "É assim que eu sou"}

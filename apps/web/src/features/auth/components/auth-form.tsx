@@ -1,5 +1,5 @@
 import { continueWithEmail } from "@grimo/client";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,17 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
           É de graça. Seu email nunca aparece no perfil.
         </p>
       </form>
+      <p className="mt-8 text-center text-xs leading-relaxed text-text-muted">
+        Ao continuar, você concorda com os{" "}
+        <Link to="/termos" className="underline underline-offset-4 hover:text-text">
+          Termos de Uso
+        </Link>{" "}
+        e a{" "}
+        <Link to="/privacidade" className="underline underline-offset-4 hover:text-text">
+          Política de Privacidade
+        </Link>
+        . O Grimo é para maiores de 16 anos.
+      </p>
     </div>
   );
 }

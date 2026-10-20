@@ -8,6 +8,12 @@
       "port": 5173
     },
     {
+      "name": "backend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@grimo/backend", "dev"],
+      "port": 3212
+    },
+    {
       "name": "web-alt-port",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@grimo/web", "dev", "--port", "5180", "--strictPort"],

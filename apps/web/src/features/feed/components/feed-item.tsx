@@ -1,8 +1,9 @@
-import { type FeedItem as FeedItemData, useToggleLike } from "@grimo/client";
+import { type FeedItem as FeedItemData, useMe, useToggleLike } from "@grimo/client";
 import { describeActivityGroup, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/ui/avatar";
 import { BookCover, BookPeekLink } from "@/features/books";
+import { ReportButton } from "@/features/moderation";
 import { cn } from "@/utils/cn";
 
 /** Covers shown for a grouped entry before "+N". */
@@ -24,6 +25,7 @@ export function FeedItem({
   interactive?: boolean;
 }) {
   const toggleLike = useToggleLike();
+  const me = useMe({ enabled: interactive });
   const { actor, book, post, target } = item;
   const hasBook = Boolean(book?.title && book.openLibraryId);
   // Progress groups show only the latest page; shelf and finished groups list every book.
@@ -111,6 +113,9 @@ export function FeedItem({
                 <span>♡ {post.likeCount}</span>
               )}
               <span>{post.commentCount} comentários</span>
+              {interactive && me.data && me.data.id !== actor.id && (
+                <ReportButton target="post" targetId={post.id} className="ml-auto" />
+              )}
             </div>
           </>
         )}

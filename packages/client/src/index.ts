@@ -1,6 +1,8 @@
 // Platform-agnostic data layer shared by web and mobile. No DOM / React Native imports here.
 export * from "./features/books";
 export * from "./features/feed";
+export * from "./features/legal";
+export * from "./features/moderation";
 export * from "./features/onboarding";
 export * from "./features/posts";
 export * from "./features/profiles";

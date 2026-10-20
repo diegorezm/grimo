@@ -5,6 +5,7 @@ import { betterAuth } from "better-auth/minimal";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
+import { onAccountDeleted } from "./account";
 import authConfig from "./auth.config";
 import { env } from "./model/env";
 import { freeUsername } from "./model/readers";
@@ -66,13 +67,8 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
         // Name and @ belong to the reader (users.completeSetup / updateMe); auth only owns the image.
         await ctx.db.patch(user._id, { image: authUser.image ?? null });
       },
-      onDelete: async (ctx, authUser) => {
-        const user = await ctx.db
-          .query("users")
-          .withIndex("by_authId", (q) => q.eq("authId", authUser._id))
-          .unique();
-        if (user) await ctx.db.delete(user._id);
-      },
+      // Account deleted (`/delete-user`): hide the reader now, erase their data in batches.
+      onDelete: (ctx, authUser) => onAccountDeleted(ctx, authUser._id),
     },
   },
 });
@@ -84,21 +80,45 @@ const google =
     ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
     : null;
 
+/**
+ * Sign in with Apple: required by the App Store when Google sign-in is offered (guideline 4.8).
+ * `APPLE_CLIENT_SECRET` is the JWT generated from the Apple key; `APPLE_BUNDLE_ID` lets the iOS
+ * app sign in natively.
+ */
+const apple =
+  env.APPLE_CLIENT_ID && env.APPLE_CLIENT_SECRET
+    ? {
+        clientId: env.APPLE_CLIENT_ID,
+        clientSecret: env.APPLE_CLIENT_SECRET,
+        appBundleIdentifier: env.APPLE_BUNDLE_ID,
+      }
+    : null;
+
 /** Which sign-in methods this deployment offers (clients disable the rest). Public. */
 export const providers = query({
   args: {},
-  handler: () => ({ google: google !== null }),
+  handler: () => ({ google: google !== null, apple: apple !== null }),
 });
 
 export const createAuth = (ctx: GenericCtx<DataModel>) =>
   betterAuth({
     // Auth endpoints are served by Convex (convex/http.ts), on the deployment's site URL.
     baseURL: env.CONVEX_SITE_URL,
-    trustedOrigins,
+    // Apple posts its callback from appleid.apple.com.
+    trustedOrigins: (request) => [
+      ...trustedOrigins(request),
+      ...(apple ? ["https://appleid.apple.com"] : []),
+    ],
     database: authComponent.adapter(ctx),
     emailAndPassword: { enabled: true, requireEmailVerification: false },
-    // Redirect URI to register in Google Cloud: <CONVEX_SITE_URL>/api/auth/callback/google
-    socialProviders: google ? { google } : {},
+    // Redirect URIs: <CONVEX_SITE_URL>/api/auth/callback/google (and /apple).
+    socialProviders: {
+      ...(google ? { google } : {}),
+      ...(apple ? { apple } : {}),
+    },
+    // "Excluir conta" (LGPD art. 18 / App Store 5.1.1(v)): the password, or a session from the
+    // last day, confirms it. The `onDelete` trigger above erases the reader's data.
+    user: { deleteUser: { enabled: true } },
     plugins: [
       // Mobile: session cookie in SecureStore, sent as a header.
       expo(),

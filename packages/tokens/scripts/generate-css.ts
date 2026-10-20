@@ -28,7 +28,8 @@ const theme = [
   ...badges("light"),
   ...Object.entries(radius).map(([k, v]) => [`radius-${k}`, `${v}px`] as [string, string]),
   ...Object.entries(fontSize).map(([k, v]) => [`text-${k}`, `${v / 16}rem`] as [string, string]),
-  ["font-serif", `"${fonts.serif}", Georgia, serif`],
+  // Web loads Fraunces from @fontsource-variable (family "Fraunces Variable", with the opsz axis).
+  ["font-serif", `"${fonts.serif} Variable", "${fonts.serif}", Georgia, serif`],
   ["font-sans", `"${fonts.sans}", ui-sans-serif, system-ui, sans-serif`],
   ["font-mono", `"${fonts.mono}", ui-monospace, SFMono-Regular, Menlo, monospace`],
 ] as [string, string][];
