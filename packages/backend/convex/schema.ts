@@ -43,6 +43,11 @@ export default defineSchema({
     /** Lowercase, unique (enforced by Better Auth's username plugin). */
     username: v.string(),
     image: v.union(v.string(), v.null()),
+    /**
+     * Photo the reader uploaded (Convex file storage). While set, `image` is its URL and the
+     * auth provider's picture (e.g. Google) no longer overwrites it.
+     */
+    avatarStorageId: v.optional(v.id("_storage")),
     bio: v.union(v.string(), v.null()),
     favoriteGenres: v.array(v.string()),
     /** Denormalized counters, kept by the follow/shelf mutations. */

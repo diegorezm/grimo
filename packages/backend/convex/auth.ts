@@ -68,8 +68,9 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           .query("users")
           .withIndex("by_authId", (q) => q.eq("authId", authUser._id))
           .unique();
-        if (!user) return;
-        // Name and @ belong to the reader (users.completeSetup / updateMe); auth only owns the image.
+        // Name and @ belong to the reader (users.completeSetup / updateMe); auth only owns the
+        // image, and only until the reader uploads a photo of their own (users.setAvatar).
+        if (!user || user.avatarStorageId) return;
         await ctx.db.patch(user._id, { image: authUser.image ?? null });
       },
       onDelete: async (ctx, authUser) => {

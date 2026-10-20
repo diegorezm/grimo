@@ -1,5 +1,5 @@
 import { api, type Id } from "@grimo/backend";
-import type { SetupProfileInput, UpdateProfileInput } from "@grimo/core";
+import { avatarProblem, type SetupProfileInput, type UpdateProfileInput } from "@grimo/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useRef } from "react";
@@ -41,6 +41,49 @@ export function useUpdateMe() {
   return useMutation({
     mutationKey: updateMeMutationKey,
     mutationFn: (input: UpdateProfileInput) => convex.mutation(api.users.updateMe, input),
+    onSuccess: (profile) =>
+      queryClient.setQueryData(meQuery().queryKey, (me) => (me ? { ...me, ...profile } : me)),
+  });
+}
+
+/** A photo ready to upload: the file's bytes and its MIME type. */
+export interface AvatarFile {
+  body: Blob;
+  contentType: string;
+}
+
+/**
+ * Uploads a profile photo: gets an upload URL, POSTs the bytes to Convex file storage and
+ * makes it the reader's photo. Platforms only pick and shrink the image (web: File, mobile: URI).
+ */
+export function useUploadAvatar() {
+  const { convex } = useConvexCache();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ body, contentType }: AvatarFile) => {
+      const problem = avatarProblem({ contentType, size: body.size });
+      if (problem) throw new Error(problem);
+      const uploadUrl = await convex.mutation(api.users.avatarUploadUrl, {});
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": contentType },
+        body,
+      });
+      if (!res.ok) throw new Error("Não foi possível enviar a foto");
+      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+      return convex.mutation(api.users.setAvatar, { storageId });
+    },
+    onSuccess: (profile) =>
+      queryClient.setQueryData(meQuery().queryKey, (me) => (me ? { ...me, ...profile } : me)),
+  });
+}
+
+/** Removes the uploaded photo (initials are shown instead). */
+export function useRemoveAvatar() {
+  const { convex } = useConvexCache();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => convex.mutation(api.users.removeAvatar, {}),
     onSuccess: (profile) =>
       queryClient.setQueryData(meQuery().queryKey, (me) => (me ? { ...me, ...profile } : me)),
   });

@@ -39,6 +39,13 @@
           }
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Grimo usa suas fotos para você escolher a foto do perfil.",
+          "cameraPermission": "O Grimo usa a câmera para você tirar a foto do perfil."
+        }
+      ],
       "expo-secure-store",
       "expo-sharing"
     ],
