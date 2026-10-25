@@ -6,6 +6,9 @@ export type CoverSize = "S" | "M" | "L";
 
 const OPEN_LIBRARY_COVER = /^(https:\/\/covers\.openlibrary\.org\/b\/[a-z]+\/[^/-]+)-[SML]\.jpg$/i;
 
+/** Whether `url` is an Open Library cover (the only covers books may have). */
+export const isOpenLibraryCover = (url: string) => OPEN_LIBRARY_COVER.test(url);
+
 /** Same cover at another size. URLs that are not Open Library covers are returned unchanged. */
 export function coverUrl(url: string, size: CoverSize): string;
 export function coverUrl(url: string | null, size: CoverSize): string | null;

@@ -1,11 +1,18 @@
-import { bookSearchQuerySchema } from "@grimo/core";
+import { bookInputSchema, bookSearchQuerySchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { action, internalMutation, internalQuery, query } from "./_generated/server";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  query,
+} from "./_generated/server";
 import { postView } from "./model/content";
 import { parse } from "./model/errors";
-import { fetchWork, searchOpenLibrary } from "./model/openLibrary";
+import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
 import { authorOf, getViewer } from "./model/readers";
+import { blockedIds, isHidden } from "./model/safety";
 import { entryView } from "./model/shelves";
 import { bookInput, workDetails } from "./schema";
 
@@ -92,6 +99,35 @@ export const saveWork = internalMutation({
 });
 
 /**
+ * A book's data comes from the first reader who shelved it (`shelves.add`), and that reader's
+ * client can send anything the schema allows. Right after, this replaces it with what Open Library
+ * says about the id, so a forged title or author never sticks for everyone else.
+ */
+export const refreshBook = internalAction({
+  args: { openLibraryId: v.string() },
+  handler: async (ctx, { openLibraryId }): Promise<null> => {
+    const found = await fetchBook(openLibraryId);
+    // Unknown or unreachable: keep what was saved (already checked by `bookInputSchema`).
+    const book = found ? bookInputSchema.safeParse(found) : null;
+    if (!book?.success) return null;
+    await ctx.runMutation(internal.books.saveBook, { book: book.data });
+    return null;
+  },
+});
+
+export const saveBook = internalMutation({
+  args: { book: bookInput },
+  handler: async (ctx, { book }) => {
+    const existing = await ctx.db
+      .query("books")
+      .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", book.openLibraryId))
+      .unique();
+    if (existing) await ctx.db.patch(existing._id, book);
+    return null;
+  },
+});
+
+/**
  * Everything the book page shows: the book (our copy, filled in from the Open Library work
  * page), your shelf entry, community numbers and reviews. `detail` is null while the work page
  * is still loading (`needsWork`) or when nobody knows the book (`needsWork: false`).
@@ -138,7 +174,7 @@ export const detail = query({
       };
     }
 
-    const [entries, reviewPosts] = await Promise.all([
+    const [entries, reviewPosts, blocked] = await Promise.all([
       ctx.db
         .query("shelfEntries")
         .withIndex("by_book", (q) => q.eq("bookId", row._id))
@@ -148,6 +184,7 @@ export const detail = query({
         .withIndex("by_book_kind", (q) => q.eq("bookId", row._id).eq("kind", "review"))
         .order("desc")
         .take(20),
+      blockedIds(ctx, viewer?._id ?? null),
     ]);
     const entry = viewer ? entries.find((item) => item.userId === viewer._id) : undefined;
     const ratings = entries.flatMap((item) => (item.rating ? [item.rating] : []));
@@ -157,7 +194,8 @@ export const detail = query({
     const reviews = await Promise.all(
       reviewPosts.map(async (post) => {
         const author = await ctx.db.get(post.authorId);
-        return author
+        // Like everywhere else: nothing from hidden readers, or between blocked readers.
+        return author && !isHidden(author) && !blocked.has(author._id)
           ? { ...(await postView(ctx, post, viewer?._id ?? null)), author: authorOf(author) }
           : null;
       }),

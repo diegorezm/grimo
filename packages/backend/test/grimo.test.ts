@@ -1,5 +1,5 @@
 import { PRIVACY_VERSION, TERMS_VERSION } from "@grimo/core";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../convex/_generated/api";
 import { onAccountDeleted } from "../convex/account";
 import { newTest, reader } from "./setup";
@@ -13,6 +13,25 @@ const book = {
   publishedYear: 1965,
   genres: ["science_fiction"],
 };
+
+/** What the stubbed Open Library search returns (the network is never used in tests). */
+let openLibrary: Record<string, unknown>[] = [];
+
+beforeEach(() => {
+  // Scheduled functions only run when a test asks (`finishAllScheduledFunctions`), so none of
+  // them leaks into the next test.
+  vi.useFakeTimers();
+  openLibrary = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(JSON.stringify({ docs: openLibrary }))),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe("auth", () => {
   it("rejects signed-in queries when signed out", async () => {
@@ -53,6 +72,104 @@ describe("shelves", () => {
     await expect(
       rafa.as.mutation(api.shelves.update, { id: entry.id, rating: 9 }),
     ).rejects.toThrow();
+  });
+});
+
+describe("books", () => {
+  it("only saves Open Library books, with Open Library covers", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    await expect(
+      rafa.as.mutation(api.shelves.add, {
+        book: { ...book, openLibraryId: "x" },
+        status: "reading",
+      }),
+    ).rejects.toThrow(/Open Library/);
+    await expect(
+      rafa.as.mutation(api.shelves.add, {
+        book: { ...book, coverUrl: "https://tracker.example/pixel.png" },
+        status: "reading",
+      }),
+    ).rejects.toThrow(/capa/);
+    await expect(
+      rafa.as.mutation(api.shelves.add, {
+        book: { ...book, title: "x".repeat(501) },
+        status: "reading",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("replaces what the first reader sent with Open Library's data", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    openLibrary = [
+      {
+        key: "/works/OL1W",
+        title: "Dune",
+        author_name: ["Frank Herbert"],
+        cover_i: 42,
+        number_of_pages_median: 608,
+        first_publish_year: 1965,
+        subject: ["Science fiction"],
+      },
+    ];
+
+    await rafa.as.mutation(api.shelves.add, {
+      book: { ...book, title: "Livro falso", authors: ["Ninguém"] },
+      status: "reading",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    // A later reader can't rename it either: existing books only get missing fields filled.
+    await bia.as.mutation(api.shelves.add, {
+      book: { ...book, title: "Outro falso" },
+      status: "want_to_read",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const { detail } = await rafa.as.query(api.books.detail, { openLibraryId: "OL1W" });
+    expect(detail?.book).toMatchObject({
+      title: "Dune",
+      authors: ["Frank Herbert"],
+      coverUrl: "https://covers.openlibrary.org/b/id/42-L.jpg",
+      pageCount: 608,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the book when Open Library doesn't answer", async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error("offline"));
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    await rafa.as.mutation(api.shelves.add, { book, status: "reading" });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const { detail } = await rafa.as.query(api.books.detail, { openLibraryId: "OL1W" });
+    expect(detail?.book.title).toBe("Duna");
+  });
+
+  it("hides reviews of blocked and hidden readers", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const caio = await reader(t, "caio");
+    const { entry } = await bia.as.mutation(api.shelves.add, { book, status: "read" });
+    const review = { kind: "review" as const, bookId: entry.bookId, rating: 5 };
+    await bia.as.mutation(api.posts.create, { ...review, body: "Da bia" });
+    await caio.as.mutation(api.posts.create, { ...review, body: "Do caio" });
+    await rafa.as.mutation(api.posts.create, { ...review, body: "Do rafa" });
+    const reviews = async (as: typeof rafa.as | typeof t) =>
+      (await as.query(api.books.detail, { openLibraryId: "OL1W" })).detail?.reviews.map(
+        (item) => item.body,
+      );
+
+    expect(await reviews(rafa.as)).toEqual(["Do rafa", "Do caio", "Da bia"]);
+    await rafa.as.mutation(api.moderation.setBlocked, { userId: bia.id, block: true });
+    // Blocking hides both ways.
+    expect(await reviews(rafa.as)).toEqual(["Do rafa", "Do caio"]);
+    expect(await reviews(bia.as)).toEqual(["Do caio", "Da bia"]);
+    await t.mutation(internal.moderation.suspend, { username: "caio", suspend: true });
+    expect(await reviews(rafa.as)).toEqual(["Do rafa"]);
+    expect(await reviews(t)).toEqual(["Do rafa", "Da bia"]);
   });
 });
 
@@ -295,7 +412,6 @@ describe("account", () => {
   });
 
   it("deleting an account erases its data and fixes everyone's counters", async () => {
-    vi.useFakeTimers();
     const t = newTest();
     const rafa = await reader(t, "rafa");
     const bia = await reader(t, "bia");

@@ -18,25 +18,48 @@ interface OpenLibraryDoc {
   subject?: string[];
 }
 
-export async function searchOpenLibrary(query: string, limit = 20): Promise<BookInput[]> {
+const searchUrl = (query: string, limit: number) => {
   const url = new URL(SEARCH_URL);
   url.searchParams.set("q", query);
   url.searchParams.set("fields", FIELDS);
   url.searchParams.set("limit", String(limit));
+  return url;
+};
 
-  const res = await fetch(url, { headers: HEADERS });
+const toBookInput = (doc: OpenLibraryDoc): BookInput => ({
+  openLibraryId: doc.key.replace("/works/", ""),
+  title: doc.title,
+  authors: doc.author_name ?? [],
+  coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
+  pageCount: doc.number_of_pages_median ?? null,
+  publishedYear: doc.first_publish_year ?? null,
+  genres: (doc.subject ?? []).slice(0, 5),
+});
+
+export async function searchOpenLibrary(query: string, limit = 20): Promise<BookInput[]> {
+  const res = await fetch(searchUrl(query, limit), { headers: HEADERS });
   if (!res.ok) throw new Error(`Open Library respondeu ${res.status}`);
   const data = (await res.json()) as { docs: OpenLibraryDoc[] };
+  return data.docs.map(toBookInput);
+}
 
-  return data.docs.map((doc) => ({
-    openLibraryId: doc.key.replace("/works/", ""),
-    title: doc.title,
-    authors: doc.author_name ?? [],
-    coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-    pageCount: doc.number_of_pages_median ?? null,
-    publishedYear: doc.first_publish_year ?? null,
-    genres: (doc.subject ?? []).slice(0, 5),
-  }));
+/**
+ * One book as Open Library's search knows it (same fields as `searchOpenLibrary`). `null` when
+ * Open Library doesn't know the id, `undefined` when it couldn't be reached.
+ */
+export async function fetchBook(openLibraryId: string): Promise<BookInput | null | undefined> {
+  try {
+    const res = await fetch(searchUrl(`key:/works/${openLibraryId}`, 1), {
+      headers: HEADERS,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { docs: OpenLibraryDoc[] };
+    const doc = data.docs.find((item) => item.key === `/works/${openLibraryId}`);
+    return doc ? toBookInput(doc) : null;
+  } catch {
+    return undefined;
+  }
 }
 
 interface OpenLibraryWork {
