@@ -1,3 +1,4 @@
+// Not named cookie-*: ad blockers block dev module URLs like /cookie-notice.tsx.
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 

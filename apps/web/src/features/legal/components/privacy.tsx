@@ -1,8 +1,8 @@
 import { LEGAL_INFO, MIN_AGE, PRIVACY_VERSION } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { COOKIE_NOTICE_KEY } from "./cookie-notice";
 import { LegalPage, List, Mail, Section } from "./legal-page";
+import { COOKIE_NOTICE_KEY } from "./storage-notice";
 
 /**
  * Privacy Policy (LGPD art. 9). Keep it true to the code: what is stored, who receives it, for
