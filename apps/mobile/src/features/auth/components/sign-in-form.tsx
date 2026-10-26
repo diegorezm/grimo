@@ -19,14 +19,24 @@ export function SignInForm() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const set = (key: keyof typeof form) => (value: string) => setForm({ ...form, [key]: value });
+  /** Nothing matched: waiting for the reader to confirm that this email gets a new account. */
+  const [newAccountEmail, setNewAccountEmail] = useState<string | null>(null);
+  // Editing a field cancels the confirmation: it was about the email on screen when it appeared.
+  const set = (key: keyof typeof form) => (value: string) => {
+    setNewAccountEmail(null);
+    setForm({ ...form, [key]: value });
+  };
 
-  async function submit() {
+  async function submit(confirmedNew = false) {
     setPending(true);
     setError(null);
-    const outcome = await continueWithEmail(authClient, form);
+    const outcome = await continueWithEmail(authClient, form, { confirmedNew });
     setPending(false);
-    if (outcome.status === "error") return setError(outcome.message);
+    if (outcome.status === "error") {
+      setNewAccountEmail(null);
+      return setError(outcome.message);
+    }
+    if (outcome.status === "confirm-new") return setNewAccountEmail(outcome.email);
     // New session: start from an empty cache so nothing from a previous account shows up.
     await appCache.clearForSignIn();
   }
@@ -65,7 +75,31 @@ export function SignInForm() {
         />
       </View>
       {error && <Text color="danger">{error}</Text>}
-      <Button title={pending ? "Um instante…" : "Continuar"} onPress={submit} disabled={pending} />
+      {newAccountEmail ? (
+        <View style={styles.fields}>
+          <Text>
+            Esse email e essa senha não batem com nenhuma conta. Quer criar uma conta nova com{" "}
+            {newAccountEmail}?
+          </Text>
+          <Button
+            title={pending ? "Um instante…" : "Criar conta"}
+            onPress={() => submit(true)}
+            disabled={pending}
+          />
+          <Button
+            title="Corrigir"
+            variant="ghost"
+            onPress={() => setNewAccountEmail(null)}
+            disabled={pending}
+          />
+        </View>
+      ) : (
+        <Button
+          title={pending ? "Um instante…" : "Continuar"}
+          onPress={() => submit()}
+          disabled={pending}
+        />
+      )}
       <Text variant="small" color="textMuted" style={styles.divider}>
         É de graça. Seu email nunca aparece no perfil.
       </Text>

@@ -17,23 +17,31 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  /** Nothing matched: waiting for the reader to confirm that this email gets a new account. */
+  const [newAccount, setNewAccount] = useState<{ email: string; password: string } | null>(null);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  async function submit(credentials: { email: string; password: string }, confirmedNew = false) {
     setPending(true);
     setError(null);
-    const outcome = await continueWithEmail(authClient, {
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
+    const outcome = await continueWithEmail(authClient, credentials, { confirmedNew });
     if (outcome.status === "error") {
       setPending(false);
+      setNewAccount(null);
       return setError(outcome.message);
+    }
+    if (outcome.status === "confirm-new") {
+      setPending(false);
+      return setNewAccount({ ...credentials, email: outcome.email });
     }
     // New session: start from an empty cache so nothing from a previous account shows up.
     await clearCacheForSignIn();
     await navigate({ to: outcome.status === "signed-up" ? "/onboarding" : redirectTo });
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    void submit({ email: String(form.get("email")), password: String(form.get("password")) });
   }
 
   return (
@@ -62,9 +70,26 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
           autoComplete="current-password"
         />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <Button type="submit" disabled={pending} className="mt-2 py-3">
-          {pending ? "Um instante…" : "Continuar"}
-        </Button>
+        {newAccount ? (
+          <div role="alert" className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <p className="text-sm">
+              Esse email e essa senha não batem com nenhuma conta. Quer criar uma conta nova com{" "}
+              <strong className="break-all">{newAccount.email}</strong>?
+            </p>
+            <div className="flex gap-2">
+              <Button disabled={pending} onClick={() => void submit(newAccount, true)}>
+                {pending ? "Um instante…" : "Criar conta"}
+              </Button>
+              <Button variant="ghost" disabled={pending} onClick={() => setNewAccount(null)}>
+                Corrigir
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="submit" disabled={pending} className="mt-2 py-3">
+            {pending ? "Um instante…" : "Continuar"}
+          </Button>
+        )}
         <p className="text-center font-mono text-[11px] text-text-muted">
           É de graça. Seu email nunca aparece no perfil.
         </p>
