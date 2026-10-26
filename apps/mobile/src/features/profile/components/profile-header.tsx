@@ -5,21 +5,27 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { AvatarPicker } from "./avatar-picker";
 
 /** Profile hero: avatar in an accent ring, name, bio, follow counts and favorite genres. */
-export function ProfileHeader({ profile }: { profile: Profile }) {
+/** `editable`: your own profile, where tapping the avatar changes the photo. */
+export function ProfileHeader({ profile, editable }: { profile: Profile; editable?: boolean }) {
   const theme = useTheme();
   return (
     <View style={styles.root}>
-      <View style={[styles.ring, { borderColor: theme.accent }]}>
-        {profile.image ? (
-          <Image source={profile.image} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.initial, { backgroundColor: theme.surfaceMuted }]}>
-            <Text variant="display">{profile.name.slice(0, 1)}</Text>
-          </View>
-        )}
-      </View>
+      {editable ? (
+        <AvatarPicker image={profile.image} name={profile.name} />
+      ) : (
+        <View style={[styles.ring, { borderColor: theme.accent }]}>
+          {profile.image ? (
+            <Image source={profile.image} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.initial, { backgroundColor: theme.surfaceMuted }]}>
+              <Text variant="display">{profile.name.slice(0, 1)}</Text>
+            </View>
+          )}
+        </View>
+      )}
       <Text variant="display" style={styles.center}>
         {profile.name}
       </Text>

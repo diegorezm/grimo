@@ -41,6 +41,9 @@ export async function searchOpenLibrary(query: string, limit = 20): Promise<Book
     headers: HEADERS,
     signal: AbortSignal.timeout(8000),
   });
+  // 422: the query is too short or only stopwords ("du", "o "), which happens while the user
+  // is still typing. That's "no results yet", not an error.
+  if (res.status === 422) return [];
   if (!res.ok) throw new Error(`Open Library respondeu ${res.status}`);
   const data = (await res.json()) as { docs: OpenLibraryDoc[] };
   return data.docs.map(toBookInput);

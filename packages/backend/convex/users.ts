@@ -1,4 +1,5 @@
 import {
+  avatarProblem,
   setupProfileSchema,
   timeZoneSchema,
   USERNAME_REGEX,
@@ -124,6 +125,48 @@ export const updateMe = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     await updateProfile(ctx, viewer, args);
+    return profileOf(ctx, (await ctx.db.get(viewer._id))!);
+  },
+});
+
+/** Step 1 of a profile photo upload: a short-lived URL the client POSTs the file to. */
+export const avatarUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireViewer(ctx);
+    return ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
+ * Step 2: makes the uploaded file the reader's photo. Checks type and size (the upload URL
+ * accepts anything), deletes the previous upload and returns the updated profile.
+ */
+export const setAvatar = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, { storageId }) => {
+    const viewer = await requireViewer(ctx);
+    const file = await ctx.db.system.get(storageId);
+    if (!file) throw notFound("Foto");
+    const problem = avatarProblem({ contentType: file.contentType ?? null, size: file.size });
+    // Throwing rolls the whole mutation back, so a rejected file is just left unreferenced.
+    if (problem) throw appError("INVALID", problem);
+    const url = await ctx.storage.getUrl(storageId);
+    if (viewer.avatarStorageId && viewer.avatarStorageId !== storageId) {
+      await ctx.storage.delete(viewer.avatarStorageId);
+    }
+    await ctx.db.patch(viewer._id, { image: url, avatarStorageId: storageId });
+    return profileOf(ctx, (await ctx.db.get(viewer._id))!);
+  },
+});
+
+/** Removes the uploaded photo (the profile falls back to initials). */
+export const removeAvatar = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await requireViewer(ctx);
+    if (viewer.avatarStorageId) await ctx.storage.delete(viewer.avatarStorageId);
+    await ctx.db.patch(viewer._id, { image: null, avatarStorageId: undefined });
     return profileOf(ctx, (await ctx.db.get(viewer._id))!);
   },
 });
