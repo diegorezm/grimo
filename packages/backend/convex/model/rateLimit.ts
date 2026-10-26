@@ -5,8 +5,8 @@ import type { DataModel } from "../_generated/dataModel";
 import { appError } from "./errors";
 
 /**
- * Per-reader limits on what costs us something (rows others see, calls to Open Library). Sign-in
- * and sign-up are limited by Better Auth itself (`rateLimit` in `auth.ts`). Generous for a human,
+ * Limits on what costs us something (rows others see, calls to Open Library), per reader; plus
+ * sign-in and sign-up, which `auth.ts` limits through a Better Auth hook. Generous for a human,
  * tight for a script.
  */
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
@@ -18,9 +18,26 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // Open Library lookups made on a reader's behalf.
   bookSearch: { kind: "fixed window", rate: 60, period: MINUTE },
   loadWork: { kind: "fixed window", rate: 60, period: MINUTE },
+  // Sign-in (key: the email) and sign-up (key: the caller's IP, plus a ceiling for everyone),
+  // enforced in Better Auth's before-hook (auth.ts).
+  signIn: { kind: "fixed window", rate: 10, period: 15 * MINUTE },
+  signUp: { kind: "fixed window", rate: 5, period: HOUR },
+  signUpAll: { kind: "fixed window", rate: 300, period: HOUR },
 });
 
 type Name = "createPost" | "createComment" | "report" | "addToShelf" | "bookSearch" | "loadWork";
+
+type AuthName = "signIn" | "signUp" | "signUpAll";
+
+/** Spends one use of an auth limit: null when allowed, else the milliseconds to wait. */
+export async function spendAuthLimit(
+  ctx: Parameters<typeof rateLimiter.limit>[0],
+  name: AuthName,
+  key: string,
+): Promise<number | null> {
+  const { ok, retryAfter } = await rateLimiter.limit(ctx, name, { key });
+  return ok ? null : (retryAfter ?? MINUTE);
+}
 
 /** Spends one use of `name` for `key` (the reader), or fails with a message saying to wait. */
 export async function enforceRateLimit(
