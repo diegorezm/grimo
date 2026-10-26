@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
+import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireViewer } from "./model/readers";
 import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
 import { postKind } from "./schema";
@@ -91,6 +92,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const input = parse(createPostSchema, args);
+    await enforceRateLimit(ctx, "createPost", viewer._id);
     if (input.bookId && !(await ctx.db.get(input.bookId as Id<"books">))) throw notFound("Livro");
     const postId = await createPost(ctx, viewer._id, {
       ...input,
@@ -179,6 +181,7 @@ export const comment = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const { body } = parse(createCommentSchema, args);
+    await enforceRateLimit(ctx, "createComment", viewer._id);
     return { comment: { id: await addComment(ctx, viewer._id, args.postId, body) } };
   },
 });

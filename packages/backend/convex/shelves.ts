@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { parse } from "./model/errors";
+import { enforceRateLimit } from "./model/rateLimit";
 import { requireViewer } from "./model/readers";
 import {
   addToShelf,
@@ -41,6 +42,7 @@ export const add = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const input = parse(addToShelfSchema, args);
+    await enforceRateLimit(ctx, "addToShelf", viewer._id);
     const { openLibraryId } = input.book;
     const isNew = !(await bookByOpenLibraryId(ctx, openLibraryId));
     const entry = await addToShelf(ctx, viewer._id, input);

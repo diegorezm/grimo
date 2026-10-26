@@ -173,6 +173,9 @@ catalogs:
     '@convex-dev/migrations':
       specifier: ^0.3.7
       version: 0.3.7
+    '@convex-dev/rate-limiter':
+      specifier: ^0.3.2
+      version: 0.3.2
     '@tanstack/query-async-storage-persister':
       specifier: ^5.104.4
       version: 5.104.4
@@ -468,6 +471,9 @@ importers:
       '@convex-dev/migrations':
         specifier: 'catalog:'
         version: 0.3.7(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.0))(hono@4.13.13)(react@19.3.0)(typescript@6.0.3)(zod@4.6.7))(convex@1.47.0(react@19.3.0))
+      '@convex-dev/rate-limiter':
+        specifier: 'catalog:'
+        version: 0.3.2(convex@1.47.0(react@19.3.0))(react@19.3.0)
       '@grimo/core':
         specifier: workspace:*
         version: link:../core
@@ -1190,6 +1196,15 @@ packages:
     peerDependencies:
       convex: ^1.42.0
       convex-helpers: ^0.1.115
+
+  '@convex-dev/rate-limiter@0.3.2':
+    resolution: {integrity: sha512-+oBPsBfFbzdxiF/9XaaTQmVnvDlvEfg/c69/v8LxTbw4VLuiflIKlfnPQL8OS0azXQQ11hcPWHmU8ytFmHKDXA==}
+    peerDependencies:
+      convex: ^1.24.8
+      react: ^18.2.0 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -6464,6 +6479,12 @@ snapshots:
     dependencies:
       convex: 1.47.0(react@19.3.0)
       convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.0))(hono@4.13.13)(react@19.3.0)(typescript@6.0.3)(zod@4.6.7)
+
+  '@convex-dev/rate-limiter@0.3.2(convex@1.47.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      convex: 1.47.0(react@19.3.0)
+    optionalDependencies:
+      react: 19.3.0
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

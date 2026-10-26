@@ -522,6 +522,23 @@ describe("moderation", () => {
     expect(await community()).toEqual({ readers: 1, ratings: 1, averageRating: 5 });
   });
 
+  it("rate limits posting and requires login for Open Library lookups", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    for (let i = 0; i < 10; i++) {
+      await rafa.as.mutation(api.posts.create, { kind: "note", body: `Nota ${i}` });
+    }
+    await expect(
+      rafa.as.mutation(api.posts.create, { kind: "note", body: "Demais" }),
+    ).rejects.toThrow(/Calma/);
+    // The limit is per reader.
+    await bia.as.mutation(api.posts.create, { kind: "note", body: "Oi" });
+
+    await expect(t.action(api.books.search, { q: "dom casmurro" })).rejects.toThrow();
+    await expect(t.action(api.books.loadWork, { openLibraryId: "OL1W" })).rejects.toThrow();
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");
