@@ -1,4 +1,4 @@
-import { useMe } from "@grimo/client";
+import { useMe, useSyncTimeZone } from "@grimo/client";
 import {
   createFileRoute,
   Link,
@@ -63,6 +63,7 @@ function AppLayout() {
 function SignedInLayout({ book, panel }: { book?: string; panel?: "profile" }) {
   useSessionGuard();
   useSetupGuard();
+  useSyncTimeZone();
   const aside = book ? (
     <BookPeek key={book} openLibraryId={book} />
   ) : panel === "profile" ? (

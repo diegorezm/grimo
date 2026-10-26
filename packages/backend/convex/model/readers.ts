@@ -1,4 +1,4 @@
-import { USERNAME_REGEX, usernameFromName } from "@grimo/core";
+import { DEFAULT_TIME_ZONE, USERNAME_REGEX, usernameFromName, yearOf } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { appError, notFound, unauthenticated } from "./errors";
@@ -82,7 +82,7 @@ export async function isFollowing(ctx: Ctx, followerId: Id<"users">, followingId
 
 /** Public profile: reader + current-year goal + follow counts. */
 export async function profileOf(ctx: Ctx, user: Doc<"users">) {
-  const year = new Date().getUTCFullYear();
+  const year = yearOf(new Date(), timeZoneOf(user));
   const goal = await ctx.db
     .query("readingGoals")
     .withIndex("by_user_year", (q) => q.eq("userId", user._id).eq("year", year))
@@ -135,3 +135,6 @@ export async function readerCard(ctx: Ctx, user: Doc<"users">, viewerId: Id<"use
     followsYou,
   };
 }
+
+/** The zone a reader's months and years are counted in. */
+export const timeZoneOf = (user: Doc<"users">) => user.timeZone ?? DEFAULT_TIME_ZONE;

@@ -1,8 +1,13 @@
 import { api, type Id } from "@grimo/backend";
-import type { SetupProfileInput, UpdateProfileInput } from "@grimo/core";
+import {
+  deviceTimeZone,
+  type SetupProfileInput,
+  type UpdateProfileInput,
+  yearOf,
+} from "@grimo/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { CONVEX_QUERY, convexQuery } from "../../lib/convex-cache";
 import { useGrowingList } from "../../lib/list";
 import { usePatchQueries } from "../../lib/mutation";
@@ -21,7 +26,7 @@ import {
  */
 export type Me = FunctionReturnType<typeof api.users.me>;
 /** A reader's public profile. */
-export type Profile = Omit<Me, "needsSetup" | "legal">;
+export type Profile = Omit<Me, "needsSetup" | "legal" | "timeZone">;
 export type ReaderPage = FunctionReturnType<typeof api.users.byUsername>;
 export type ReaderActivityPage = FunctionReturnType<typeof api.users.activity>;
 export type ConnectionKind = "followers" | "following";
@@ -33,7 +38,7 @@ export function meQuery() {
 }
 
 /** A reader's public page; `year` picks the stats shown (defaults to this year). */
-export function readerQuery(username: string, year = new Date().getUTCFullYear()) {
+export function readerQuery(username: string, year = yearOf(new Date())) {
   return convexQuery(api.users.byUsername, { username, year }, "optional");
 }
 
@@ -206,4 +211,22 @@ export function useToggleFollow() {
     },
     onError: (_error, _input, rollback) => rollback?.(),
   });
+}
+
+/**
+ * Tells the server which time zone this device is in, so the months and years of reading follow
+ * the reader (travel, a new phone). Mount it once while signed in; tries once per zone per run.
+ */
+export function useSyncTimeZone(enabled = true) {
+  const { convex } = useConvexCache();
+  const stored = useMe({ enabled }).data?.timeZone;
+  const tried = useRef<string | null>(null);
+  useEffect(() => {
+    const device = deviceTimeZone();
+    if (stored === undefined || stored === device || tried.current === device) return;
+    tried.current = device;
+    convex.mutation(api.users.setTimeZone, { timeZone: device }).catch(() => {
+      tried.current = null;
+    });
+  }, [convex, stored]);
 }

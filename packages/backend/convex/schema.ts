@@ -70,6 +70,8 @@ export default defineSchema({
     setupDone: v.optional(v.boolean()),
     /** When the reader declared being 16+ (the birth date itself is never stored). */
     ageConfirmedAt: v.optional(v.number()),
+    /** IANA zone (`America/Sao_Paulo`) for months and years of reading; sent by the apps. */
+    timeZone: v.optional(v.string()),
     /** Declared under 16: the account can't be used, only deleted. */
     ageRejectedAt: v.optional(v.number()),
     /** Suspended by moderation (`moderation.suspend`): hidden, and signed-in calls fail. */

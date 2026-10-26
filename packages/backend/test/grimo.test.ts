@@ -434,6 +434,41 @@ describe("moderation", () => {
     expect(usernames).toContain("dani");
   });
 
+  it("counts books in the reader's own time zone", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    await rafa.as.mutation(api.users.setTimeZone, { timeZone: "America/Sao_Paulo" });
+    await expect(
+      rafa.as.mutation(api.users.setTimeZone, { timeZone: "Mars/Olympus" }),
+    ).rejects.toThrow();
+    // 22:00 on Oct 31 in São Paulo is already November in UTC.
+    await t.run(async (ctx) => {
+      const bookId = await ctx.db.insert("books", {
+        openLibraryId: "OL2W",
+        title: "Noite",
+        authors: [],
+        coverUrl: null,
+        pageCount: null,
+        publishedYear: null,
+        genres: [],
+      });
+      await ctx.db.insert("shelfEntries", {
+        userId: rafa.id,
+        bookId,
+        status: "read",
+        currentPage: 0,
+        rating: null,
+        startedAt: null,
+        finishedAt: Date.parse("2026-11-01T01:00:00Z"),
+        updatedAt: Date.now(),
+      });
+    });
+    const october = await rafa.as.query(api.stats.monthly, { month: "2026-10" });
+    const november = await rafa.as.query(api.stats.monthly, { month: "2026-11" });
+    expect(october.booksRead).toBe(1);
+    expect(november.booksRead).toBe(0);
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");

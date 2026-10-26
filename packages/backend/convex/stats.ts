@@ -10,7 +10,7 @@ export const overview = query({
   args: { year: v.number() },
   handler: async (ctx, { year }) => {
     const viewer = await requireViewer(ctx);
-    return yearOverview(ctx, viewer._id, year);
+    return yearOverview(ctx, viewer, year);
   },
 });
 
@@ -20,6 +20,6 @@ export const monthly = query({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const { month } = parse(monthlySummaryQuerySchema, args);
-    return monthlySummary(ctx, viewer._id, month);
+    return monthlySummary(ctx, viewer, month);
   },
 });

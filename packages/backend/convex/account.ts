@@ -72,6 +72,7 @@ export const exportData = query({
       account: {
         email: identity?.email ?? null,
         createdAt: date(viewer._creationTime),
+        timeZone: viewer.timeZone ?? null,
         ageConfirmedAt: date(viewer.ageConfirmedAt ?? null),
       },
       profile: {

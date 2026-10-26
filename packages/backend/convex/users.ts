@@ -1,4 +1,10 @@
-import { setupProfileSchema, USERNAME_REGEX, updateProfileSchema } from "@grimo/core";
+import {
+  setupProfileSchema,
+  timeZoneSchema,
+  USERNAME_REGEX,
+  updateProfileSchema,
+  yearOf,
+} from "@grimo/core";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
@@ -18,6 +24,7 @@ import {
   readerByUsername,
   readerCard,
   requireViewer,
+  timeZoneOf,
   userByUsername,
 } from "./model/readers";
 import { blockedIds, hasBlocked, isBlockedBetween, isHidden } from "./model/safety";
@@ -33,6 +40,7 @@ export const me = query({
     // else; older accounts are asked again when a legal document changes (`legal`).
     return {
       ...(await profileOf(ctx, viewer)),
+      timeZone: timeZoneOf(viewer),
       needsSetup: viewer.setupDone === false,
       legal: await legalStatus(ctx, viewer),
     };
@@ -91,7 +99,7 @@ export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch:
   if (Object.keys(fields).length > 0) await ctx.db.patch(user._id, fields);
 
   if (yearlyGoal !== undefined) {
-    const year = new Date().getUTCFullYear();
+    const year = yearOf(new Date(), timeZoneOf(user));
     const goal = await ctx.db
       .query("readingGoals")
       .withIndex("by_user_year", (q) => q.eq("userId", user._id).eq("year", year))
@@ -149,7 +157,7 @@ export const byUsername = query({
     if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
     const [profile, stats, books, following, followsYou, blockedByMe] = await Promise.all([
       profileOf(ctx, reader),
-      yearOverview(ctx, reader._id, year),
+      yearOverview(ctx, reader, year),
       profileBooks(ctx, reader),
       viewer ? isFollowing(ctx, viewer._id, reader._id) : false,
       viewer ? isFollowing(ctx, reader._id, viewer._id) : false,
@@ -365,4 +373,18 @@ export const setFollowing = mutation({
   args: { userId: v.id("users"), follow: v.boolean() },
   handler: async (ctx, { userId, follow }) =>
     setFollow(ctx, await requireViewer(ctx), userId, follow),
+});
+
+/**
+ * The apps report the device's time zone, so months and years of reading follow the reader
+ * (see `timeZoneOf`). No-op when it is already that zone.
+ */
+export const setTimeZone = mutation({
+  args: { timeZone: v.string() },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const timeZone = parse(timeZoneSchema, args.timeZone);
+    if (viewer.timeZone !== timeZone) await ctx.db.patch(viewer._id, { timeZone });
+    return null;
+  },
 });

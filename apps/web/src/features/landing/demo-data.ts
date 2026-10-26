@@ -158,6 +158,7 @@ const ME: Me = {
   yearlyGoal: 24,
   followers: 38,
   following: 41,
+  timeZone: "America/Sao_Paulo",
   needsSetup: false,
   legal: { needsAcceptance: false, needsAge: false, underage: false },
 };
