@@ -14,6 +14,7 @@ import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
 import { BookPeek } from "@/features/books";
 import { LegalGate } from "@/features/legal";
+import { PostPeek } from "@/features/posts";
 import { ProfilePeek } from "@/features/profile";
 import { sessionQuery, signOutLocally } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -23,12 +24,16 @@ const isPublicPath = (pathname: string) => pathname.startsWith("/u/");
 
 /**
  * Layout for every app page. Search params open a side peek next to any screen:
- * `?book=<openLibraryId>` (book page) or `?panel=profile` (edit profile).
+ * `?book=<openLibraryId>` (book page), `?post=<id>` (post and comments) or `?panel=profile`
+ * (edit profile).
  * Signed out, only public pages render (in `PublicShell`); everything else goes to /login.
  */
 export const Route = createFileRoute("/_app")({
-  validateSearch: (search: Record<string, unknown>): { book?: string; panel?: "profile" } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { book?: string; post?: string; panel?: "profile" } => ({
     book: typeof search.book === "string" && search.book ? search.book : undefined,
+    post: typeof search.post === "string" && search.post ? search.post : undefined,
     panel: search.panel === "profile" ? "profile" : undefined,
   }),
   beforeLoad: async ({ context, location }) => {
@@ -47,7 +52,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { session } = Route.useRouteContext();
-  const { book, panel } = Route.useSearch();
+  const { book, post, panel } = Route.useSearch();
 
   if (!session) {
     return (
@@ -57,15 +62,25 @@ function AppLayout() {
     );
   }
 
-  return <SignedInLayout book={book} panel={panel} />;
+  return <SignedInLayout book={book} post={post} panel={panel} />;
 }
 
-function SignedInLayout({ book, panel }: { book?: string; panel?: "profile" }) {
+function SignedInLayout({
+  book,
+  post,
+  panel,
+}: {
+  book?: string;
+  post?: string;
+  panel?: "profile";
+}) {
   useSessionGuard();
   useSetupGuard();
   useSyncTimeZone();
   const aside = book ? (
     <BookPeek key={book} openLibraryId={book} />
+  ) : post ? (
+    <PostPeek key={post} postId={post} />
   ) : panel === "profile" ? (
     <ProfilePeek />
   ) : undefined;

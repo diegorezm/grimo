@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/ui/avatar";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
+import { PostPeekLink } from "@/features/posts";
 import { cn } from "@/utils/cn";
 
 /** Covers shown for a grouped entry before "+N". */
@@ -112,7 +113,13 @@ export function FeedItem({
               ) : (
                 <span>♡ {post.likeCount}</span>
               )}
-              <span>{post.commentCount} comentários</span>
+              {interactive ? (
+                <PostPeekLink postId={post.id} className="hover:text-text">
+                  {post.commentCount} comentários
+                </PostPeekLink>
+              ) : (
+                <span>{post.commentCount} comentários</span>
+              )}
               {interactive && me.data && me.data.id !== actor.id && (
                 <ReportButton target="post" targetId={post.id} className="ml-auto" />
               )}

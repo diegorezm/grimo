@@ -539,6 +539,28 @@ describe("moderation", () => {
     await expect(t.action(api.books.loadWork, { openLibraryId: "OL1W" })).rejects.toThrow();
   });
 
+  it("lets comment and post authors delete a comment, and nobody else", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const caio = await reader(t, "caio");
+    const { post } = await bia.as.mutation(api.posts.create, { kind: "note", body: "Olá" });
+    const mine = await rafa.as.mutation(api.posts.comment, { postId: post.id, body: "Um" });
+    const other = await caio.as.mutation(api.posts.comment, { postId: post.id, body: "Dois" });
+    const count = async () => (await t.run((ctx) => ctx.db.get(post.id)))?.commentCount;
+    expect(await count()).toBe(2);
+
+    await expect(
+      caio.as.mutation(api.posts.removeComment, { id: mine.comment.id }),
+    ).rejects.toThrow(/apagar/);
+    await rafa.as.mutation(api.posts.removeComment, { id: mine.comment.id }); // its author
+    await bia.as.mutation(api.posts.removeComment, { id: other.comment.id }); // the post's author
+    expect(await count()).toBe(0);
+    await bia.as.mutation(api.posts.removeComment, { id: other.comment.id }); // already gone
+    const detail = await rafa.as.query(api.posts.get, { id: post.id });
+    expect(detail.comments).toHaveLength(0);
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");
