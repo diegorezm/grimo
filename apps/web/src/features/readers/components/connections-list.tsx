@@ -1,4 +1,4 @@
-import { type ConnectionKind, useReaderConnections } from "@grimo/client";
+import { type ConnectionKind, useMe, useReaderConnections } from "@grimo/client";
 import { Spinner } from "@/components/feedback/spinner";
 import { LoadMore } from "@/components/ui/load-more";
 import { ReaderGrid, ReaderTile } from "./reader-tile";
@@ -15,6 +15,8 @@ export function ConnectionsList({
   viewerId: string | null;
 }) {
   const connections = useReaderConnections(username, kind);
+  // `reader.id` is a users-table id, so compare with `me`, not with the auth session id.
+  const me = useMe({ enabled: viewerId !== null });
   const items = connections.data?.items ?? [];
 
   if (connections.isPending) return <Spinner />;
@@ -33,7 +35,7 @@ export function ConnectionsList({
           <ReaderTile
             key={reader.id}
             reader={reader}
-            canFollow={viewerId !== null && reader.id !== viewerId}
+            canFollow={me.data !== undefined && reader.id !== me.data.id}
           />
         ))}
       </ReaderGrid>

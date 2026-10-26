@@ -37,7 +37,10 @@ const toBookInput = (doc: OpenLibraryDoc): BookInput => ({
 });
 
 export async function searchOpenLibrary(query: string, limit = 20): Promise<BookInput[]> {
-  const res = await fetch(searchUrl(query, limit), { headers: HEADERS });
+  const res = await fetch(searchUrl(query, limit), {
+    headers: HEADERS,
+    signal: AbortSignal.timeout(8000),
+  });
   if (!res.ok) throw new Error(`Open Library respondeu ${res.status}`);
   const data = (await res.json()) as { docs: OpenLibraryDoc[] };
   return data.docs.map(toBookInput);

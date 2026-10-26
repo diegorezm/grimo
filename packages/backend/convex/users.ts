@@ -229,12 +229,19 @@ export const search = query({
   },
 });
 
-/** How many readers suggestions look at. Plenty for a young network; revisit as it grows. */
-const SUGGESTION_POOL = 500;
+/** Most popular readers considered as suggestions, besides friends of friends. */
+const SUGGESTION_POPULAR = 100;
+/** Follows scanned to exclude them / to find friends of friends, and per-friend follows read. */
+const SUGGESTION_FOLLOWS = 200;
+const SUGGESTION_FRIENDS = 30;
+const SUGGESTION_PER_FRIEND = 50;
+/** Followers of mine looked at for "follows you". */
+const SUGGESTION_FOLLOWERS = 500;
 
 /**
- * Readers to follow: everyone I don't follow yet, ranked by how many people I follow already
- * follow them (`mutualName` is one of those), then whether they follow me, then popularity.
+ * Readers to follow: friends of friends plus the most popular readers, ranked by how many people
+ * I follow already follow them (`mutualName` is one of those), then whether they follow me, then
+ * popularity. Bounded reads: the cost doesn't grow with the network.
  */
 export const suggestions = query({
   args: { limit: v.number() },
@@ -243,40 +250,53 @@ export const suggestions = query({
     const myFollows = await ctx.db
       .query("follows")
       .withIndex("by_follower_following", (q) => q.eq("followerId", viewer._id))
-      .collect();
+      .take(SUGGESTION_FOLLOWS);
     const followingIds = new Set<Id<"users">>(myFollows.map((follow) => follow.followingId));
 
     // Who the people I follow follow: reader id → names of my follows who follow them.
     const mutuals = new Map<Id<"users">, string[]>();
-    for (const followed of myFollows) {
+    for (const followed of myFollows.slice(0, SUGGESTION_FRIENDS)) {
       const person = await ctx.db.get(followed.followingId);
       if (!person) continue;
       const theirs = await ctx.db
         .query("follows")
         .withIndex("by_follower_following", (q) => q.eq("followerId", followed.followingId))
-        .collect();
+        .take(SUGGESTION_PER_FRIEND);
       for (const follow of theirs) {
         mutuals.set(follow.followingId, [...(mutuals.get(follow.followingId) ?? []), person.name]);
       }
     }
 
-    const pool = await ctx.db.query("users").take(SUGGESTION_POOL);
-    const blocked = await blockedIds(ctx, viewer._id);
-    const candidates = pool.filter(
-      (user) =>
-        user._id !== viewer._id &&
-        !followingIds.has(user._id) &&
-        !isHidden(user) &&
-        !blocked.has(user._id),
-    );
-    const ranked = await Promise.all(
-      candidates.map(async (user) => ({
+    const [popular, followersOfMine, blocked] = await Promise.all([
+      ctx.db.query("users").withIndex("by_followers").order("desc").take(SUGGESTION_POPULAR),
+      ctx.db
+        .query("follows")
+        .withIndex("by_following", (q) => q.eq("followingId", viewer._id))
+        .take(SUGGESTION_FOLLOWERS),
+      blockedIds(ctx, viewer._id),
+    ]);
+    const followsMe = new Set<Id<"users">>(followersOfMine.map((follow) => follow.followerId));
+
+    const pool = new Map<Id<"users">, Doc<"users">>(popular.map((user) => [user._id, user]));
+    const friendsOfFriends = [...mutuals.keys()].filter((id) => !pool.has(id));
+    for (const user of await Promise.all(friendsOfFriends.map((id) => ctx.db.get(id)))) {
+      if (user) pool.set(user._id, user);
+    }
+
+    const ranked = [...pool.values()]
+      .filter(
+        (user) =>
+          user._id !== viewer._id &&
+          !followingIds.has(user._id) &&
+          !isHidden(user) &&
+          !blocked.has(user._id),
+      )
+      .map((user) => ({
         user,
         mutuals: mutuals.get(user._id)?.length ?? 0,
         mutualName: mutuals.get(user._id)?.[0] ?? null,
-        followsYou: await isFollowing(ctx, user._id, viewer._id),
-      })),
-    );
+        followsYou: followsMe.has(user._id),
+      }));
     ranked.sort(
       (a, b) =>
         b.mutuals - a.mutuals ||

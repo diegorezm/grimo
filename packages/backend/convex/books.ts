@@ -215,3 +215,27 @@ export const detail = query({
     };
   },
 });
+
+/** Rows deleted per table per run; a full batch schedules another run. */
+const PURGE_BATCH = 200;
+
+/** Cron: deletes search and work cache rows past their TTL (they are refetched on demand). */
+export const purgeExpiredCaches = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const searches = await ctx.db
+      .query("bookSearchCache")
+      .withIndex("by_fetchedAt", (q) => q.lt("fetchedAt", now - SEARCH_TTL))
+      .take(PURGE_BATCH);
+    const works = await ctx.db
+      .query("workCache")
+      .withIndex("by_fetchedAt", (q) => q.lt("fetchedAt", now - WORK_TTL))
+      .take(PURGE_BATCH);
+    for (const row of [...searches, ...works]) await ctx.db.delete(row._id);
+    if (searches.length === PURGE_BATCH || works.length === PURGE_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.books.purgeExpiredCaches, {});
+    }
+    return null;
+  },
+});

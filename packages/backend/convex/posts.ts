@@ -91,6 +91,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const input = parse(createPostSchema, args);
+    if (input.bookId && !(await ctx.db.get(input.bookId as Id<"books">))) throw notFound("Livro");
     const postId = await createPost(ctx, viewer._id, {
       ...input,
       bookId: input.bookId as Id<"books"> | null,

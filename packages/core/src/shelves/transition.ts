@@ -1,6 +1,6 @@
 import type { ActivityKind } from "../stats/activity";
 import type { ShelfStatus } from "./constants";
-import type { UpdateShelfEntryInput } from "./schemas";
+import { MAX_CURRENT_PAGE, type UpdateShelfEntryInput } from "./schemas";
 
 export interface ShelfEntryState {
   status: ShelfStatus | null;
@@ -29,6 +29,9 @@ export function planShelfTransition(
   now: Date,
 ): ShelfTransition {
   const set: UpdateShelfEntryInput = { ...patch };
+  if (set.currentPage !== undefined) {
+    set.currentPage = Math.min(set.currentPage, pageCount ?? MAX_CURRENT_PAGE);
+  }
   const status = patch.status ?? prev.status;
   const statusChanged = patch.status !== undefined && patch.status !== prev.status;
   const keepsStartDate = prev.startedAt !== null || patch.startedAt !== undefined;

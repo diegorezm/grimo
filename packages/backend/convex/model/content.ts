@@ -73,6 +73,8 @@ export async function listActivities(
   actorIds: Id<"users">[],
   viewerId: Id<"users"> | null,
   limit: number,
+  /** Activities read per actor; the merged list is still `limit` long. Bounds the fan-out. */
+  perActorLimit = limit,
 ) {
   // Nothing from (or about) readers the viewer blocked or was blocked by.
   const blocked = await blockedIds(ctx, viewerId);
@@ -82,7 +84,7 @@ export async function listActivities(
         .query("activities")
         .withIndex("by_actor_created", (q) => q.eq("actorId", actorId))
         .order("desc")
-        .take(limit + 1),
+        .take(Math.min(limit, perActorLimit) + 1),
     ),
   );
   const newest = perActor
