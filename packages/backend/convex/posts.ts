@@ -185,3 +185,20 @@ export const comment = mutation({
     return { comment: { id: await addComment(ctx, viewer._id, args.postId, body) } };
   },
 });
+
+/** Deletes a comment: its author may, and so may the author of the post it is on. */
+export const removeComment = mutation({
+  args: { id: v.id("postComments") },
+  handler: async (ctx, { id }) => {
+    const viewer = await requireViewer(ctx);
+    const comment = await ctx.db.get(id);
+    if (!comment) return null;
+    const post = await ctx.db.get(comment.postId);
+    if (comment.authorId !== viewer._id && post?.authorId !== viewer._id) {
+      throw appError("FORBIDDEN", "Você não pode apagar esse comentário.");
+    }
+    await ctx.db.delete(id);
+    if (post) await ctx.db.patch(post._id, { commentCount: Math.max(0, post.commentCount - 1) });
+    return null;
+  },
+});

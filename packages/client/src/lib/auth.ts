@@ -52,17 +52,25 @@ export type EmailAuthOutcome =
   | { status: "signed-in" }
   /** A new account: send the reader to the onboarding (name and @). */
   | { status: "signed-up" }
+  /**
+   * Nothing matched and nothing was created: ask the reader whether `email` is right and a new
+   * account is wanted, then call again with `confirmedNew`. (Better Auth doesn't say whether the
+   * email exists, so this also shows for a wrong password: the copy must fit both.)
+   */
+  | { status: "confirm-new"; email: string }
   | { status: "error"; message: string };
 
 /**
- * One form for both: tries to sign in and, when that email + password isn't an account, creates
- * one. Better Auth never says whether an email exists (on purpose), so a failed sign-in is
- * followed by a sign-up: if the email is taken, the password was wrong.
+ * One form for both: tries to sign in and, when that email + password isn't an account, asks
+ * ("confirm-new", so a mistyped email doesn't silently become an empty account) and then creates
+ * one. Better Auth never says whether an email exists (on purpose), so after the confirmation the
+ * sign-up decides: if the email is taken, the password was wrong.
  * Input is validated with the core schemas first (`emailCredentialsSchema`, `newPasswordSchema`).
  */
 export async function continueWithEmail(
   client: EmailAuthClient,
   input: { email: string; password: string },
+  options: { confirmedNew?: boolean } = {},
 ): Promise<EmailAuthOutcome> {
   const fail = (message: string) => ({ status: "error", message }) as const;
   const credentials = emailCredentialsSchema.safeParse(input);
@@ -78,6 +86,7 @@ export async function continueWithEmail(
   if (!newPassword.success) {
     return fail(`Email ou senha incorretos. Se a conta é nova: ${firstIssue(newPassword.error)}.`);
   }
+  if (!options.confirmedNew) return { status: "confirm-new", email };
   // The name comes in the onboarding (Google accounts bring the provider's).
   const signUp = await client.signUp.email({ email, password, name: "" });
   if (!signUp.error) return { status: "signed-up" };

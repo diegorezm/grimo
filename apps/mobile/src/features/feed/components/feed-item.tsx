@@ -79,7 +79,18 @@ export function FeedItem({ item }: { item: FeedItemData }) {
               hitSlop={8}
             >
               <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-                {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {post.commentCount} comentários
+                {post.likedByMe ? "♥" : "♡"} {post.likeCount}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ver comentários"
+              onPress={() => router.push({ pathname: "/post/[id]", params: { id: post.id! } })}
+              hitSlop={8}
+              style={styles.flex}
+            >
+              <Text variant="label" color="textMuted">
+                {post.commentCount} comentários
               </Text>
             </Pressable>
             {me?.id !== actor.id && (
