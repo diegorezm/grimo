@@ -126,13 +126,18 @@ export async function updateShelfEntry(
     {
       status: entry.status,
       currentPage: entry.currentPage,
+      maxPage: entry.maxPage,
       startedAt: entry.startedAt === null ? null : new Date(entry.startedAt),
     },
     patch,
     book?.pageCount ?? null,
     new Date(now),
   );
-  await ctx.db.patch(entryId, { ...storedPatch(plan.set), updatedAt: now });
+  await ctx.db.patch(entryId, {
+    ...storedPatch(plan.set),
+    maxPage: plan.maxPage,
+    updatedAt: now,
+  });
   const updated = (await ctx.db.get(entryId))!;
   await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now);
   return updated;
@@ -166,6 +171,7 @@ export async function addToShelf(
     startedAt: null,
     finishedAt: null,
     ...storedPatch(plan.set),
+    maxPage: plan.maxPage,
     updatedAt: now,
   });
   const user = await ctx.db.get(userId);

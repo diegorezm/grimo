@@ -107,6 +107,8 @@ export default defineSchema({
     bookId: v.id("books"),
     status: shelfStatus,
     currentPage: v.number(),
+    /** Furthest page logged, so going back and forward again isn't counted twice. */
+    maxPage: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),

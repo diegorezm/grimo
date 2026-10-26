@@ -469,6 +469,20 @@ describe("moderation", () => {
     expect(november.booksRead).toBe(0);
   });
 
+  it("doesn't count the same pages twice after going back", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const { entry } = await rafa.as.mutation(api.shelves.add, {
+      book: { ...book, openLibraryId: "OL3W", pageCount: 300 },
+      status: "reading",
+    });
+    for (const page of [200, 100, 150, 230]) {
+      await rafa.as.mutation(api.shelves.update, { id: entry.id, currentPage: page });
+    }
+    const logs = await t.run((ctx) => ctx.db.query("readingLogs").collect());
+    expect(logs.reduce((total, log) => total + log.pagesRead, 0)).toBe(230);
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");
