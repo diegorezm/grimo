@@ -1,12 +1,13 @@
-import { USERNAME_REGEX, usernameFromName } from "@grimo/core";
+import { DEFAULT_TIME_ZONE, USERNAME_REGEX, usernameFromName, yearOf } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { notFound, unauthenticated } from "./errors";
+import { appError, notFound, unauthenticated } from "./errors";
+import { isHidden } from "./safety";
 
 type Ctx = QueryCtx | MutationCtx;
 
-/** The signed-in reader, or null when signed out. */
-export async function getViewer(ctx: Ctx): Promise<Doc<"users"> | null> {
+/** The account behind the auth identity, whatever its state (deleted, suspended…). */
+async function viewerAccount(ctx: Ctx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   return ctx.db
@@ -15,19 +16,32 @@ export async function getViewer(ctx: Ctx): Promise<Doc<"users"> | null> {
     .unique();
 }
 
+/** The signed-in reader, or null when signed out (or the account is deleted or suspended). */
+export async function getViewer(ctx: Ctx): Promise<Doc<"users"> | null> {
+  const viewer = await viewerAccount(ctx);
+  return viewer && !viewer.deletedAt && !viewer.suspendedAt ? viewer : null;
+}
+
 /** The signed-in reader, or an UNAUTHENTICATED error. First line of every protected function. */
 export async function requireViewer(ctx: Ctx): Promise<Doc<"users">> {
-  const viewer = await getViewer(ctx);
-  if (!viewer) throw unauthenticated();
+  const viewer = await viewerAccount(ctx);
+  if (viewer?.suspendedAt) {
+    throw appError(
+      "FORBIDDEN",
+      "Sua conta está suspensa. Fale com a gente se achar que é um erro.",
+    );
+  }
+  if (!viewer || viewer.deletedAt) throw unauthenticated();
   return viewer;
 }
 
+/** A reader others can see (deleted, suspended and under-16 accounts are "not found"). */
 export async function readerByUsername(ctx: Ctx, username: string) {
   const reader = await ctx.db
     .query("users")
     .withIndex("by_username", (q) => q.eq("username", username.toLowerCase()))
     .unique();
-  if (!reader) throw notFound("Leitor");
+  if (!reader || isHidden(reader)) throw notFound("Leitor");
   return reader;
 }
 
@@ -68,7 +82,7 @@ export async function isFollowing(ctx: Ctx, followerId: Id<"users">, followingId
 
 /** Public profile: reader + current-year goal + follow counts. */
 export async function profileOf(ctx: Ctx, user: Doc<"users">) {
-  const year = new Date().getUTCFullYear();
+  const year = yearOf(new Date(), timeZoneOf(user));
   const goal = await ctx.db
     .query("readingGoals")
     .withIndex("by_user_year", (q) => q.eq("userId", user._id).eq("year", year))
@@ -121,3 +135,6 @@ export async function readerCard(ctx: Ctx, user: Doc<"users">, viewerId: Id<"use
     followsYou,
   };
 }
+
+/** The zone a reader's months and years are counted in. */
+export const timeZoneOf = (user: Doc<"users">) => user.timeZone ?? DEFAULT_TIME_ZONE;

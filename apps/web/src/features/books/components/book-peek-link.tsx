@@ -14,7 +14,7 @@ export function BookPeekLink({
   return (
     <Link
       to="."
-      search={(prev) => ({ ...prev, book: openLibraryId })}
+      search={(prev) => ({ ...prev, book: openLibraryId, post: undefined })}
       resetScroll={false}
       className={className}
     >

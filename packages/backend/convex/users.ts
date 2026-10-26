@@ -1,14 +1,22 @@
 import {
   avatarProblem,
   setupProfileSchema,
+  timeZoneSchema,
   USERNAME_REGEX,
   updateProfileSchema,
+  yearOf,
 } from "@grimo/core";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { listActivities, recordActivity } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
+import {
+  type AcceptanceResult,
+  acceptLegal,
+  legalAcceptanceArgs,
+  legalStatus,
+} from "./model/legal";
 import { listLimit } from "./model/limits";
 import {
   getViewer,
@@ -17,8 +25,10 @@ import {
   readerByUsername,
   readerCard,
   requireViewer,
+  timeZoneOf,
   userByUsername,
 } from "./model/readers";
+import { blockedIds, hasBlocked, isBlockedBetween, isHidden } from "./model/safety";
 import { withBooks } from "./model/shelves";
 import { yearOverview } from "./model/stats";
 
@@ -27,8 +37,14 @@ export const me = query({
   args: {},
   handler: async (ctx) => {
     const viewer = await requireViewer(ctx);
-    // New accounts confirm name and @ in the onboarding before anything else.
-    return { ...(await profileOf(ctx, viewer)), needsSetup: viewer.setupDone === false };
+    // New accounts confirm name and @ (and agree to the terms) in the onboarding before anything
+    // else; older accounts are asked again when a legal document changes (`legal`).
+    return {
+      ...(await profileOf(ctx, viewer)),
+      timeZone: timeZoneOf(viewer),
+      needsSetup: viewer.setupDone === false,
+      legal: await legalStatus(ctx, viewer),
+    };
   },
 });
 
@@ -43,23 +59,31 @@ export const usernameAvailable = query({
   },
 });
 
-/** Onboarding: the reader's name and @. Ends the setup (`needsSetup` turns false). */
+/**
+ * Onboarding: the reader's name and @, the age declaration and the acceptance of the Terms and
+ * Privacy Policy. Ends the setup (`needsSetup` turns false), unless the reader is under 16.
+ */
 export const completeSetup = mutation({
-  args: { name: v.string(), username: v.string() },
-  handler: async (ctx, args) => {
+  args: { name: v.string(), username: v.string(), ...legalAcceptanceArgs },
+  handler: async (
+    ctx,
+    { name: rawName, username: rawUsername, ...legal },
+  ): Promise<AcceptanceResult> => {
     const viewer = await requireViewer(ctx);
-    const { name, username } = parse(setupProfileSchema, args);
+    const { name, username } = parse(setupProfileSchema, { name: rawName, username: rawUsername });
     const owner = await userByUsername(ctx, username);
     if (owner && owner._id !== viewer._id) {
       throw appError("INVALID", "Esse @ já tem dono. Que tal outro?");
     }
+    const result = await acceptLegal(ctx, viewer, legal);
+    if (!result.ok) return result;
     await ctx.db.patch(viewer._id, {
       name,
       username,
       searchText: `${name} ${username}`,
       setupDone: true,
     });
-    return null;
+    return result;
   },
 });
 
@@ -76,7 +100,7 @@ export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch:
   if (Object.keys(fields).length > 0) await ctx.db.patch(user._id, fields);
 
   if (yearlyGoal !== undefined) {
-    const year = new Date().getUTCFullYear();
+    const year = yearOf(new Date(), timeZoneOf(user));
     const goal = await ctx.db
       .query("readingGoals")
       .withIndex("by_user_year", (q) => q.eq("userId", user._id).eq("year", year))
@@ -172,14 +196,17 @@ export const byUsername = query({
   args: { username: v.string(), year: v.number() },
   handler: async (ctx, { username, year }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
-    const [profile, stats, books, following, followsYou] = await Promise.all([
+    // Whoever blocked you doesn't exist for you; whoever you blocked shows "Desbloquear".
+    if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
+    const [profile, stats, books, following, followsYou, blockedByMe] = await Promise.all([
       profileOf(ctx, reader),
-      yearOverview(ctx, reader._id, year),
+      yearOverview(ctx, reader, year),
       profileBooks(ctx, reader),
       viewer ? isFollowing(ctx, viewer._id, reader._id) : false,
       viewer ? isFollowing(ctx, reader._id, viewer._id) : false,
+      viewer ? hasBlocked(ctx, viewer._id, reader._id) : false,
     ]);
-    return { profile, stats, books, isFollowing: following, followsYou };
+    return { profile, stats, books, isFollowing: following, followsYou, blockedByMe };
   },
 });
 
@@ -188,6 +215,9 @@ export const activity = query({
   args: { username: v.string(), limit: v.number() },
   handler: async (ctx, { username, limit }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
+    if (viewer && (await isBlockedBetween(ctx, viewer._id, reader._id))) {
+      return { items: [], hasMore: false };
+    }
     return listActivities(ctx, [reader._id], viewer?._id ?? null, listLimit(limit));
   },
 });
@@ -201,6 +231,7 @@ export const connections = query({
   },
   handler: async (ctx, { username, kind, limit }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
+    const blocked = await blockedIds(ctx, viewer?._id ?? null);
     const take = listLimit(limit);
     const rows =
       kind === "followers"
@@ -217,7 +248,7 @@ export const connections = query({
     const cards = await Promise.all(
       rows.slice(0, take).map(async (row) => {
         const other = await ctx.db.get(kind === "followers" ? row.followerId : row.followingId);
-        return other
+        return other && !isHidden(other) && !blocked.has(other._id)
           ? { ...(await readerCard(ctx, other, viewer?._id ?? null)), since: row._creationTime }
           : null;
       }),
@@ -238,7 +269,10 @@ export const search = query({
       .query("users")
       .withSearchIndex("search", (s) => s.search("searchText", text))
       .take(take + 2);
-    const others = matches.filter((user) => user._id !== viewer._id);
+    const blocked = await blockedIds(ctx, viewer._id);
+    const others = matches.filter(
+      (user) => user._id !== viewer._id && !isHidden(user) && !blocked.has(user._id),
+    );
     const cards = await Promise.all(
       others.slice(0, take).map((user) => readerCard(ctx, user, viewer._id)),
     );
@@ -246,12 +280,19 @@ export const search = query({
   },
 });
 
-/** How many readers suggestions look at. Plenty for a young network; revisit as it grows. */
-const SUGGESTION_POOL = 500;
+/** Most popular readers considered as suggestions, besides friends of friends. */
+const SUGGESTION_POPULAR = 100;
+/** Follows scanned to exclude them / to find friends of friends, and per-friend follows read. */
+const SUGGESTION_FOLLOWS = 200;
+const SUGGESTION_FRIENDS = 30;
+const SUGGESTION_PER_FRIEND = 50;
+/** Followers of mine looked at for "follows you". */
+const SUGGESTION_FOLLOWERS = 500;
 
 /**
- * Readers to follow: everyone I don't follow yet, ranked by how many people I follow already
- * follow them (`mutualName` is one of those), then whether they follow me, then popularity.
+ * Readers to follow: friends of friends plus the most popular readers, ranked by how many people
+ * I follow already follow them (`mutualName` is one of those), then whether they follow me, then
+ * popularity. Bounded reads: the cost doesn't grow with the network.
  */
 export const suggestions = query({
   args: { limit: v.number() },
@@ -260,35 +301,53 @@ export const suggestions = query({
     const myFollows = await ctx.db
       .query("follows")
       .withIndex("by_follower_following", (q) => q.eq("followerId", viewer._id))
-      .collect();
+      .take(SUGGESTION_FOLLOWS);
     const followingIds = new Set<Id<"users">>(myFollows.map((follow) => follow.followingId));
 
     // Who the people I follow follow: reader id → names of my follows who follow them.
     const mutuals = new Map<Id<"users">, string[]>();
-    for (const followed of myFollows) {
+    for (const followed of myFollows.slice(0, SUGGESTION_FRIENDS)) {
       const person = await ctx.db.get(followed.followingId);
       if (!person) continue;
       const theirs = await ctx.db
         .query("follows")
         .withIndex("by_follower_following", (q) => q.eq("followerId", followed.followingId))
-        .collect();
+        .take(SUGGESTION_PER_FRIEND);
       for (const follow of theirs) {
         mutuals.set(follow.followingId, [...(mutuals.get(follow.followingId) ?? []), person.name]);
       }
     }
 
-    const pool = await ctx.db.query("users").take(SUGGESTION_POOL);
-    const candidates = pool.filter(
-      (user) => user._id !== viewer._id && !followingIds.has(user._id),
-    );
-    const ranked = await Promise.all(
-      candidates.map(async (user) => ({
+    const [popular, followersOfMine, blocked] = await Promise.all([
+      ctx.db.query("users").withIndex("by_followers").order("desc").take(SUGGESTION_POPULAR),
+      ctx.db
+        .query("follows")
+        .withIndex("by_following", (q) => q.eq("followingId", viewer._id))
+        .take(SUGGESTION_FOLLOWERS),
+      blockedIds(ctx, viewer._id),
+    ]);
+    const followsMe = new Set<Id<"users">>(followersOfMine.map((follow) => follow.followerId));
+
+    const pool = new Map<Id<"users">, Doc<"users">>(popular.map((user) => [user._id, user]));
+    const friendsOfFriends = [...mutuals.keys()].filter((id) => !pool.has(id));
+    for (const user of await Promise.all(friendsOfFriends.map((id) => ctx.db.get(id)))) {
+      if (user) pool.set(user._id, user);
+    }
+
+    const ranked = [...pool.values()]
+      .filter(
+        (user) =>
+          user._id !== viewer._id &&
+          !followingIds.has(user._id) &&
+          !isHidden(user) &&
+          !blocked.has(user._id),
+      )
+      .map((user) => ({
         user,
         mutuals: mutuals.get(user._id)?.length ?? 0,
         mutualName: mutuals.get(user._id)?.[0] ?? null,
-        followsYou: await isFollowing(ctx, user._id, viewer._id),
-      })),
-    );
+        followsYou: followsMe.has(user._id),
+      }));
     ranked.sort(
       (a, b) =>
         b.mutuals - a.mutuals ||
@@ -319,6 +378,9 @@ export async function setFollow(
   if (targetId === viewer._id) throw appError("INVALID", "Você não pode seguir a si mesmo");
   const target = await ctx.db.get(targetId);
   if (!target) throw notFound("Leitor");
+  if (follow && (isHidden(target) || (await isBlockedBetween(ctx, viewer._id, targetId)))) {
+    throw appError("FORBIDDEN", "Não é possível seguir esse leitor.");
+  }
   const existing = await ctx.db
     .query("follows")
     .withIndex("by_follower_following", (q) =>
@@ -354,4 +416,18 @@ export const setFollowing = mutation({
   args: { userId: v.id("users"), follow: v.boolean() },
   handler: async (ctx, { userId, follow }) =>
     setFollow(ctx, await requireViewer(ctx), userId, follow),
+});
+
+/**
+ * The apps report the device's time zone, so months and years of reading follow the reader
+ * (see `timeZoneOf`). No-op when it is already that zone.
+ */
+export const setTimeZone = mutation({
+  args: { timeZone: v.string() },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const timeZone = parse(timeZoneSchema, args.timeZone);
+    if (viewer.timeZone !== timeZone) await ctx.db.patch(viewer._id, { timeZone });
+    return null;
+  },
 });

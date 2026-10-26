@@ -17,6 +17,8 @@
   "dependencies": {
     "@better-auth/expo": "catalog:",
     "@convex-dev/better-auth": "catalog:",
+    "@convex-dev/migrations": "catalog:",
+    "@convex-dev/rate-limiter": "catalog:",
     "@grimo/core": "workspace:*",
     "better-auth": "catalog:",
     "convex": "catalog:",

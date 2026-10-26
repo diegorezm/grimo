@@ -78,27 +78,44 @@ export function Bubble({
   );
 }
 
-/** Covers sliding by, like browsing a friend's shelf. Pauses on hover; still for reduced motion. */
+/** Enough covers per copy of the strip to be wider than any screen (~132px each). */
+const MARQUEE_MIN_COVERS = 24;
+
+/**
+ * Covers sliding by, like browsing a friend's shelf. Pauses on hover; still for reduced motion.
+ * Two identical copies, each wider than the viewport and with its trailing gap as padding, so
+ * sliding by exactly one copy (-50%) loops without a jump or an empty edge.
+ */
 export function CoverMarquee({ covers }: { covers: string[] }) {
-  const row = [...covers, ...covers];
+  const repeat = Math.max(1, Math.ceil(MARQUEE_MIN_COVERS / covers.length));
+  const copy = Array.from({ length: repeat }, () => covers).flat();
+  // Same speed (~18px/s) whatever the copy width.
+  const duration = { animationDuration: `${copy.length * 7.5}s` };
   return (
     <div className="group overflow-hidden py-6 [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
-      <ul className="animate-marquee flex w-max gap-5 group-hover:[animation-play-state:paused]">
-        {row.map((src, index) => (
-          <li
-            key={index}
-            aria-hidden={index >= covers.length}
-            className={cn("shrink-0", index % 2 ? "rotate-2" : "-rotate-2")}
-          >
-            <img
-              src={src}
-              alt=""
-              loading="lazy"
-              className="aspect-[2/3] w-24 rounded-sm object-cover shadow-md shadow-shadow sm:w-28"
-            />
-          </li>
+      <div
+        className="animate-marquee flex w-max group-hover:[animation-play-state:paused]"
+        style={duration}
+      >
+        {[0, 1].map((half) => (
+          <ul key={half} aria-hidden={half === 1 || undefined} className="flex shrink-0 gap-5 pr-5">
+            {copy.map((src, index) => (
+              <li
+                key={index}
+                aria-hidden={index >= covers.length || undefined}
+                className={cn("shrink-0", index % 2 ? "rotate-2" : "-rotate-2")}
+              >
+                <img
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  className="aspect-[2/3] w-24 rounded-sm object-cover shadow-md shadow-shadow sm:w-28"
+                />
+              </li>
+            ))}
+          </ul>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

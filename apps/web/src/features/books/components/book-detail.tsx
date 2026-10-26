@@ -2,6 +2,7 @@ import {
   type BookDetail,
   useAddToShelf,
   useCreatePost,
+  useRemoveFromShelf,
   useToggleLike,
   useUpdateShelfEntry,
 } from "@grimo/client";
@@ -262,6 +263,7 @@ export function BookShelfActions({ detail }: { detail: BookDetail }) {
           {SHELF_LABELS[status]}
         </button>
       ))}
+      {detail.entry && <RemoveFromShelf entryId={detail.entry.id} />}
     </fieldset>
   );
 }
@@ -286,5 +288,42 @@ export function BookDetailSkeleton() {
         />
       ))}
     </div>
+  );
+}
+
+/** Takes the book off the shelf, after a second click (the page log goes with it). */
+function RemoveFromShelf({ entryId }: { entryId: string }) {
+  const remove = useRemoveFromShelf();
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="ml-auto font-mono text-[11px] uppercase tracking-wider text-text-muted underline-offset-4 hover:text-text hover:underline"
+      >
+        Remover
+      </button>
+    );
+  }
+  return (
+    <span className="ml-auto flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider">
+      <span className="text-text-muted">Apaga também seu histórico de páginas.</span>
+      <button
+        type="button"
+        onClick={() => remove.mutate(entryId)}
+        className="text-danger hover:underline"
+      >
+        Remover
+      </button>
+      <button
+        type="button"
+        onClick={() => setConfirming(false)}
+        className="text-text-muted hover:text-text"
+      >
+        Cancelar
+      </button>
+    </span>
   );
 }

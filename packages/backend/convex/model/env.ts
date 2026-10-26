@@ -13,4 +13,9 @@ export const env = {
   /** Google sign-in (OAuth client from Google Cloud). Both unset = Google sign-in disabled. */
   GOOGLE_CLIENT_ID: vars.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: vars.GOOGLE_CLIENT_SECRET,
+  /** Sign in with Apple (Services ID + client secret JWT). Both unset = Apple disabled. */
+  APPLE_CLIENT_ID: vars.APPLE_CLIENT_ID,
+  APPLE_CLIENT_SECRET: vars.APPLE_CLIENT_SECRET,
+  /** The iOS app's bundle id, for native Sign in with Apple. */
+  APPLE_BUNDLE_ID: vars.APPLE_BUNDLE_ID,
 };

@@ -8,13 +8,14 @@
  * same model functions the app uses, backdated so the feed and stats look lived-in.
  * Re-running is safe: nothing happens once the main reader has books.
  */
-import type { BookInput } from "@grimo/core";
+import { type BookInput, PRIVACY_VERSION, TERMS_VERSION } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation } from "./_generated/server";
 import { createAuth } from "./auth";
 import { env } from "./model/env";
+import { acceptLegal, legalStatus } from "./model/legal";
 import { searchOpenLibrary } from "./model/openLibrary";
 import { type BookKey, catalog, comments, readers } from "./model/seedData";
 import { addToShelf, updateShelfEntry } from "./model/shelves";
@@ -84,6 +85,17 @@ export const populate = internalMutation({
         searchText: `${reader.name} ${reader.username}`,
         setupDone: true,
       });
+      // ...and are adults who agreed to the current Terms and Privacy Policy.
+      const seeded = (await ctx.db.get(user._id))!;
+      if ((await legalStatus(ctx, seeded)).needsAcceptance) {
+        await acceptLegal(ctx, seeded, {
+          accepted: true,
+          termsVersion: TERMS_VERSION,
+          privacyVersion: PRIVACY_VERSION,
+          birthDate: "1995-05-20",
+          source: "web",
+        });
+      }
       users.set(reader.username, (await ctx.db.get(user._id))!);
     }
     const [main, ...others] = readers.map((reader) => ({

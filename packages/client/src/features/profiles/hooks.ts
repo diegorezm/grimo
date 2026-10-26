@@ -1,18 +1,33 @@
 import { api, type Id } from "@grimo/backend";
-import { avatarProblem, type SetupProfileInput, type UpdateProfileInput } from "@grimo/core";
+import {
+  avatarProblem,
+  deviceTimeZone,
+  type SetupProfileInput,
+  type UpdateProfileInput,
+  yearOf,
+} from "@grimo/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { CONVEX_QUERY, convexQuery } from "../../lib/convex-cache";
 import { useGrowingList } from "../../lib/list";
 import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
 import { PAGE_SIZE } from "../../lib/query";
+import {
+  type AgreementInput,
+  agreementArgs,
+  applyAcceptance,
+  type LegalSource,
+} from "../legal/hooks";
 
-/** The signed-in reader (`needsSetup`: the onboarding hasn't asked for name and @ yet). */
+/**
+ * The signed-in reader. `needsSetup`: the onboarding hasn't asked for name and @ yet; `legal`:
+ * terms to accept again, age to declare, or declared under 16.
+ */
 export type Me = FunctionReturnType<typeof api.users.me>;
 /** A reader's public profile. */
-export type Profile = Omit<Me, "needsSetup">;
+export type Profile = Omit<Me, "needsSetup" | "legal" | "timeZone">;
 export type ReaderPage = FunctionReturnType<typeof api.users.byUsername>;
 export type ReaderActivityPage = FunctionReturnType<typeof api.users.activity>;
 export type ConnectionKind = "followers" | "following";
@@ -24,7 +39,7 @@ export function meQuery() {
 }
 
 /** A reader's public page; `year` picks the stats shown (defaults to this year). */
-export function readerQuery(username: string, year = new Date().getUTCFullYear()) {
+export function readerQuery(username: string, year = yearOf(new Date())) {
   return convexQuery(api.users.byUsername, { username, year }, "optional");
 }
 
@@ -97,15 +112,28 @@ export function useUsernameAvailable(username: string) {
   });
 }
 
-/** Onboarding: saves name and @ and ends the setup (the app opens normally afterwards). */
-export function useCompleteSetup() {
+/**
+ * Onboarding: saves name and @, the age declaration and the acceptance of the terms, and ends
+ * the setup (the app opens normally afterwards). Under 16, `result.ok` is false and `me` says
+ * `legal.underage` instead.
+ */
+export function useCompleteSetup(source: LegalSource) {
   const { convex } = useConvexCache();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: SetupProfileInput) => convex.mutation(api.users.completeSetup, input),
-    onSuccess: (_result, input) =>
+    mutationFn: ({ name, username, ...agreement }: SetupProfileInput & AgreementInput) =>
+      convex.mutation(api.users.completeSetup, {
+        name,
+        username,
+        ...agreementArgs(agreement, source),
+      }),
+    onSuccess: (result, { name, username }) =>
       queryClient.setQueryData(meQuery().queryKey, (me) =>
-        me ? { ...me, ...input, needsSetup: false } : me,
+        !me
+          ? me
+          : result.ok
+            ? { ...applyAcceptance(me, result), name, username, needsSetup: false }
+            : applyAcceptance(me, result),
       ),
   });
 }
@@ -226,4 +254,22 @@ export function useToggleFollow() {
     },
     onError: (_error, _input, rollback) => rollback?.(),
   });
+}
+
+/**
+ * Tells the server which time zone this device is in, so the months and years of reading follow
+ * the reader (travel, a new phone). Mount it once while signed in; tries once per zone per run.
+ */
+export function useSyncTimeZone(enabled = true) {
+  const { convex } = useConvexCache();
+  const stored = useMe({ enabled }).data?.timeZone;
+  const tried = useRef<string | null>(null);
+  useEffect(() => {
+    const device = deviceTimeZone();
+    if (stored === undefined || stored === device || tried.current === device) return;
+    tried.current = device;
+    convex.mutation(api.users.setTimeZone, { timeZone: device }).catch(() => {
+      tried.current = null;
+    });
+  }, [convex, stored]);
 }

@@ -39,7 +39,9 @@ export function useBook(openLibraryId: string) {
   const cache = useConvexCache();
   const query = useQuery(bookQuery(openLibraryId));
   const needsWork = query.data?.needsWork ?? false;
-  const [failed, setFailed] = useState(false);
+  // Which book gave up waiting: a different book (side peek switching) starts clean.
+  const [failedId, setFailedId] = useState<string | null>(null);
+  const failed = failedId === openLibraryId;
 
   useEffect(() => {
     if (!needsWork) return;
@@ -48,7 +50,7 @@ export function useBook(openLibraryId: string) {
       .action(api.books.loadWork, { openLibraryId })
       .catch(() => {})
       // Still unknown after trying (Open Library unreachable): stop waiting.
-      .finally(() => active && setTimeout(() => active && setFailed(true), 3000));
+      .finally(() => active && setTimeout(() => active && setFailedId(openLibraryId), 3000));
     return () => {
       active = false;
     };

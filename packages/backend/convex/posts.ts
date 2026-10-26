@@ -3,8 +3,10 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity } from "./model/content";
-import { notFound, parse } from "./model/errors";
+import { appError, notFound, parse } from "./model/errors";
+import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireViewer } from "./model/readers";
+import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
 import { postKind } from "./schema";
 
 /** Creates a review or note (and its feed activity). Used by the seed too. */
@@ -36,14 +38,23 @@ export async function createPost(
   return postId;
 }
 
+/** A post `userId` may like or comment on: it exists and nobody blocked anybody. */
+async function interactablePost(ctx: MutationCtx, userId: Id<"users">, postId: Id<"posts">) {
+  const post = await ctx.db.get(postId);
+  if (!post) throw notFound("Post");
+  if (await isBlockedBetween(ctx, userId, post.authorId)) {
+    throw appError("FORBIDDEN", "Não é possível interagir com esse post.");
+  }
+  return post;
+}
+
 export async function setLike(
   ctx: MutationCtx,
   userId: Id<"users">,
   postId: Id<"posts">,
   like: boolean,
 ) {
-  const post = await ctx.db.get(postId);
-  if (!post) throw notFound("Post");
+  const post = await interactablePost(ctx, userId, postId);
   const existing = await ctx.db
     .query("postLikes")
     .withIndex("by_post_user", (q) => q.eq("postId", postId).eq("userId", userId))
@@ -64,8 +75,7 @@ export async function addComment(
   postId: Id<"posts">,
   body: string,
 ) {
-  const post = await ctx.db.get(postId);
-  if (!post) throw notFound("Post");
+  const post = await interactablePost(ctx, authorId, postId);
   const id = await ctx.db.insert("postComments", { postId, authorId, body });
   await ctx.db.patch(postId, { commentCount: post.commentCount + 1 });
   return id;
@@ -82,6 +92,8 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const input = parse(createPostSchema, args);
+    await enforceRateLimit(ctx, "createPost", viewer._id);
+    if (input.bookId && !(await ctx.db.get(input.bookId as Id<"books">))) throw notFound("Livro");
     const postId = await createPost(ctx, viewer._id, {
       ...input,
       bookId: input.bookId as Id<"books"> | null,
@@ -98,7 +110,7 @@ export const get = query({
     const post = id ? await ctx.db.get(id) : null;
     if (!post) throw notFound("Post");
     const viewer = await getViewer(ctx);
-    const [author, book, view, comments] = await Promise.all([
+    const [author, book, view, comments, blocked] = await Promise.all([
       ctx.db.get(post.authorId),
       post.bookId ? ctx.db.get(post.bookId) : null,
       postView(ctx, post, viewer?._id ?? null),
@@ -106,12 +118,13 @@ export const get = query({
         .query("postComments")
         .withIndex("by_post", (q) => q.eq("postId", post._id))
         .collect(),
+      blockedIds(ctx, viewer?._id ?? null),
     ]);
-    if (!author) throw notFound("Post");
+    if (!author || isHidden(author) || blocked.has(author._id)) throw notFound("Post");
     const commentViews = await Promise.all(
       comments.map(async (comment) => {
         const commenter = await ctx.db.get(comment.authorId);
-        return commenter
+        return commenter && !isHidden(commenter) && !blocked.has(commenter._id)
           ? {
               id: comment._id,
               body: comment.body,
@@ -168,6 +181,24 @@ export const comment = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const { body } = parse(createCommentSchema, args);
+    await enforceRateLimit(ctx, "createComment", viewer._id);
     return { comment: { id: await addComment(ctx, viewer._id, args.postId, body) } };
+  },
+});
+
+/** Deletes a comment: its author may, and so may the author of the post it is on. */
+export const removeComment = mutation({
+  args: { id: v.id("postComments") },
+  handler: async (ctx, { id }) => {
+    const viewer = await requireViewer(ctx);
+    const comment = await ctx.db.get(id);
+    if (!comment) return null;
+    const post = await ctx.db.get(comment.postId);
+    if (comment.authorId !== viewer._id && post?.authorId !== viewer._id) {
+      throw appError("FORBIDDEN", "Você não pode apagar esse comentário.");
+    }
+    await ctx.db.delete(id);
+    if (post) await ctx.db.patch(post._id, { commentCount: Math.max(0, post.commentCount - 1) });
+    return null;
   },
 });

@@ -73,6 +73,12 @@ function MePage() {
               <PencilIcon className="size-4" />
               Editar perfil
             </Link>
+            <Link
+              to="/settings/account"
+              className="inline-flex items-center rounded-full border border-border bg-surface px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider shadow-sm shadow-shadow transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent hover:shadow-md"
+            >
+              Conta e privacidade
+            </Link>
             <button
               type="button"
               onClick={signOut}

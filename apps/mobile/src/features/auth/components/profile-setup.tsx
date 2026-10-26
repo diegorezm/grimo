@@ -1,20 +1,36 @@
-import { errorMessage, useCompleteSetup, useMe, useUsernameAvailable } from "@grimo/client";
-import { firstIssue, setupProfileSchema, usernameFromName } from "@grimo/core";
+import {
+  type AgreementInput,
+  errorMessage,
+  useCompleteSetup,
+  useMe,
+  useUsernameAvailable,
+} from "@grimo/client";
+import {
+  firstIssue,
+  legalAcceptanceSchema,
+  PRIVACY_VERSION,
+  setupProfileSchema,
+  TERMS_VERSION,
+  usernameFromName,
+} from "@grimo/core";
 import { useDeferredValue, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
+import { AgreementFields, legalSource, UnderageNotice } from "@/features/legal";
 
 /**
- * First screen of a new account: the name (Google's, when it came from there) and the @ others
- * use to find you. Validated with the core `setupProfileSchema`; the @ says right away whether
- * it's free. Saving ends the setup and the root layout swaps to the tabs.
+ * First screen of a new account: the name (Google's, when it came from there), the @ others
+ * use to find you, the birth date (16+) and the acceptance of the Terms and Privacy Policy.
+ * Validated with the core schemas; the @ says right away whether it's free. Saving ends the
+ * setup and the root layout swaps to the tabs (under 16, this screen shows the way out).
  */
 export function ProfileSetup() {
   const me = useMe().data;
-  const completeSetup = useCompleteSetup();
+  const completeSetup = useCompleteSetup(legalSource);
   const [name, setName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [agreement, setAgreement] = useState<AgreementInput>({ accepted: false });
   const currentName = name ?? me?.name ?? "";
   // Follows the name until edited (a Google account starts with the @ the server picked).
   const handle =
@@ -23,12 +39,24 @@ export function ProfileSetup() {
   const taken = checked.data?.valid && !checked.data.available;
   const [error, setError] = useState<string | null>(null);
 
+  if (me?.legal.underage) return <UnderageNotice />;
+
   function save() {
     const input = setupProfileSchema.safeParse({ name: currentName, username: handle });
     if (!input.success) return setError(firstIssue(input.error));
     if (taken) return setError("Esse @ já tem dono. Que tal outro?");
+    const legal = legalAcceptanceSchema.safeParse({
+      ...agreement,
+      birthDate: agreement.birthDate ?? "",
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    });
+    if (!legal.success) return setError(firstIssue(legal.error));
     setError(null);
-    completeSetup.mutate(input.data, { onError: (failure) => setError(errorMessage(failure)) });
+    completeSetup.mutate(
+      { ...input.data, ...agreement },
+      { onError: (failure) => setError(errorMessage(failure)) },
+    );
   }
 
   return (
@@ -59,6 +87,7 @@ export function ProfileSetup() {
             : " "}
         </Text>
       </View>
+      <AgreementFields value={agreement} onChange={setAgreement} askAge />
       {error && <Text color="danger">{error}</Text>}
       <Button
         title={completeSetup.isPending ? "Salvando…" : "É assim que eu sou"}

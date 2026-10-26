@@ -1,4 +1,4 @@
-import { useMe } from "@grimo/client";
+import { useMe, useSyncTimeZone } from "@grimo/client";
 import {
   createFileRoute,
   Link,
@@ -8,10 +8,13 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
+import { ErrorScreen } from "@/components/feedback/error-screen";
 import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
 import { BookPeek } from "@/features/books";
+import { LegalGate } from "@/features/legal";
+import { PostPeek } from "@/features/posts";
 import { ProfilePeek } from "@/features/profile";
 import { sessionQuery, signOutLocally } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -21,12 +24,16 @@ const isPublicPath = (pathname: string) => pathname.startsWith("/u/");
 
 /**
  * Layout for every app page. Search params open a side peek next to any screen:
- * `?book=<openLibraryId>` (book page) or `?panel=profile` (edit profile).
+ * `?book=<openLibraryId>` (book page), `?post=<id>` (post and comments) or `?panel=profile`
+ * (edit profile).
  * Signed out, only public pages render (in `PublicShell`); everything else goes to /login.
  */
 export const Route = createFileRoute("/_app")({
-  validateSearch: (search: Record<string, unknown>): { book?: string; panel?: "profile" } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { book?: string; post?: string; panel?: "profile" } => ({
     book: typeof search.book === "string" && search.book ? search.book : undefined,
+    post: typeof search.post === "string" && search.post ? search.post : undefined,
     panel: search.panel === "profile" ? "profile" : undefined,
   }),
   beforeLoad: async ({ context, location }) => {
@@ -39,11 +46,13 @@ export const Route = createFileRoute("/_app")({
     return { session: data };
   },
   component: AppLayout,
+  // A screen that throws keeps the shell (navigation) and shows the error inside it.
+  errorComponent: ({ reset }) => <ErrorScreen reset={reset} />,
 });
 
 function AppLayout() {
   const { session } = Route.useRouteContext();
-  const { book, panel } = Route.useSearch();
+  const { book, post, panel } = Route.useSearch();
 
   if (!session) {
     return (
@@ -53,20 +62,33 @@ function AppLayout() {
     );
   }
 
-  return <SignedInLayout book={book} panel={panel} />;
+  return <SignedInLayout book={book} post={post} panel={panel} />;
 }
 
-function SignedInLayout({ book, panel }: { book?: string; panel?: "profile" }) {
+function SignedInLayout({
+  book,
+  post,
+  panel,
+}: {
+  book?: string;
+  post?: string;
+  panel?: "profile";
+}) {
   useSessionGuard();
   useSetupGuard();
+  useSyncTimeZone();
   const aside = book ? (
     <BookPeek key={book} openLibraryId={book} />
+  ) : post ? (
+    <PostPeek key={post} postId={post} />
   ) : panel === "profile" ? (
     <ProfilePeek />
   ) : undefined;
   return (
     <AppShell aside={aside}>
       <Outlet />
+      {/* Terms changed (or never accepted): agree again before going on. */}
+      <LegalGate />
     </AppShell>
   );
 }

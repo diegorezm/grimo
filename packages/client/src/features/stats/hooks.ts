@@ -1,9 +1,9 @@
 import { api } from "@grimo/backend";
-import { toMonthKey } from "@grimo/core";
+import { toMonthKey, yearOf } from "@grimo/core";
 import { useQuery } from "@tanstack/react-query";
 import { convexQuery } from "../../lib/convex-cache";
 
-export function yearOverviewQuery(year = new Date().getUTCFullYear()) {
+export function yearOverviewQuery(year = yearOf(new Date())) {
   return convexQuery(api.stats.overview, { year }, "required");
 }
 

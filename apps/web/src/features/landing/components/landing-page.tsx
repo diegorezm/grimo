@@ -6,6 +6,7 @@ import { BookStack } from "@/components/ui/book-stack";
 import { Logo } from "@/components/ui/logo";
 import { Sparkle } from "@/components/ui/sparkle";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
+import { LegalLinks } from "@/features/legal";
 import { type CardData, CardPreview } from "@/features/stats";
 import { cn } from "@/utils/cn";
 import { DashboardDemo } from "./dashboard-demo";
@@ -421,6 +422,7 @@ export function LandingPage() {
 
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 font-mono text-[11px] text-text-muted lg:px-8">
         <span>Grimo ✦ feito por quem lê no ônibus</span>
+        <LegalLinks />
         <span>Capas e catálogo: Open Library</span>
       </footer>
     </div>

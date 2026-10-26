@@ -1,13 +1,33 @@
-import { bookSearchQuerySchema } from "@grimo/core";
+import { bookInputSchema, bookSearchQuerySchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { action, internalMutation, internalQuery, query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
+import { communityFromCounters, countEntries } from "./model/bookStats";
 import { postView } from "./model/content";
-import { parse } from "./model/errors";
-import { fetchWork, searchOpenLibrary } from "./model/openLibrary";
+import { parse, unauthenticated } from "./model/errors";
+import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
+import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer } from "./model/readers";
+import { blockedIds, isHidden } from "./model/safety";
 import { entryView } from "./model/shelves";
 import { bookInput, workDetails } from "./schema";
+
+/** The signed-in reader's auth id: Open Library lookups are for readers only. */
+async function requireIdentity(ctx: {
+  auth: { getUserIdentity: () => Promise<{ subject: string } | null> };
+}) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw unauthenticated();
+  return identity.subject;
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 /** Search results are reused for a day (same as the client's `staleTimes.bookSearch`). */
@@ -22,7 +42,9 @@ const WORK_TTL = 30 * DAY;
 export const search = action({
   args: { q: v.string() },
   handler: async (ctx, args): Promise<{ items: (typeof bookInput.type)[] }> => {
+    const reader = await requireIdentity(ctx);
     const query = parse(bookSearchQuerySchema, args).q.toLowerCase();
+    await enforceRateLimit(ctx, "bookSearch", reader);
     const cached = await ctx.runQuery(internal.books.cachedSearch, { query });
     if (cached && Date.now() - cached.fetchedAt < SEARCH_TTL) return { items: cached.items };
     const items = await searchOpenLibrary(query);
@@ -59,7 +81,9 @@ export const saveSearch = internalMutation({
 export const loadWork = action({
   args: { openLibraryId: v.string() },
   handler: async (ctx, { openLibraryId }) => {
+    const reader = await requireIdentity(ctx);
     if (!/^OL\d+W$/.test(openLibraryId)) return null;
+    await enforceRateLimit(ctx, "loadWork", reader);
     const cached = await ctx.runQuery(internal.books.cachedWork, { openLibraryId });
     if (cached && Date.now() - cached.fetchedAt < WORK_TTL) return null;
     const details = await fetchWork(openLibraryId);
@@ -88,6 +112,35 @@ export const saveWork = internalMutation({
       .unique();
     if (existing) await ctx.db.patch(existing._id, { details, fetchedAt: Date.now() });
     else await ctx.db.insert("workCache", { openLibraryId, details, fetchedAt: Date.now() });
+  },
+});
+
+/**
+ * A book's data comes from the first reader who shelved it (`shelves.add`), and that reader's
+ * client can send anything the schema allows. Right after, this replaces it with what Open Library
+ * says about the id, so a forged title or author never sticks for everyone else.
+ */
+export const refreshBook = internalAction({
+  args: { openLibraryId: v.string() },
+  handler: async (ctx, { openLibraryId }): Promise<null> => {
+    const found = await fetchBook(openLibraryId);
+    // Unknown or unreachable: keep what was saved (already checked by `bookInputSchema`).
+    const book = found ? bookInputSchema.safeParse(found) : null;
+    if (!book?.success) return null;
+    await ctx.runMutation(internal.books.saveBook, { book: book.data });
+    return null;
+  },
+});
+
+export const saveBook = internalMutation({
+  args: { book: bookInput },
+  handler: async (ctx, { book }) => {
+    const existing = await ctx.db
+      .query("books")
+      .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", book.openLibraryId))
+      .unique();
+    if (existing) await ctx.db.patch(existing._id, book);
+    return null;
   },
 });
 
@@ -138,26 +191,26 @@ export const detail = query({
       };
     }
 
-    const [entries, reviewPosts] = await Promise.all([
-      ctx.db
-        .query("shelfEntries")
-        .withIndex("by_book", (q) => q.eq("bookId", row._id))
-        .collect(),
+    const [entry, counted, reviewPosts, blocked] = await Promise.all([
+      viewer
+        ? ctx.db
+            .query("shelfEntries")
+            .withIndex("by_user_book", (q) => q.eq("userId", viewer._id).eq("bookId", row._id))
+            .unique()
+        : null,
+      communityOf(ctx, row),
       ctx.db
         .query("posts")
         .withIndex("by_book_kind", (q) => q.eq("bookId", row._id).eq("kind", "review"))
         .order("desc")
         .take(20),
+      blockedIds(ctx, viewer?._id ?? null),
     ]);
-    const entry = viewer ? entries.find((item) => item.userId === viewer._id) : undefined;
-    const ratings = entries.flatMap((item) => (item.rating ? [item.rating] : []));
-    const average = ratings.length
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
-      : null;
     const reviews = await Promise.all(
       reviewPosts.map(async (post) => {
         const author = await ctx.db.get(post.authorId);
-        return author
+        // Like everywhere else: nothing from hidden readers, or between blocked readers.
+        return author && !isHidden(author) && !blocked.has(author._id)
           ? { ...(await postView(ctx, post, viewer?._id ?? null)), author: authorOf(author) }
           : null;
       }),
@@ -166,14 +219,49 @@ export const detail = query({
       detail: {
         book,
         entry: entry ? entryView(entry) : null,
-        community: {
-          readers: entries.length,
-          ratings: ratings.length,
-          averageRating: average === null ? null : Math.round(average * 10) / 10,
-        },
+        community: counted,
         reviews: reviews.filter((review) => review !== null),
       },
       needsWork,
     };
   },
 });
+
+/** Rows deleted per table per run; a full batch schedules another run. */
+const PURGE_BATCH = 200;
+
+/** Cron: deletes search and work cache rows past their TTL (they are refetched on demand). */
+export const purgeExpiredCaches = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const searches = await ctx.db
+      .query("bookSearchCache")
+      .withIndex("by_fetchedAt", (q) => q.lt("fetchedAt", now - SEARCH_TTL))
+      .take(PURGE_BATCH);
+    const works = await ctx.db
+      .query("workCache")
+      .withIndex("by_fetchedAt", (q) => q.lt("fetchedAt", now - WORK_TTL))
+      .take(PURGE_BATCH);
+    for (const row of [...searches, ...works]) await ctx.db.delete(row._id);
+    if (searches.length === PURGE_BATCH || works.length === PURGE_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.books.purgeExpiredCaches, {});
+    }
+    return null;
+  },
+});
+
+/**
+ * Readers, ratings and average of a book. Straight from the book's counters; a book the
+ * backfill hasn't reached yet is counted from its shelf entries (remove once all are counted).
+ */
+async function communityOf(ctx: QueryCtx, book: Doc<"books">) {
+  const counted = communityFromCounters(book);
+  if (counted) return counted;
+  const entries = await ctx.db
+    .query("shelfEntries")
+    .withIndex("by_book", (q) => q.eq("bookId", book._id))
+    .collect();
+  const { readerCount, ratingSum, ratingCount } = countEntries(entries);
+  return communityFromCounters({ ...book, readerCount, ratingSum, ratingCount })!;
+}

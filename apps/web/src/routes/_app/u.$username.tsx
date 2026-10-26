@@ -1,7 +1,8 @@
-import { readerActivityQuery, readerQuery, useReader } from "@grimo/client";
+import { readerActivityQuery, readerQuery, useMe, useReader } from "@grimo/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
+import { ReaderSafetyMenu } from "@/features/moderation";
 import { BookRow, ProfileHeader } from "@/features/profile";
 import { FollowButton, ReaderActivity, ShareProfileButton } from "@/features/readers";
 import { YearStats } from "@/features/stats";
@@ -19,6 +20,7 @@ function ReaderPage() {
   const { username } = Route.useParams();
   const { session } = Route.useRouteContext();
   const reader = useReader(username);
+  const me = useMe({ enabled: Boolean(session) });
 
   if (reader.isError) {
     return (
@@ -28,9 +30,12 @@ function ReaderPage() {
     );
   }
   if (!reader.data) return <Spinner />;
-  const { profile, stats, books, isFollowing, followsYou } = reader.data;
+  const { profile, stats, books, isFollowing, followsYou, blockedByMe } = reader.data;
   const viewerId = session?.user.id ?? null;
-  const isMe = profile.id === viewerId;
+  // `profile.id` is the reader id (users table), not the auth user id: compare with `me`.
+  const isMe = profile.id === me.data?.id;
+  // Until `me` loads we can not tell whose profile this is: hide the actions instead of flashing.
+  const meKnown = !session || me.data !== undefined;
 
   return (
     <Screen>
@@ -42,7 +47,9 @@ function ReaderPage() {
         linkCounts
         actions={
           <>
-            {viewerId && !isMe && <FollowButton reader={{ ...profile, isFollowing, followsYou }} />}
+            {viewerId && meKnown && !isMe && !blockedByMe && (
+              <FollowButton reader={{ ...profile, isFollowing, followsYou }} />
+            )}
             {!viewerId && (
               <Link
                 to="/login"
@@ -62,6 +69,9 @@ function ReaderPage() {
             )}
             {profile.username && (
               <ShareProfileButton username={profile.username} name={profile.name} own={isMe} />
+            )}
+            {viewerId && meKnown && !isMe && (
+              <ReaderSafetyMenu reader={profile} blocked={blockedByMe} />
             )}
           </>
         }

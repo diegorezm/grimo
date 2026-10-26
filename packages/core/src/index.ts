@@ -1,5 +1,6 @@
 export * from "./auth";
 export * from "./books";
+export * from "./legal";
 export * from "./lib/dashboard";
 export * from "./lib/date";
 export * from "./posts";

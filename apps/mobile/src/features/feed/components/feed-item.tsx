@@ -1,16 +1,19 @@
-import { type FeedItem as FeedItemData, useToggleLike } from "@grimo/client";
+import { type FeedItem as FeedItemData, useMe, useSetBlocked, useToggleLike } from "@grimo/client";
 import { describeActivity, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Card, Stars, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
+import { showPostActions } from "@/features/moderation";
 import { useTheme } from "@/hooks/use-theme";
 
 /** One activity from your network: who did what, the book (tap to open) and the post. */
 export function FeedItem({ item }: { item: FeedItemData }) {
   const theme = useTheme();
   const toggleLike = useToggleLike();
+  const setBlocked = useSetBlocked();
+  const me = useMe().data;
   const { actor, book, post } = item;
   const openLibraryId = book?.openLibraryId;
 
@@ -68,16 +71,47 @@ export function FeedItem({ item }: { item: FeedItemData }) {
               {post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
             </Text>
           )}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={post.likedByMe ? "Descurtir" : "Curtir"}
-            onPress={() => toggleLike.mutate({ postId: post.id!, like: !post.likedByMe })}
-            hitSlop={8}
-          >
-            <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-              {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {post.commentCount} comentários
-            </Text>
-          </Pressable>
+          <View style={styles.actions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={post.likedByMe ? "Descurtir" : "Curtir"}
+              onPress={() => toggleLike.mutate({ postId: post.id!, like: !post.likedByMe })}
+              hitSlop={8}
+            >
+              <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
+                {post.likedByMe ? "♥" : "♡"} {post.likeCount}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ver comentários"
+              onPress={() => router.push({ pathname: "/post/[id]", params: { id: post.id! } })}
+              hitSlop={8}
+              style={styles.flex}
+            >
+              <Text variant="label" color="textMuted">
+                {post.commentCount} comentários
+              </Text>
+            </Pressable>
+            {me?.id !== actor.id && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Denunciar ou bloquear"
+                onPress={() =>
+                  showPostActions({
+                    postId: post.id!,
+                    author: actor,
+                    block: (userId) => setBlocked.mutate({ userId, block: true }),
+                  })
+                }
+                hitSlop={10}
+              >
+                <Text variant="label" color="textMuted">
+                  ⋯
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </>
       )}
     </Card>
@@ -86,6 +120,7 @@ export function FeedItem({ item }: { item: FeedItemData }) {
 
 const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   avatar: {
     width: 32,
     height: 32,

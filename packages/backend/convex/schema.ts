@@ -1,4 +1,12 @@
-import { ACTIVITY_KINDS, POST_KINDS, SHELF_STATUSES } from "@grimo/core";
+import {
+  ACTIVITY_KINDS,
+  LEGAL_DOCUMENTS,
+  POST_KINDS,
+  REPORT_REASONS,
+  REPORT_STATUSES,
+  REPORT_TARGETS,
+  SHELF_STATUSES,
+} from "@grimo/core";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -9,6 +17,10 @@ const literals = <T extends string>(values: readonly T[]) =>
 export const shelfStatus = literals(SHELF_STATUSES);
 export const postKind = literals(POST_KINDS);
 export const activityKind = literals(ACTIVITY_KINDS);
+export const legalDocument = literals(LEGAL_DOCUMENTS);
+export const reportTarget = literals(REPORT_TARGETS);
+export const reportReason = literals(REPORT_REASONS);
+export const reportStatus = literals(REPORT_STATUSES);
 
 /** A book as returned by search: enough to save it locally. */
 export const bookInput = v.object({
@@ -61,9 +73,20 @@ export default defineSchema({
      * before the onboarding existed (treated as done).
      */
     setupDone: v.optional(v.boolean()),
+    /** When the reader declared being 16+ (the birth date itself is never stored). */
+    ageConfirmedAt: v.optional(v.number()),
+    /** IANA zone (`America/Sao_Paulo`) for months and years of reading; sent by the apps. */
+    timeZone: v.optional(v.string()),
+    /** Declared under 16: the account can't be used, only deleted. */
+    ageRejectedAt: v.optional(v.number()),
+    /** Suspended by moderation (`moderation.suspend`): hidden, and signed-in calls fail. */
+    suspendedAt: v.optional(v.number()),
+    /** Account deleted: hidden while `account.purge` erases its data (then the row goes too). */
+    deletedAt: v.optional(v.number()),
   })
     .index("by_authId", ["authId"])
     .index("by_username", ["username"])
+    .index("by_followers", ["followers"])
     .searchIndex("search", { searchField: "searchText" }),
 
   readingGoals: defineTable({
@@ -81,6 +104,13 @@ export default defineSchema({
     pageCount: v.union(v.number(), v.null()),
     publishedYear: v.union(v.number(), v.null()),
     genres: v.array(v.string()),
+    /**
+     * Community numbers, kept by the shelf mutations (`model/bookStats.ts`). Absent until
+     * `migrations.backfillBookCounters` has run on the book; readers fall back to counting.
+     */
+    readerCount: v.optional(v.number()),
+    ratingSum: v.optional(v.number()),
+    ratingCount: v.optional(v.number()),
   }).index("by_openLibraryId", ["openLibraryId"]),
 
   /** A book on a reader's shelf. One per (user, book). */
@@ -89,6 +119,8 @@ export default defineSchema({
     bookId: v.id("books"),
     status: shelfStatus,
     currentPage: v.number(),
+    /** Furthest page logged, so going back and forward again isn't counted twice. */
+    maxPage: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
@@ -136,13 +168,17 @@ export default defineSchema({
   postLikes: defineTable({
     postId: v.id("posts"),
     userId: v.id("users"),
-  }).index("by_post_user", ["postId", "userId"]),
+  })
+    .index("by_post_user", ["postId", "userId"])
+    .index("by_user", ["userId"]),
 
   postComments: defineTable({
     postId: v.id("posts"),
     authorId: v.id("users"),
     body: v.string(),
-  }).index("by_post", ["postId"]),
+  })
+    .index("by_post", ["postId"])
+    .index("by_author", ["authorId"]),
 
   /** Feed events. The feed is fan-out-on-read: activities of the people you follow. */
   activities: defineTable({
@@ -159,17 +195,64 @@ export default defineSchema({
     .index("by_post", ["postId"])
     .index("by_actor_target", ["actorId", "targetUserId"]),
 
+  /**
+   * Proof that a reader agreed to a version of a legal document (append-only). The latest row per
+   * document is compared with the current version (`@grimo/core` CURRENT_LEGAL_VERSIONS).
+   */
+  legalAcceptances: defineTable({
+    userId: v.id("users"),
+    document: legalDocument,
+    version: v.string(),
+    acceptedAt: v.number(),
+    /** Where it was accepted: "web" | "ios" | "android". */
+    source: v.string(),
+  }).index("by_user_document", ["userId", "document"]),
+
+  /** `blockerId` blocked `blockedId`: no follows between them, each other's content hidden. */
+  blocks: defineTable({
+    blockerId: v.id("users"),
+    blockedId: v.id("users"),
+  })
+    .index("by_blocker_blocked", ["blockerId", "blockedId"])
+    .index("by_blocked", ["blockedId"]),
+
+  /**
+   * Reports of posts, comments and readers (moderation queue, reviewed in the Convex dashboard).
+   * Kept after the content or the reporter is gone: they are the record that we acted.
+   */
+  reports: defineTable({
+    /** Null once the reporter deleted their account. */
+    reporterId: v.union(v.id("users"), v.null()),
+    target: reportTarget,
+    targetId: v.string(),
+    /** Who answers for the reported content (the reader, or the post/comment author). */
+    targetUserId: v.union(v.id("users"), v.null()),
+    reason: reportReason,
+    details: v.union(v.string(), v.null()),
+    /** Copy of the reported text at report time (posts and comments). */
+    snapshot: v.union(v.string(), v.null()),
+    status: reportStatus,
+    createdAt: v.number(),
+    resolvedAt: v.union(v.number(), v.null()),
+  })
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_reporter_target", ["reporterId", "target", "targetId"]),
+
   /** Open Library search results, reused for 24 h (see `books.search`). */
   bookSearchCache: defineTable({
     query: v.string(),
     items: v.array(bookInput),
     fetchedAt: v.number(),
-  }).index("by_query", ["query"]),
+  })
+    .index("by_query", ["query"])
+    .index("by_fetchedAt", ["fetchedAt"]),
 
   /** Open Library work pages; `details: null` means Open Library doesn't know the id. */
   workCache: defineTable({
     openLibraryId: v.string(),
     details: v.union(workDetails, v.null()),
     fetchedAt: v.number(),
-  }).index("by_openLibraryId", ["openLibraryId"]),
+  })
+    .index("by_openLibraryId", ["openLibraryId"])
+    .index("by_fetchedAt", ["fetchedAt"]),
 });
