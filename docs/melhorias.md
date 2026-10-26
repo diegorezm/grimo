@@ -94,6 +94,8 @@ limite do Convex e o usuário vê o spinner o tempo todo.
 
 ### B8 · Email digitado errado cria uma conta nova em silêncio — Média (UX)
 
+> **Corrigido:** quando o login não bate com nenhuma conta, o formulário pergunta "Criar conta nova com x@y.com?" (`confirm-new` em `continueWithEmail`) antes de criar.
+
 [continueWithEmail](../packages/client/src/lib/auth.ts) cria conta quando o login falha e o email não
 existe. Quem erra uma letra do email (`gmial.com`) cai no onboarding de uma conta vazia, achando que
 perdeu os dados. **Correção:** quando o sign-in falha, perguntar "Criar uma conta nova com
@@ -258,6 +260,8 @@ para uma tabela `userStats` lida só onde são exibidos.
 ### Completar o que já existe (pouco esforço)
 
 #### F1 · Tela de post com comentários
+
+> **Feito:** side peek `?post=<id>` e página `/posts/$id` na web, tela `post/[id]` no mobile, apagar o próprio post, apagar comentário (`posts.removeComment`: autor do comentário ou do post) e denunciar comentário. Falta a notificação ao autor (F6).
 Backend (`posts.get`, `posts.comment`) e hooks (`usePost`, `useAddComment`) prontos e sem uso.
 Falta: página/side peek `?post=<id>` na web e tela no mobile, contador clicável no feed, **apagar o
 próprio post** (`posts.remove` existe) e **apagar o próprio comentário** (não existe no backend; é

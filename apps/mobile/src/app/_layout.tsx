@@ -62,6 +62,7 @@ function RootNavigator() {
       <Stack.Protected guard={Boolean(session) && !needsSetup && !needsLegal}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="book/[id]" />
+        <Stack.Screen name="post/[id]" />
         <Stack.Screen name="account" />
         <Stack.Screen
           name="report"
