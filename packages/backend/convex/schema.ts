@@ -79,6 +79,7 @@ export default defineSchema({
   })
     .index("by_authId", ["authId"])
     .index("by_username", ["username"])
+    .index("by_followers", ["followers"])
     .searchIndex("search", { searchField: "searchText" }),
 
   readingGoals: defineTable({
@@ -226,12 +227,16 @@ export default defineSchema({
     query: v.string(),
     items: v.array(bookInput),
     fetchedAt: v.number(),
-  }).index("by_query", ["query"]),
+  })
+    .index("by_query", ["query"])
+    .index("by_fetchedAt", ["fetchedAt"]),
 
   /** Open Library work pages; `details: null` means Open Library doesn't know the id. */
   workCache: defineTable({
     openLibraryId: v.string(),
     details: v.union(workDetails, v.null()),
     fetchedAt: v.number(),
-  }).index("by_openLibraryId", ["openLibraryId"]),
+  })
+    .index("by_openLibraryId", ["openLibraryId"])
+    .index("by_fetchedAt", ["fetchedAt"]),
 });

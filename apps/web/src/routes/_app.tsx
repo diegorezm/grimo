@@ -8,6 +8,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { useCallback, useEffect } from "react";
+import { ErrorScreen } from "@/components/feedback/error-screen";
 import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
@@ -40,6 +41,8 @@ export const Route = createFileRoute("/_app")({
     return { session: data };
   },
   component: AppLayout,
+  // A screen that throws keeps the shell (navigation) and shows the error inside it.
+  errorComponent: ({ reset }) => <ErrorScreen reset={reset} />,
 });
 
 function AppLayout() {

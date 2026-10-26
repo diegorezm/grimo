@@ -1,0 +1,10 @@
+# Cloudflare static assets: security headers for every route.
+# The session token lives in localStorage (cross-domain auth), so the CSP is what keeps an XSS
+# from turning into account theft. If you edit the inline theme script in index.html, update its
+# sha256 below: node -e 'console.log("sha256-"+require("crypto").createHash("sha256").update(require("fs").readFileSync("index.html","utf8").match(/<script>([\s\S]*?)<\/script>/)[1]).digest("base64"))'
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-EKmNHA9722ceSfp6r8c49ExKyJD7gKYl2QL074w7Itw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://covers.openlibrary.org https://*.archive.org https://lh3.googleusercontent.com; font-src 'self'; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://covers.openlibrary.org https://*.archive.org; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()

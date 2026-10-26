@@ -379,6 +379,61 @@ describe("moderation", () => {
     expect(rows[0]).toMatchObject({ targetUserId: bia.id, snapshot: "Spam!", status: "open" });
   });
 
+  it("doesn't pile up reports when an older one was already resolved", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const { post } = await bia.as.mutation(api.posts.create, { kind: "note", body: "Spam!" });
+    const report = { target: "post" as const, targetId: post.id, reason: "spam" as const };
+    await rafa.as.mutation(api.moderation.report, report);
+    await t.run(async (ctx) => {
+      const first = await ctx.db.query("reports").first();
+      if (!first) throw new Error("expected a report");
+      await ctx.db.patch(first._id, { status: "dismissed", resolvedAt: Date.now() });
+    });
+    await rafa.as.mutation(api.moderation.report, report);
+    await rafa.as.mutation(api.moderation.report, report);
+    expect(await t.run((ctx) => ctx.db.query("reports").collect())).toHaveLength(2);
+  });
+
+  it("refuses a post about a book that doesn't exist", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bookId = await t.run(async (ctx) => {
+      const id = await ctx.db.insert("books", {
+        openLibraryId: "OL1W",
+        title: "Gone",
+        authors: [],
+        coverUrl: null,
+        pageCount: null,
+        publishedYear: null,
+        genres: [],
+      });
+      await ctx.db.delete(id);
+      return id;
+    });
+    await expect(
+      rafa.as.mutation(api.posts.create, { kind: "review", bookId, body: "Ótimo" }),
+    ).rejects.toThrow();
+  });
+
+  it("suggests friends of friends and leaves out who you follow", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const caio = await reader(t, "caio");
+    await reader(t, "dani");
+    await rafa.as.mutation(api.users.setFollowing, { userId: bia.id, follow: true });
+    await bia.as.mutation(api.users.setFollowing, { userId: caio.id, follow: true });
+    const { items } = await rafa.as.query(api.users.suggestions, { limit: 20 });
+    const usernames = items.map((item) => item.username);
+    expect(usernames).not.toContain("bia");
+    expect(usernames).not.toContain("rafa");
+    expect(usernames[0]).toBe("caio");
+    expect(items[0]).toMatchObject({ mutuals: 1, mutualName: "bia" });
+    expect(usernames).toContain("dani");
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");

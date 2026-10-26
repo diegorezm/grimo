@@ -50,6 +50,7 @@ export const report = mutation({
       .withIndex("by_reporter_target", (q) =>
         q.eq("reporterId", viewer._id).eq("target", input.target).eq("targetId", input.targetId),
       )
+      .order("desc")
       .first();
     if (existing?.status === "open") return null;
     await ctx.db.insert("reports", {

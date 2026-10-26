@@ -1,8 +1,15 @@
 import { useMe } from "@grimo/client";
 import { useFonts } from "expo-font";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  type ErrorBoundaryProps,
+  Stack,
+  ThemeProvider,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
+import { Button, Screen, Text } from "@/components/ui";
 import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeStore } from "@/lib/theme";
@@ -96,4 +103,17 @@ function useClearCacheOnSignOut(sessionId: string | null) {
     if (previous.current && !sessionId) void appCache.clearForSignOut();
     previous.current = sessionId;
   }, [sessionId, appCache]);
+}
+
+/** Expo Router's error boundary: a screen that throws shows this instead of a blank screen. */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  return (
+    <Screen>
+      <Text variant="heading">Algo deu errado</Text>
+      <Text color="textMuted">
+        Essa tela não carregou direito. Seus dados estão salvos; tente de novo.
+      </Text>
+      <Button title="Tentar de novo" onPress={retry} />
+    </Screen>
+  );
 }

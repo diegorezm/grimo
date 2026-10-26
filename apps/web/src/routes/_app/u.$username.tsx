@@ -34,6 +34,8 @@ function ReaderPage() {
   const viewerId = session?.user.id ?? null;
   // `profile.id` is the reader id (users table), not the auth user id: compare with `me`.
   const isMe = profile.id === me.data?.id;
+  // Until `me` loads we can not tell whose profile this is: hide the actions instead of flashing.
+  const meKnown = !session || me.data !== undefined;
 
   return (
     <Screen>
@@ -45,7 +47,7 @@ function ReaderPage() {
         linkCounts
         actions={
           <>
-            {viewerId && !isMe && !blockedByMe && (
+            {viewerId && meKnown && !isMe && !blockedByMe && (
               <FollowButton reader={{ ...profile, isFollowing, followsYou }} />
             )}
             {!viewerId && (
@@ -68,7 +70,9 @@ function ReaderPage() {
             {profile.username && (
               <ShareProfileButton username={profile.username} name={profile.name} own={isMe} />
             )}
-            {viewerId && !isMe && <ReaderSafetyMenu reader={profile} blocked={blockedByMe} />}
+            {viewerId && meKnown && !isMe && (
+              <ReaderSafetyMenu reader={profile} blocked={blockedByMe} />
+            )}
           </>
         }
       />
