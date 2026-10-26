@@ -1,4 +1,4 @@
-import { useMe } from "@grimo/client";
+import { useMe, useSyncTimeZone } from "@grimo/client";
 import { useFonts } from "expo-font";
 import {
   DarkTheme,
@@ -39,6 +39,7 @@ function RootNavigator() {
   // A new account confirms name and @ first (`needsSetup`); cached, so this works offline too.
   // Then, when the Terms or Privacy Policy changed (or the reader is under 16): `legal`.
   const me = useMe({ enabled: Boolean(session) }).data;
+  useSyncTimeZone(Boolean(session));
   const needsSetup = me?.needsSetup ?? false;
   const needsLegal = !needsSetup && Boolean(me?.legal.needsAcceptance || me?.legal.underage);
   const [fontsLoaded] = useFonts(fontAssets);

@@ -434,6 +434,94 @@ describe("moderation", () => {
     expect(usernames).toContain("dani");
   });
 
+  it("counts books in the reader's own time zone", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    await rafa.as.mutation(api.users.setTimeZone, { timeZone: "America/Sao_Paulo" });
+    await expect(
+      rafa.as.mutation(api.users.setTimeZone, { timeZone: "Mars/Olympus" }),
+    ).rejects.toThrow();
+    // 22:00 on Oct 31 in São Paulo is already November in UTC.
+    await t.run(async (ctx) => {
+      const bookId = await ctx.db.insert("books", {
+        openLibraryId: "OL2W",
+        title: "Noite",
+        authors: [],
+        coverUrl: null,
+        pageCount: null,
+        publishedYear: null,
+        genres: [],
+      });
+      await ctx.db.insert("shelfEntries", {
+        userId: rafa.id,
+        bookId,
+        status: "read",
+        currentPage: 0,
+        rating: null,
+        startedAt: null,
+        finishedAt: Date.parse("2026-11-01T01:00:00Z"),
+        updatedAt: Date.now(),
+      });
+    });
+    const october = await rafa.as.query(api.stats.monthly, { month: "2026-10" });
+    const november = await rafa.as.query(api.stats.monthly, { month: "2026-11" });
+    expect(october.booksRead).toBe(1);
+    expect(november.booksRead).toBe(0);
+  });
+
+  it("doesn't count the same pages twice after going back", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const { entry } = await rafa.as.mutation(api.shelves.add, {
+      book: { ...book, openLibraryId: "OL3W", pageCount: 300 },
+      status: "reading",
+    });
+    for (const page of [200, 100, 150, 230]) {
+      await rafa.as.mutation(api.shelves.update, { id: entry.id, currentPage: page });
+    }
+    const logs = await t.run((ctx) => ctx.db.query("readingLogs").collect());
+    expect(logs.reduce((total, log) => total + log.pagesRead, 0)).toBe(230);
+  });
+
+  it("keeps the book's community numbers in step with the shelves", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const community = async () =>
+      (await rafa.as.query(api.books.detail, { openLibraryId: book.openLibraryId })).detail
+        ?.community;
+
+    const mine = (await rafa.as.mutation(api.shelves.add, { book, status: "reading" })).entry;
+    const hers = (await bia.as.mutation(api.shelves.add, { book, status: "read" })).entry;
+    expect(await community()).toEqual({ readers: 2, ratings: 0, averageRating: null });
+
+    await rafa.as.mutation(api.shelves.update, { id: mine.id, rating: 5 });
+    await bia.as.mutation(api.shelves.update, { id: hers.id, rating: 2 });
+    expect(await community()).toEqual({ readers: 2, ratings: 2, averageRating: 3.5 });
+
+    await bia.as.mutation(api.shelves.update, { id: hers.id, rating: 4 });
+    expect(await community()).toEqual({ readers: 2, ratings: 2, averageRating: 4.5 });
+
+    await bia.as.mutation(api.shelves.remove, { id: hers.id });
+    expect(await community()).toEqual({ readers: 1, ratings: 1, averageRating: 5 });
+
+    // A book from before the counters existed is counted from its entries until backfilled.
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("books").first();
+      if (!row) throw new Error("expected a book");
+      await ctx.db.replace(row._id, {
+        openLibraryId: row.openLibraryId,
+        title: row.title,
+        authors: row.authors,
+        coverUrl: row.coverUrl,
+        pageCount: row.pageCount,
+        publishedYear: row.publishedYear,
+        genres: row.genres,
+      });
+    });
+    expect(await community()).toEqual({ readers: 1, ratings: 1, averageRating: 5 });
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");

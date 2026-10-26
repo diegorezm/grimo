@@ -70,6 +70,8 @@ export default defineSchema({
     setupDone: v.optional(v.boolean()),
     /** When the reader declared being 16+ (the birth date itself is never stored). */
     ageConfirmedAt: v.optional(v.number()),
+    /** IANA zone (`America/Sao_Paulo`) for months and years of reading; sent by the apps. */
+    timeZone: v.optional(v.string()),
     /** Declared under 16: the account can't be used, only deleted. */
     ageRejectedAt: v.optional(v.number()),
     /** Suspended by moderation (`moderation.suspend`): hidden, and signed-in calls fail. */
@@ -97,6 +99,13 @@ export default defineSchema({
     pageCount: v.union(v.number(), v.null()),
     publishedYear: v.union(v.number(), v.null()),
     genres: v.array(v.string()),
+    /**
+     * Community numbers, kept by the shelf mutations (`model/bookStats.ts`). Absent until
+     * `migrations.backfillBookCounters` has run on the book; readers fall back to counting.
+     */
+    readerCount: v.optional(v.number()),
+    ratingSum: v.optional(v.number()),
+    ratingCount: v.optional(v.number()),
   }).index("by_openLibraryId", ["openLibraryId"]),
 
   /** A book on a reader's shelf. One per (user, book). */
@@ -105,6 +114,8 @@ export default defineSchema({
     bookId: v.id("books"),
     status: shelfStatus,
     currentPage: v.number(),
+    /** Furthest page logged, so going back and forward again isn't counted twice. */
+    maxPage: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),

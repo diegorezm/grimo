@@ -1,6 +1,7 @@
 import { computeMonthlySummary, monthRange, mostFrequent, yearRange } from "@grimo/core";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
+import { timeZoneOf } from "./readers";
 
 type Range = { start: Date; end: Date };
 
@@ -53,8 +54,10 @@ async function goalTarget(ctx: QueryCtx, userId: Id<"users">, year: number) {
   return goal?.target ?? null;
 }
 
-export async function yearOverview(ctx: QueryCtx, userId: Id<"users">, year: number) {
-  const range = yearRange(year);
+/** Books and pages of `year`, counted in the reader's time zone. */
+export async function yearOverview(ctx: QueryCtx, user: Doc<"users">, year: number) {
+  const userId = user._id;
+  const range = yearRange(year, timeZoneOf(user));
   const [finished, pages, target] = await Promise.all([
     finishedBooks(ctx, userId, range),
     pagesRead(ctx, userId, range),
@@ -69,14 +72,16 @@ export async function yearOverview(ctx: QueryCtx, userId: Id<"users">, year: num
   };
 }
 
-export async function monthlySummary(ctx: QueryCtx, userId: Id<"users">, month: string) {
-  const range = monthRange(month);
-  const year = range.start.getUTCFullYear();
+export async function monthlySummary(ctx: QueryCtx, user: Doc<"users">, month: string) {
+  const userId = user._id;
+  const timeZone = timeZoneOf(user);
+  const range = monthRange(month, timeZone);
+  const year = Number(month.slice(0, 4));
   const [finished, pages, target, yearFinished] = await Promise.all([
     finishedBooks(ctx, userId, range),
     pagesRead(ctx, userId, range),
     goalTarget(ctx, userId, year),
-    finishedBooks(ctx, userId, yearRange(year)),
+    finishedBooks(ctx, userId, yearRange(year, timeZone)),
   ]);
   return computeMonthlySummary({
     month,

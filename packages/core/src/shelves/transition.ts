@@ -5,6 +5,8 @@ import { MAX_CURRENT_PAGE, type UpdateShelfEntryInput } from "./schemas";
 export interface ShelfEntryState {
   status: ShelfStatus | null;
   currentPage: number;
+  /** Furthest page ever logged; absent on entries from before it existed (= `currentPage`). */
+  maxPage?: number;
   startedAt: Date | null;
 }
 
@@ -13,6 +15,8 @@ export interface ShelfTransition {
   set: UpdateShelfEntryInput;
   /** Pages advanced by this change (for the reading log / stats). */
   pagesRead: number;
+  /** New furthest page: going back and forward again never counts the same pages twice. */
+  maxPage: number;
   /** Feed activity to emit, if any. */
   activity: ActivityKind | null;
 }
@@ -43,11 +47,14 @@ export function planShelfTransition(
     if (patch.currentPage === undefined && pageCount) set.currentPage = pageCount;
   }
 
-  const pagesRead = Math.max(0, (set.currentPage ?? prev.currentPage) - prev.currentPage);
+  const before = Math.max(prev.maxPage ?? 0, prev.currentPage);
+  const after = set.currentPage ?? prev.currentPage;
+  const pagesRead = Math.max(0, after - before);
+  const maxPage = Math.max(before, after);
 
   let activity: ActivityKind | null = null;
   if (statusChanged) activity = patch.status === "read" ? "finished" : "shelved";
   else if (pagesRead > 0) activity = "progress";
 
-  return { set, pagesRead, activity };
+  return { set, pagesRead, maxPage, activity };
 }

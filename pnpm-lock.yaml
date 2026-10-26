@@ -170,6 +170,9 @@ catalogs:
     '@convex-dev/better-auth':
       specifier: ^0.12.5
       version: 0.12.5
+    '@convex-dev/migrations':
+      specifier: ^0.3.7
+      version: 0.3.7
     '@tanstack/query-async-storage-persister':
       specifier: ^5.104.4
       version: 5.104.4
@@ -462,6 +465,9 @@ importers:
       '@convex-dev/better-auth':
         specifier: 'catalog:'
         version: 0.12.5(@standard-schema/spec@1.1.0)(better-auth@1.6.33(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261016.1)(@libsql/client@0.18.0)(kysely@0.29.7))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.5(@edge-runtime/vm@5.0.0)(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))))(convex@1.47.0(react@19.3.0))(hono@4.13.13)(react@19.3.0)(typescript@6.0.3)
+      '@convex-dev/migrations':
+        specifier: 'catalog:'
+        version: 0.3.7(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.0))(hono@4.13.13)(react@19.3.0)(typescript@6.0.3)(zod@4.6.7))(convex@1.47.0(react@19.3.0))
       '@grimo/core':
         specifier: workspace:*
         version: link:../core
@@ -1178,6 +1184,12 @@ packages:
       better-auth: '>=1.6.11 <1.7.0'
       convex: ^1.25.0
       react: ^18.3.1 || ^19.0.0
+
+  '@convex-dev/migrations@0.3.7':
+    resolution: {integrity: sha512-B5psv+FhfFLu2ttusIMcWiHS2fpxOiqWrvHl9wOjgcCwTy1Lqhvn2rY7LBQ8O6hVF5dPm8uoEbaNKPSHxkiD7A==}
+    peerDependencies:
+      convex: ^1.42.0
+      convex-helpers: ^0.1.115
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -6447,6 +6459,11 @@ snapshots:
       - '@standard-schema/spec'
       - hono
       - typescript
+
+  '@convex-dev/migrations@0.3.7(convex-helpers@0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.0))(hono@4.13.13)(react@19.3.0)(typescript@6.0.3)(zod@4.6.7))(convex@1.47.0(react@19.3.0))':
+    dependencies:
+      convex: 1.47.0(react@19.3.0)
+      convex-helpers: 0.1.128(@standard-schema/spec@1.1.0)(convex@1.47.0(react@19.3.0))(hono@4.13.13)(react@19.3.0)(typescript@6.0.3)(zod@4.6.7)
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

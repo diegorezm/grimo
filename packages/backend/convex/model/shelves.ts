@@ -6,6 +6,7 @@ import {
 } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { recordBookCounters } from "./bookStats";
 import { recordActivity } from "./content";
 import { notFound } from "./errors";
 
@@ -64,7 +65,7 @@ export async function upsertBook(ctx: MutationCtx, input: BookInput) {
     if (Object.keys(missing).length > 0) await ctx.db.patch(existing._id, missing);
     return existing._id;
   }
-  return ctx.db.insert("books", input);
+  return ctx.db.insert("books", { ...input, readerCount: 0, ratingSum: 0, ratingCount: 0 });
 }
 
 const toMs = (date: Date | null | undefined) =>
@@ -126,14 +127,20 @@ export async function updateShelfEntry(
     {
       status: entry.status,
       currentPage: entry.currentPage,
+      maxPage: entry.maxPage,
       startedAt: entry.startedAt === null ? null : new Date(entry.startedAt),
     },
     patch,
     book?.pageCount ?? null,
     new Date(now),
   );
-  await ctx.db.patch(entryId, { ...storedPatch(plan.set), updatedAt: now });
+  await ctx.db.patch(entryId, {
+    ...storedPatch(plan.set),
+    maxPage: plan.maxPage,
+    updatedAt: now,
+  });
   const updated = (await ctx.db.get(entryId))!;
+  if (updated.rating !== entry.rating) await recordBookCounters(ctx, entry.bookId, entry, updated);
   await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now);
   return updated;
 }
@@ -166,10 +173,12 @@ export async function addToShelf(
     startedAt: null,
     finishedAt: null,
     ...storedPatch(plan.set),
+    maxPage: plan.maxPage,
     updatedAt: now,
   });
   const user = await ctx.db.get(userId);
   if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
+  await recordBookCounters(ctx, bookId, null, { rating: null });
 
   const entry = (await ctx.db.get(entryId))!;
   // Adding a book is always worth a feed entry ("shelved"/"finished").
@@ -190,6 +199,7 @@ export async function removeFromShelf(
     .collect();
   for (const log of logs) await ctx.db.delete(log._id);
   await ctx.db.delete(entryId);
+  await recordBookCounters(ctx, entry.bookId, entry, null);
   const user = await ctx.db.get(userId);
   if (user) await ctx.db.patch(userId, { bookCount: Math.max(0, user.bookCount - 1) });
 }

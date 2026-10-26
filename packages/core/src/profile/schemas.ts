@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GENRES } from "../books/genres";
+import { isValidTimeZone } from "../lib/date";
 
 export const USERNAME_REGEX = /^[a-z0-9_.]{3,30}$/;
 
@@ -41,3 +42,10 @@ export const updateProfileSchema = z.object({
   yearlyGoal: z.number().int().min(1).max(1000).nullable().optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+/** The IANA time zone an app reports for its reader (`America/Sao_Paulo`). */
+export const timeZoneSchema = z
+  .string()
+  .trim()
+  .max(64)
+  .refine(isValidTimeZone, "Fuso horário inválido");

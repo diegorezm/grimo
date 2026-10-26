@@ -41,6 +41,8 @@ andamento aparecem para todos. O resto do app usa `isHidden` + `blockedIds` (fee
 
 ### B2 · Mês e ano calculados em UTC — Média
 
+> **Corrigido:** `users.timeZone` (padrão `America/Sao_Paulo`, enviado pelos apps com `useSyncTimeZone`); `monthRange`/`yearRange`/`toMonthKey` aceitam o fuso e `model/stats.ts` conta no fuso do leitor.
+
 `monthRange`, `yearRange` e `toMonthKey` ([core/lib/date.ts](../packages/core/src/lib/date.ts)) e o
 ano da meta ([users.ts:94](../packages/backend/convex/users.ts), [readers.ts:85](../packages/backend/convex/model/readers.ts))
 usam UTC. No Brasil (UTC−3), entre 21h e meia-noite o "hoje" do servidor já é o dia seguinte.
@@ -51,6 +53,8 @@ usam UTC. No Brasil (UTC−3), entre 21h e meia-noite o "hoje" do servidor já �
   app) e calcular os intervalos nele; ou o cliente manda o intervalo/offset. Testar a virada de mês.
 
 ### B3 · "Páginas lidas" pode ser inflado — Média
+
+> **Corrigido:** `currentPage` é limitado a `pageCount` (ou 20000) e `shelfEntries.maxPage` evita contar a mesma página duas vezes.
 
 [planShelfTransition](../packages/core/src/shelves/transition.ts) soma `nova página − página
 anterior` sempre que sobe. Voltar a página e avançar de novo conta duas vezes, e `currentPage` não
@@ -210,6 +214,8 @@ leitura do Convex. O AGENTS.md já aponta isso.
   índice global por data filtrando por quem você segue em lotes.
 
 ### P3 · Leituras sem limite (`collect`) em dados que crescem — Média
+
+> **Corrigido:** `books.detail` usa os contadores `readerCount`/`ratingSum`/`ratingCount` (mantidos em `model/bookStats.ts`, preenchidos por `migrations:runAll`). Falta `profileBooks`, `posts.get`, exclusão em lotes de posts e `exportData`.
 
 - `shelves.list` e `profileBooks` ([users.ts:124](../packages/backend/convex/users.ts)) leem a estante
   inteira + um `get` por livro, a cada visita a um perfil. Leitores com 2000 livros pesam.

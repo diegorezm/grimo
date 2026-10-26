@@ -42,7 +42,8 @@ export function PrivacyPage() {
             a data em que você confirmou ter {MIN_AGE} anos ou mais, não a data de nascimento.
           </li>
           <li>
-            <strong>Perfil:</strong> foto, bio, gêneros favoritos e meta de leitura.
+            <strong>Perfil:</strong> foto, bio, gêneros favoritos, meta de leitura e o fuso horário
+            do seu aparelho (para contar seus meses e anos de leitura).
           </li>
           <li>
             <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações, datas

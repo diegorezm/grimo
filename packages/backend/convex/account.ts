@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx, query } from "./_generated/server";
+import { recordBookCounters } from "./model/bookStats";
 import { requireViewer } from "./model/readers";
 
 /**
@@ -72,6 +73,7 @@ export const exportData = query({
       account: {
         email: identity?.email ?? null,
         createdAt: date(viewer._creationTime),
+        timeZone: viewer.timeZone ?? null,
         ageConfirmedAt: date(viewer.ageConfirmedAt ?? null),
       },
       profile: {
@@ -260,11 +262,18 @@ const steps: Step[] = [
       ctx,
       ctx.db.query("readingLogs").withIndex("by_user_created", (q) => q.eq("userId", userId)),
     ),
-  async (ctx, userId) =>
-    deleteAll(
-      ctx,
-      ctx.db.query("shelfEntries").withIndex("by_user_updated", (q) => q.eq("userId", userId)),
-    ),
+  // Shelf entries: the books they were on lose a reader (and a rating).
+  async (ctx, userId) => {
+    const entries = await ctx.db
+      .query("shelfEntries")
+      .withIndex("by_user_updated", (q) => q.eq("userId", userId))
+      .take(BATCH);
+    for (const entry of entries) {
+      await ctx.db.delete(entry._id);
+      await recordBookCounters(ctx, entry.bookId, entry, null);
+    }
+    return entries.length === BATCH;
+  },
   async (ctx, userId) =>
     deleteAll(
       ctx,
