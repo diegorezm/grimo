@@ -11,6 +11,7 @@ catalog:
   # @convex-dev/better-auth supports better-auth 1.6.x only: keep these three in lockstep.
   "@better-auth/expo": ~1.6.33
   "@convex-dev/better-auth": ^0.12.5
+  "@convex-dev/migrations": ^0.3.7
   "@tanstack/query-async-storage-persister": ^5.104.4
   "@tanstack/react-query": ^5.104.4
   "@tanstack/react-query-persist-client": ^5.104.4

@@ -99,6 +99,13 @@ export default defineSchema({
     pageCount: v.union(v.number(), v.null()),
     publishedYear: v.union(v.number(), v.null()),
     genres: v.array(v.string()),
+    /**
+     * Community numbers, kept by the shelf mutations (`model/bookStats.ts`). Absent until
+     * `migrations.backfillBookCounters` has run on the book; readers fall back to counting.
+     */
+    readerCount: v.optional(v.number()),
+    ratingSum: v.optional(v.number()),
+    ratingCount: v.optional(v.number()),
   }).index("by_openLibraryId", ["openLibraryId"]),
 
   /** A book on a reader's shelf. One per (user, book). */

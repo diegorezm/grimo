@@ -1,13 +1,16 @@
 import { bookInputSchema, bookSearchQuerySchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import {
   action,
   internalAction,
   internalMutation,
   internalQuery,
+  type QueryCtx,
   query,
 } from "./_generated/server";
+import { communityFromCounters, countEntries } from "./model/bookStats";
 import { postView } from "./model/content";
 import { parse } from "./model/errors";
 import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
@@ -174,11 +177,14 @@ export const detail = query({
       };
     }
 
-    const [entries, reviewPosts, blocked] = await Promise.all([
-      ctx.db
-        .query("shelfEntries")
-        .withIndex("by_book", (q) => q.eq("bookId", row._id))
-        .collect(),
+    const [entry, counted, reviewPosts, blocked] = await Promise.all([
+      viewer
+        ? ctx.db
+            .query("shelfEntries")
+            .withIndex("by_user_book", (q) => q.eq("userId", viewer._id).eq("bookId", row._id))
+            .unique()
+        : null,
+      communityOf(ctx, row),
       ctx.db
         .query("posts")
         .withIndex("by_book_kind", (q) => q.eq("bookId", row._id).eq("kind", "review"))
@@ -186,11 +192,6 @@ export const detail = query({
         .take(20),
       blockedIds(ctx, viewer?._id ?? null),
     ]);
-    const entry = viewer ? entries.find((item) => item.userId === viewer._id) : undefined;
-    const ratings = entries.flatMap((item) => (item.rating ? [item.rating] : []));
-    const average = ratings.length
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
-      : null;
     const reviews = await Promise.all(
       reviewPosts.map(async (post) => {
         const author = await ctx.db.get(post.authorId);
@@ -204,11 +205,7 @@ export const detail = query({
       detail: {
         book,
         entry: entry ? entryView(entry) : null,
-        community: {
-          readers: entries.length,
-          ratings: ratings.length,
-          averageRating: average === null ? null : Math.round(average * 10) / 10,
-        },
+        community: counted,
         reviews: reviews.filter((review) => review !== null),
       },
       needsWork,
@@ -239,3 +236,18 @@ export const purgeExpiredCaches = internalMutation({
     return null;
   },
 });
+
+/**
+ * Readers, ratings and average of a book. Straight from the book's counters; a book the
+ * backfill hasn't reached yet is counted from its shelf entries (remove once all are counted).
+ */
+async function communityOf(ctx: QueryCtx, book: Doc<"books">) {
+  const counted = communityFromCounters(book);
+  if (counted) return counted;
+  const entries = await ctx.db
+    .query("shelfEntries")
+    .withIndex("by_book", (q) => q.eq("bookId", book._id))
+    .collect();
+  const { readerCount, ratingSum, ratingCount } = countEntries(entries);
+  return communityFromCounters({ ...book, readerCount, ratingSum, ratingCount })!;
+}

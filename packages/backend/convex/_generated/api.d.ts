@@ -11,9 +11,12 @@
 import type * as account from "../account.js";
 import type * as auth from "../auth.js";
 import type * as books from "../books.js";
+import type * as crons from "../crons.js";
 import type * as feed from "../feed.js";
 import type * as http from "../http.js";
 import type * as legal from "../legal.js";
+import type * as migrations from "../migrations.js";
+import type * as model_bookStats from "../model/bookStats.js";
 import type * as model_content from "../model/content.js";
 import type * as model_env from "../model/env.js";
 import type * as model_errors from "../model/errors.js";
@@ -42,9 +45,12 @@ declare const fullApi: ApiFromModules<{
   account: typeof account;
   auth: typeof auth;
   books: typeof books;
+  crons: typeof crons;
   feed: typeof feed;
   http: typeof http;
   legal: typeof legal;
+  migrations: typeof migrations;
+  "model/bookStats": typeof model_bookStats;
   "model/content": typeof model_content;
   "model/env": typeof model_env;
   "model/errors": typeof model_errors;
@@ -92,4 +98,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
 };
