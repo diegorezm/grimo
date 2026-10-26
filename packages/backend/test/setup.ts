@@ -1,11 +1,17 @@
 /// <reference types="vite/client" />
+
+import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema";
 
 /** Every Convex module, for convex-test. */
 export const modules = import.meta.glob("../convex/**/*.ts");
 
-export const newTest = () => convexTest(schema, modules);
+export const newTest = () => {
+  const t = convexTest(schema, modules);
+  rateLimiterTest.register(t);
+  return t;
+};
 
 /** Creates a reader (as the Better Auth trigger would) and returns a client acting as them. */
 export async function reader(t: ReturnType<typeof newTest>, username: string) {

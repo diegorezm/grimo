@@ -12,12 +12,22 @@ import {
 } from "./_generated/server";
 import { communityFromCounters, countEntries } from "./model/bookStats";
 import { postView } from "./model/content";
-import { parse } from "./model/errors";
+import { parse, unauthenticated } from "./model/errors";
 import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
+import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer } from "./model/readers";
 import { blockedIds, isHidden } from "./model/safety";
 import { entryView } from "./model/shelves";
 import { bookInput, workDetails } from "./schema";
+
+/** The signed-in reader's auth id: Open Library lookups are for readers only. */
+async function requireIdentity(ctx: {
+  auth: { getUserIdentity: () => Promise<{ subject: string } | null> };
+}) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw unauthenticated();
+  return identity.subject;
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 /** Search results are reused for a day (same as the client's `staleTimes.bookSearch`). */
@@ -32,7 +42,9 @@ const WORK_TTL = 30 * DAY;
 export const search = action({
   args: { q: v.string() },
   handler: async (ctx, args): Promise<{ items: (typeof bookInput.type)[] }> => {
+    const reader = await requireIdentity(ctx);
     const query = parse(bookSearchQuerySchema, args).q.toLowerCase();
+    await enforceRateLimit(ctx, "bookSearch", reader);
     const cached = await ctx.runQuery(internal.books.cachedSearch, { query });
     if (cached && Date.now() - cached.fetchedAt < SEARCH_TTL) return { items: cached.items };
     const items = await searchOpenLibrary(query);
@@ -69,7 +81,9 @@ export const saveSearch = internalMutation({
 export const loadWork = action({
   args: { openLibraryId: v.string() },
   handler: async (ctx, { openLibraryId }) => {
+    const reader = await requireIdentity(ctx);
     if (!/^OL\d+W$/.test(openLibraryId)) return null;
+    await enforceRateLimit(ctx, "loadWork", reader);
     const cached = await ctx.runQuery(internal.books.cachedWork, { openLibraryId });
     if (cached && Date.now() - cached.fetchedAt < WORK_TTL) return null;
     const details = await fetchWork(openLibraryId);

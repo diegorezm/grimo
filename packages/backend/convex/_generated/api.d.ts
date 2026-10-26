@@ -23,6 +23,7 @@ import type * as model_errors from "../model/errors.js";
 import type * as model_legal from "../model/legal.js";
 import type * as model_limits from "../model/limits.js";
 import type * as model_openLibrary from "../model/openLibrary.js";
+import type * as model_rateLimit from "../model/rateLimit.js";
 import type * as model_readers from "../model/readers.js";
 import type * as model_safety from "../model/safety.js";
 import type * as model_seedData from "../model/seedData.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   "model/legal": typeof model_legal;
   "model/limits": typeof model_limits;
   "model/openLibrary": typeof model_openLibrary;
+  "model/rateLimit": typeof model_rateLimit;
   "model/readers": typeof model_readers;
   "model/safety": typeof model_safety;
   "model/seedData": typeof model_seedData;
@@ -99,4 +101,5 @@ export declare const internal: FilterApi<
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
   migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
 };

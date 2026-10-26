@@ -2,6 +2,7 @@ import { reportSchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internalMutation, type MutationCtx, mutation, query } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
+import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, requireViewer } from "./model/readers";
 import { MAX_BLOCKS } from "./model/safety";
 import { reportReason, reportTarget } from "./schema";
@@ -41,6 +42,7 @@ export const report = mutation({
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
     const input = parse(reportSchema, args);
+    await enforceRateLimit(ctx, "report", viewer._id);
     const content = await reportedContent(ctx, input.target, input.targetId);
     if (content.userId === viewer._id) {
       throw appError("INVALID", "Você não pode denunciar algo seu.");

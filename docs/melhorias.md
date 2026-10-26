@@ -136,6 +136,8 @@ qualquer URL em `coverUrl`.
 
 ### S2 · Nenhum rate limit — Alta
 
+> **Corrigido:** `@convex-dev/rate-limiter` (`model/rateLimit.ts`) limita posts 10/h, comentários 30/h, denúncias 10/dia, livros novos na estante 120/h e buscas do Open Library 60/min por leitor; `books.search` e `books.loadWork` exigem login. Better Auth usa `rateLimit.storage: "database"` com login 10/15 min e cadastro 5/h **por IP** (não por email).
+
 Não há limite de taxa em nenhuma função. Better Auth tem rate limit embutido, mas com armazenamento
 em memória ele não vale entre execuções do Convex.
 

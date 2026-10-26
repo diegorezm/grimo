@@ -111,6 +111,18 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
     ],
     database: authComponent.adapter(ctx),
     emailAndPassword: { enabled: true, requireEmailVerification: false },
+    // Limits per IP and path, stored in the database (the in-memory default does not survive
+    // between Convex executions). Sign-in/up are the brute-force and mass-signup targets.
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+      window: 60,
+      max: 100,
+      customRules: {
+        "/sign-in/email": { window: 15 * 60, max: 10 },
+        "/sign-up/email": { window: 60 * 60, max: 5 },
+      },
+    },
     // Redirect URIs: <CONVEX_SITE_URL>/api/auth/callback/google (and /apple).
     socialProviders: {
       ...(google ? { google } : {}),
