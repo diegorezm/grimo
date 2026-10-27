@@ -10,7 +10,7 @@ export function ReaderRow({
   reader,
   meId,
 }: {
-  reader: ReaderCard & { mutualName?: string | null };
+  reader: Omit<ReaderCard, "since"> & { mutualName?: string | null };
   meId?: string;
 }) {
   const context = reader.mutualName
