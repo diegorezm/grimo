@@ -17,7 +17,18 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      {me.data && <ProfileHeader profile={me.data} editable />}
+      {me.data && (
+        <ProfileHeader
+          profile={me.data}
+          editable
+          onPressCount={(kind) =>
+            router.push({
+              pathname: "/u/[username]/[kind]",
+              params: { username: me.data!.username, kind },
+            })
+          }
+        />
+      )}
       <YearStats />
       <Text variant="heading">Resumo do mês</Text>
       <MonthlyCard />

@@ -1,7 +1,10 @@
 import { api } from "@grimo/backend";
 import { toMonthKey, yearOf } from "@grimo/core";
 import { useQuery } from "@tanstack/react-query";
+import type { FunctionReturnType } from "convex/server";
 import { convexQuery } from "../../lib/convex-cache";
+
+export type YearOverview = FunctionReturnType<typeof api.stats.overview>;
 
 export function yearOverviewQuery(year = yearOf(new Date())) {
   return convexQuery(api.stats.overview, { year }, "required");

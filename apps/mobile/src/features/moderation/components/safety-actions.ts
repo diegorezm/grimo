@@ -37,3 +37,34 @@ export function showPostActions({
     { text: "Cancelar", style: "cancel" },
   ]);
 }
+
+/** "⋯" on a reader's profile: report them, or block / unblock (blocking is confirmed first). */
+export function showReaderActions({
+  reader,
+  blockedByMe,
+  setBlocked,
+}: {
+  reader: { id: string; name: string };
+  blockedByMe: boolean;
+  setBlocked: (block: boolean) => void;
+}) {
+  Alert.alert(reader.name, undefined, [
+    { text: "Denunciar leitor", onPress: () => openReport("user", reader.id) },
+    blockedByMe
+      ? { text: `Desbloquear ${reader.name}`, onPress: () => setBlocked(false) }
+      : {
+          text: `Bloquear ${reader.name}`,
+          style: "destructive",
+          onPress: () =>
+            Alert.alert(
+              `Bloquear ${reader.name}?`,
+              "Vocês deixam de se seguir e não verão nem poderão interagir com o que o outro publica. Dá para desbloquear aqui ou em Conta e privacidade.",
+              [
+                { text: "Cancelar", style: "cancel" },
+                { text: "Bloquear", style: "destructive", onPress: () => setBlocked(true) },
+              ],
+            ),
+        },
+    { text: "Cancelar", style: "cancel" },
+  ]);
+}
