@@ -2,7 +2,7 @@
 
 Inventário do que já existe no código, por área. "Web" e "Mobile" indicam onde há tela; "Backend"
 indica que a função existe no Convex mesmo sem tela. Sugestões e problemas encontrados estão em
-[melhorias.md](melhorias.md).
+[melhorias.md](melhorias.md); o que ainda pode vir, em [roadmap.md](roadmap.md).
 
 ## Visão geral
 
