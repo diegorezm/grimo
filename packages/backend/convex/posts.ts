@@ -5,7 +5,7 @@ import { type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
 import { enforceRateLimit } from "./model/rateLimit";
-import { authorOf, getViewer, requireViewer } from "./model/readers";
+import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
 import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
 import { postKind } from "./schema";
 
@@ -90,7 +90,7 @@ export const create = mutation({
     hasSpoilers: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const viewer = await requireViewer(ctx);
+    const viewer = await requireVerifiedViewer(ctx);
     const input = parse(createPostSchema, args);
     await enforceRateLimit(ctx, "createPost", viewer._id);
     if (input.bookId && !(await ctx.db.get(input.bookId as Id<"books">))) throw notFound("Livro");
@@ -171,7 +171,7 @@ export const remove = mutation({
 export const setLiked = mutation({
   args: { postId: v.id("posts"), like: v.boolean() },
   handler: async (ctx, { postId, like }) => {
-    const viewer = await requireViewer(ctx);
+    const viewer = await requireVerifiedViewer(ctx);
     return setLike(ctx, viewer._id, postId, like);
   },
 });
@@ -179,7 +179,7 @@ export const setLiked = mutation({
 export const comment = mutation({
   args: { postId: v.id("posts"), body: v.string() },
   handler: async (ctx, args) => {
-    const viewer = await requireViewer(ctx);
+    const viewer = await requireVerifiedViewer(ctx);
     const { body } = parse(createCommentSchema, args);
     await enforceRateLimit(ctx, "createComment", viewer._id);
     return { comment: { id: await addComment(ctx, viewer._id, args.postId, body) } };

@@ -74,6 +74,12 @@ Entrar com Apple (exigido pela App Store quando há login com Google): `APPLE_CL
 ID), `APPLE_CLIENT_SECRET` (JWT gerado com a chave da Apple) e `APPLE_BUNDLE_ID` (app iOS), com o
 redirect `<CONVEX_SITE_URL>/api/auth/callback/apple`. `auth.providers` diz aos apps se está ligado.
 
+Email (opcional, Resend): confirmação de email e recuperação de senha. Com `RESEND_API_KEY` e
+`EMAIL_FROM` (ex.: `Grimo <ola@seudominio.com>`, domínio verificado no Resend) no deployment, os
+emails saem e o **email confirmado passa a ser exigido** para comentar, postar, curtir e seguir
+(`requireVerifiedViewer`). Sem elas nada é exigido (ninguém conseguiria confirmar) e o link só vai
+para o log (`npx convex logs`). Depois de ligar, rode `npx convex run migrations:runAll` uma vez.
+
 Termos, privacidade, idade mínima (16+), exclusão de conta e moderação: veja
 [docs/legal/README.md](docs/legal/README.md).
 

@@ -1,6 +1,7 @@
 import { Migrations } from "@convex-dev/migrations";
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
+import { authComponent } from "./auth";
 import { countEntries } from "./model/bookStats";
 
 /** Data migrations (`@convex-dev/migrations`). Run with `npx convex run migrations:run`. */
@@ -23,5 +24,21 @@ export const backfillBookCounters = migrations.define({
   },
 });
 
+/**
+ * Copies Better Auth's `emailVerified` into `users.emailVerified` for accounts created before
+ * the field existed (new and updated accounts are synced by the auth triggers).
+ */
+export const backfillEmailVerified = migrations.define({
+  table: "users",
+  migrateOne: async (ctx, user) => {
+    if (user.emailVerified !== undefined) return;
+    const authUser = await authComponent.getAnyUserById(ctx, user.authId);
+    return { emailVerified: authUser?.emailVerified ?? false };
+  },
+});
+
 /** Runs every pending migration, in order. `npx convex run migrations:runAll`. */
-export const runAll = migrations.runner([internal.migrations.backfillBookCounters]);
+export const runAll = migrations.runner([
+  internal.migrations.backfillBookCounters,
+  internal.migrations.backfillEmailVerified,
+]);

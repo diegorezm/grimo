@@ -5,6 +5,7 @@ import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Card, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
+import { VerifyEmailBanner } from "@/features/account";
 import { BookCover, BookTile } from "@/features/books";
 import { FeedItem } from "@/features/feed";
 import { ShelfTiles } from "@/features/shelves";
@@ -53,6 +54,7 @@ export function Dashboard() {
           </View>
         </View>
 
+        <VerifyEmailBanner />
         <FirstSteps />
 
         {current ? (

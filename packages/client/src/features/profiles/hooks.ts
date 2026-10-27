@@ -27,7 +27,7 @@ import {
  */
 export type Me = FunctionReturnType<typeof api.users.me>;
 /** A reader's public profile. */
-export type Profile = Omit<Me, "needsSetup" | "legal" | "timeZone">;
+export type Profile = Omit<Me, "needsSetup" | "legal" | "timeZone" | "needsEmailVerification">;
 export type ReaderPage = FunctionReturnType<typeof api.users.byUsername>;
 export type ReaderActivityPage = FunctionReturnType<typeof api.users.activity>;
 export type ConnectionKind = "followers" | "following";

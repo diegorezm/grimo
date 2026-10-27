@@ -18,4 +18,14 @@ export const env = {
   APPLE_CLIENT_SECRET: vars.APPLE_CLIENT_SECRET,
   /** The iOS app's bundle id, for native Sign in with Apple. */
   APPLE_BUNDLE_ID: vars.APPLE_BUNDLE_ID,
+  /** Transactional email (Resend): password reset and email verification. Unset = disabled. */
+  RESEND_API_KEY: vars.RESEND_API_KEY,
+  /** Sender, e.g. `Grimo <ola@grimo.app>` (a domain verified in Resend). */
+  EMAIL_FROM: vars.EMAIL_FROM,
 };
+
+/**
+ * Whether the deployment can send email. Only then is a verified email required for the social
+ * features (comment, post, like, follow): without a way to send the link, nobody could verify.
+ */
+export const emailEnabled = () => Boolean(vars.RESEND_API_KEY && vars.EMAIL_FROM);

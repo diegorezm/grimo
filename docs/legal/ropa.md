@@ -25,6 +25,7 @@ Controlador e encarregado: veja "Dados do controlador" em [README.md](README.md)
 | Convex, Inc. | banco de dados e servidor | EUA | conferir DPA e localização do deployment de produção |
 | Hospedagem da web (a definir: Cloudflare ou outro) | entrega das páginas | — | recebe IP dos visitantes |
 | Google / Apple | login social (só se o usuário escolher) | EUA | controladores independentes dos próprios dados |
+| Resend (a definir) | envio de email de confirmação e de recuperação de senha (só o endereço do usuário e o link) | EUA | só liga com `RESEND_API_KEY`; citar na Política (seção de terceiros) antes de ligar e conferir o DPA |
 | Open Library (Internet Archive) | catálogo e capas | EUA | buscas via servidor; capas carregadas pelo navegador |
 
 ## Pendências

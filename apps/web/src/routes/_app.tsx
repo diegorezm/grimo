@@ -12,6 +12,7 @@ import { ErrorScreen } from "@/components/feedback/error-screen";
 import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
+import { VerifyEmailBanner } from "@/features/account";
 import { BookPeek } from "@/features/books";
 import { LegalGate } from "@/features/legal";
 import { PostPeek } from "@/features/posts";
@@ -86,6 +87,7 @@ function SignedInLayout({
   ) : undefined;
   return (
     <AppShell aside={aside}>
+      <VerifyEmailBanner />
       <Outlet />
       {/* Terms changed (or never accepted): agree again before going on. */}
       <LegalGate />
