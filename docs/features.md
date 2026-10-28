@@ -16,7 +16,7 @@ indica que a função existe no Convex mesmo sem tela. Sugestões e problemas en
 | Curtidas                |    ✓    |  ✓  |   ✓    |
 | Comentários             |    ✓    |  —  |   —    |
 | Feed                    |    ✓    |  ✓  |   ✓    |
-| Leitores (seguir, busca, sugestões, perfil público) | ✓ | ✓ | parcial (só o próprio perfil) |
+| Leitores (seguir, busca, sugestões, perfil público) | ✓ | ✓ | ✓ |
 | Estatísticas e metas    |    ✓    |  ✓  |   ✓    |
 | Card do mês (Stories)   |    ✓    |  ✓  |   —    |
 | Moderação (denúncia, bloqueio, suspensão) | ✓ | ✓ | ✓ |
@@ -56,7 +56,7 @@ indica que a função existe no Convex mesmo sem tela. Sugestões e problemas en
 - **Log de leitura** (`readingLogs`, append-only) é a fonte das "páginas lidas".
 - Web: quadro de estantes (`ShelfBoard`), carrossel no painel, logger de páginas (`page-logger`),
   capa 3D. Mobile: abas de estante, sheet de progresso (`progress/[id]`).
-- Backend tem `shelves.remove` (tira o livro e o log), **sem botão em nenhum app**.
+- **Tirar da estante** (`shelves.remove`: tira o livro e o log de páginas, as resenhas ficam) na página do livro, web e mobile, com confirmação.
 
 ## Livros
 
@@ -95,9 +95,11 @@ indica que a função existe no Convex mesmo sem tela. Sugestões e problemas en
 - **Busca de leitores** por nome ou @ (índice de busca) e **sugestões** ranqueadas por amigos em
   comum, se segue você e popularidade (`/people`).
 - **Compartilhar perfil** (Web Share API no celular, copiar link no desktop).
-- Editar perfil (nome, bio, até 5 gêneros favoritos, meta): web em side peek / página; mobile só a
-  meta (nos primeiros passos).
-- Mobile ainda **não tem** perfil de outros leitores, seguir, busca de leitores nem sugestões.
+- Editar perfil (foto, nome, bio, até 5 gêneros favoritos): web em side peek / página, mobile em
+  `profile-edit`; a meta, nos primeiros passos.
+- Mobile: perfil de outros leitores (`u/[username]`), seguir, seguidores/seguindo
+  (`u/[username]/[kind]`), busca e sugestões de leitores na aba Buscar ("Livros | Leitores"); nome
+  e foto no feed, nos posts, nos comentários e nas resenhas abrem o perfil.
 
 ## Estatísticas e metas
 
