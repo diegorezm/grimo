@@ -122,13 +122,11 @@ no emulador Android, `http://10.0.2.2:3210`. Um deployment na nuvem funciona igu
    qualquer host estático com fallback de SPA para `index.html`.
 3. Mobile: `EXPO_PUBLIC_CONVEX_URL` do deployment de produção no build do EAS.
 
-## Próximos passos do MVP
+## Roadmap
 
-- Upload de avatar (Convex file storage: `ctx.storage` + URL de upload)
-- Tela de post/resenha com comentários (backend e hooks já existem)
-- Editar perfil no mobile (backend e `useUpdateMe` já existem)
-- Exportar/importar dados (CSV do Goodreads, backup em JSON)
-- Descoberta de leitores com gostos parecidos
+O que já existe está em [docs/features.md](docs/features.md); tudo o que o Grimo pode ter, por pilar
+e com a ordem sugerida, em [docs/roadmap.md](docs/roadmap.md); bugs e melhorias técnicas em
+[docs/melhorias.md](docs/melhorias.md).
 
 ## Licença
 
