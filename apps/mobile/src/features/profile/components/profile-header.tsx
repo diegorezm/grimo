@@ -1,15 +1,26 @@
-import type { Profile } from "@grimo/client";
+import type { ConnectionKind, Profile } from "@grimo/client";
 import { GENRE_LABELS, type Genre } from "@grimo/core";
 import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
 
 /** Profile hero: avatar in an accent ring, name, bio, follow counts and favorite genres. */
-/** `editable`: your own profile, where tapping the avatar changes the photo. */
-export function ProfileHeader({ profile, editable }: { profile: Profile; editable?: boolean }) {
+/**
+ * `editable`: your own profile, where tapping the avatar changes the photo. `onPressCount`: the
+ * follower counts open the lists.
+ */
+export function ProfileHeader({
+  profile,
+  editable,
+  onPressCount,
+}: {
+  profile: Profile;
+  editable?: boolean;
+  onPressCount?: (kind: ConnectionKind) => void;
+}) {
   const theme = useTheme();
   return (
     <View style={styles.root}>
@@ -40,9 +51,17 @@ export function ProfileHeader({ profile, editable }: { profile: Profile; editabl
         </Text>
       )}
       <View style={[styles.counts, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-        <Count value={profile.followers} label="seguidores" />
+        <Count
+          value={profile.followers}
+          label="seguidores"
+          onPress={onPressCount && (() => onPressCount("followers"))}
+        />
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
-        <Count value={profile.following} label="seguindo" />
+        <Count
+          value={profile.following}
+          label="seguindo"
+          onPress={onPressCount && (() => onPressCount("following"))}
+        />
       </View>
       {profile.favoriteGenres.length > 0 && (
         <Text variant="small" color="textMuted" style={styles.center}>
@@ -53,16 +72,22 @@ export function ProfileHeader({ profile, editable }: { profile: Profile; editabl
   );
 }
 
-function Count({ value, label }: { value: number; label: string }) {
+function Count({ value, label, onPress }: { value: number; label: string; onPress?: () => void }) {
   return (
-    <View style={styles.count}>
+    <Pressable
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={`${value} ${label}`}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [styles.count, { opacity: pressed ? 0.6 : 1 }]}
+    >
       <Text variant="number" style={styles.number}>
         {value}
       </Text>
       <Text variant="label" color="textMuted">
         {label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 

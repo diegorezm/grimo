@@ -63,6 +63,8 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="book/[id]" />
         <Stack.Screen name="post/[id]" />
+        <Stack.Screen name="u/[username]/index" />
+        <Stack.Screen name="u/[username]/[kind]" />
         <Stack.Screen name="account" />
         <Stack.Screen
           name="report"
