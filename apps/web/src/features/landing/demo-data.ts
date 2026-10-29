@@ -154,6 +154,7 @@ const ME: Me = {
   name: "Marina",
   username: "marina",
   image: null,
+  role: null,
   bio: "Lendo no ônibus desde 2009.",
   favoriteGenres: ["literary_fiction", "science_fiction"],
   yearlyGoal: 24,
@@ -180,6 +181,7 @@ const friend = (key: string, name: string) => ({
   name,
   username: key,
   image: null,
+  role: null,
 });
 
 const summary = (book: DemoBook) => ({

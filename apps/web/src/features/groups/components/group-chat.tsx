@@ -10,6 +10,7 @@ import { type FormEvent, type KeyboardEvent, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { StaffBadge } from "@/components/ui/staff-badge";
 import { ReportButton } from "@/features/moderation";
 import { cn } from "@/utils/cn";
 
@@ -71,6 +72,7 @@ function Message({ message }: { message: GroupMessage }) {
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
           <span className="font-semibold">{message.mine ? "Você" : message.author.name}</span>
+          {!message.mine && <StaffBadge role={message.author.role} />}
           <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
             em {message.percent}% · {timeAgo(new Date(message.createdAt))}
           </span>

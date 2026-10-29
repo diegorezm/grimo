@@ -21,6 +21,7 @@ import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MentionText } from "@/components/ui/mention-text";
+import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
 import { cn } from "@/utils/cn";
 import { Book3D } from "./book-3d";
@@ -194,6 +195,7 @@ function Reviews({ detail }: { detail: BookDetail }) {
                   ) : (
                     <span className="font-semibold">{review.author.name}</span>
                   )}
+                  <StaffBadge role={review.author.role} />
                   {review.rating && <Stars rating={review.rating} />}
                   <span className="font-mono text-[10px] text-text-muted">
                     {timeAgo(new Date(review.createdAt))}

@@ -35,6 +35,7 @@ export function ReaderRow({
         </Text>
         <Text variant="label" color="textMuted" numberOfLines={1}>
           @{reader.username}
+          {reader.role === "admin" ? " · admin" : reader.role === "moderator" ? " · moderador" : ""}
           {reader.followsYou ? " · segue você" : ""}
         </Text>
         <Text variant="small" color="textMuted" numberOfLines={1}>

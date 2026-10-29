@@ -43,6 +43,11 @@ export function ProfileHeader({
       {profile.username && (
         <Text variant="label" color="textMuted">
           @{profile.username}
+          {profile.role === "admin"
+            ? " · ADMIN"
+            : profile.role === "moderator"
+              ? " · MODERADOR"
+              : ""}
         </Text>
       )}
       {profile.bio && (

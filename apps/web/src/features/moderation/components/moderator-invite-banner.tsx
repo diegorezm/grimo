@@ -25,7 +25,8 @@ export function ModeratorInviteBanner() {
       <p className="min-w-0 flex-1">
         <strong>Convite para moderar o Grimo.</strong>{" "}
         {invite.invitedBy ? `@${invite.invitedBy.username} chamou você` : "Você foi chamado"} para
-        analisar denúncias. Responda até {until}.
+        analisar denúncias. Quem aceita ganha um selo público de moderador no perfil e nas
+        publicações. Responda até {until}.
         {respond.error && <span className="text-danger"> {errorMessage(respond.error)}</span>}
       </p>
       <div className="flex gap-2">

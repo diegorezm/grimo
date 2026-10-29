@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Sparkle } from "@/components/ui/sparkle";
+import { StaffBadge } from "@/components/ui/staff-badge";
 
 /**
  * Profile header: a banner (a tilted mosaic of the reader's covers, or the accent gradient),
@@ -71,6 +72,7 @@ export function ProfileHeader({
         {profile.username && (
           <p className="mt-1 flex flex-wrap items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
             @{profile.username}
+            <StaffBadge role={profile.role} />
             {followsYou && (
               <span className="rounded-sm bg-surface-muted px-2 py-0.5 text-[10px] tracking-wider">
                 Segue você

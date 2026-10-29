@@ -13,6 +13,7 @@ import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MentionText } from "@/components/ui/mention-text";
+import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
@@ -123,17 +124,26 @@ export function PostThread({
   );
 }
 
-function AuthorLink({ author }: { author: { name: string | null; username: string | null } }) {
-  return author.username ? (
-    <Link
-      to="/u/$username"
-      params={{ username: author.username }}
-      className="font-semibold hover:underline"
-    >
-      {author.name}
-    </Link>
-  ) : (
-    <span className="font-semibold">{author.name}</span>
+function AuthorLink({
+  author,
+}: {
+  author: { name: string | null; username: string | null; role?: "admin" | "moderator" | null };
+}) {
+  return (
+    <>
+      {author.username ? (
+        <Link
+          to="/u/$username"
+          params={{ username: author.username }}
+          className="font-semibold hover:underline"
+        >
+          {author.name}
+        </Link>
+      ) : (
+        <span className="font-semibold">{author.name}</span>
+      )}
+      <StaffBadge role={author.role} />
+    </>
   );
 }
 

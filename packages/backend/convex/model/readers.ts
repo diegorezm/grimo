@@ -118,6 +118,8 @@ export const authorOf = (user: Doc<"users">) => ({
   name: user.name,
   username: user.username,
   image: user.image,
+  /** Moderation team badge, public: "admin", "moderator" or null. */
+  role: user.role ?? null,
 });
 
 export async function isFollowing(ctx: Ctx, followerId: Id<"users">, followingId: Id<"users">) {
@@ -142,6 +144,7 @@ export async function profileOf(ctx: Ctx, user: Doc<"users">) {
     name: user.name,
     username: user.username,
     image: user.image,
+    role: user.role ?? null,
     bio: user.bio,
     favoriteGenres: user.favoriteGenres,
     yearlyGoal: goal?.target ?? null,
@@ -176,6 +179,7 @@ export async function readerCard(ctx: Ctx, user: Doc<"users">, viewerId: Id<"use
     name: user.name,
     username: user.username,
     image: user.image,
+    role: user.role ?? null,
     bio: user.bio,
     followers: user.followers,
     bookCount: user.bookCount,
