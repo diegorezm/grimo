@@ -1,7 +1,10 @@
 import { api } from "@grimo/backend";
 import { toMonthKey, yearOf } from "@grimo/core";
 import { useQuery } from "@tanstack/react-query";
+import type { FunctionReturnType } from "convex/server";
 import { convexQuery } from "../../lib/convex-cache";
+
+export type YearOverview = FunctionReturnType<typeof api.stats.overview>;
 
 export function yearOverviewQuery(year = yearOf(new Date())) {
   return convexQuery(api.stats.overview, { year }, "required");
@@ -16,6 +19,15 @@ export function useYearOverview(year?: number, options: { enabled?: boolean } = 
   return useQuery({ ...yearOverviewQuery(year), ...options });
 }
 
-export function useMonthlySummary(month?: string) {
-  return useQuery(monthlySummaryQuery(month));
+/** Data for the "retrospectiva" card. */
+export function yearlySummaryQuery(year = yearOf(new Date())) {
+  return convexQuery(api.stats.yearly, { year }, "required");
+}
+
+export function useMonthlySummary(month?: string, options: { enabled?: boolean } = {}) {
+  return useQuery({ ...monthlySummaryQuery(month), ...options });
+}
+
+export function useYearlySummary(year?: number, options: { enabled?: boolean } = {}) {
+  return useQuery({ ...yearlySummaryQuery(year), ...options });
 }

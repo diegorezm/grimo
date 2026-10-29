@@ -20,6 +20,20 @@ export function useShelf(status?: ShelfStatus) {
 
 const shelves = [convexQueryPrefix(api.shelves.list)];
 
+/** How many books "Amigos querem ler" shows. */
+const FRIENDS_WANT_LIMIT = 12;
+
+export type FriendsWantItem = FunctionReturnType<typeof api.shelves.friendsWant>["items"][number];
+
+/** Books the people you follow want to read, the most wanted first (route loaders prefetch it). */
+export function friendsWantQuery() {
+  return convexQuery(api.shelves.friendsWant, { limit: FRIENDS_WANT_LIMIT }, "required");
+}
+
+export function useFriendsWant() {
+  return useQuery(friendsWantQuery());
+}
+
 export function useAddToShelf() {
   const { convex } = useConvexCache();
   return useMutation({
@@ -42,7 +56,7 @@ export function useUpdateShelfEntry() {
         ...(startedAt !== undefined && { startedAt: toMs(startedAt) }),
         ...(finishedAt !== undefined && { finishedAt: toMs(finishedAt) }),
       }),
-    onMutate: ({ id, status, currentPage, rating }) => {
+    onMutate: ({ id, status, currentPage, rating, pageCount }) => {
       const patch = {
         ...(status !== undefined && { status }),
         ...(currentPage !== undefined && { currentPage }),
@@ -50,9 +64,16 @@ export function useUpdateShelfEntry() {
       };
       return patchQueries<ShelfList>(shelves, (data) => ({
         ...data,
-        items: data.items.map((item) =>
-          item.entry.id === id ? { ...item, entry: { ...item.entry, ...patch } } : item,
-        ),
+        items: data.items.map((item) => {
+          if (item.entry.id !== id) return item;
+          const entry = { ...item.entry, ...patch };
+          // Cleared: only the server knows the book's own pages (the row shows the edition's).
+          if (pageCount === undefined || pageCount === null) {
+            return { ...item, entry: pageCount === null ? { ...entry, pageCount } : entry };
+          }
+          entry.currentPage = Math.min(entry.currentPage, pageCount);
+          return { entry: { ...entry, pageCount }, book: { ...item.book, pageCount } };
+        }),
       }));
     },
     onError: (_error, _input, rollback) => rollback?.(),

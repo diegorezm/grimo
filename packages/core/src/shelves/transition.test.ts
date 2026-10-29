@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planShelfTransition } from "./transition";
+import { editionPages, planShelfTransition } from "./transition";
 
 const now = new Date("2026-10-18T12:00:00Z");
 const fresh = { status: null, currentPage: 0, startedAt: null };
@@ -68,5 +68,25 @@ describe("planShelfTransition furthest page", () => {
       pagesRead: 20,
       maxPage: 100,
     });
+  });
+});
+
+describe("edition pages", () => {
+  it("uses the reader's edition when set", () => {
+    expect(editionPages(412, 300)).toBe(412);
+    expect(editionPages(null, 300)).toBe(300);
+    expect(editionPages(undefined, null)).toBeNull();
+  });
+
+  it("moves the bookmark to the last page of a shorter edition, without reading pages", () => {
+    const prev = { status: "reading" as const, currentPage: 280, startedAt: now };
+    const result = planShelfTransition(prev, { pageCount: 250 }, 250, now);
+    expect(result.set.currentPage).toBe(250);
+    expect(result).toMatchObject({ pagesRead: 0, activity: null });
+  });
+
+  it("finishing fills up to the edition's last page", () => {
+    const prev = { status: "reading" as const, currentPage: 100, startedAt: now };
+    expect(planShelfTransition(prev, { status: "read" }, 412, now).set.currentPage).toBe(412);
   });
 });

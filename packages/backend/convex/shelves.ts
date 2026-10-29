@@ -3,6 +3,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { parse } from "./model/errors";
+import { booksFriendsWant } from "./model/friends";
+import { listLimit } from "./model/limits";
 import { enforceRateLimit } from "./model/rateLimit";
 import { requireViewer } from "./model/readers";
 import {
@@ -37,6 +39,15 @@ export const list = query({
   },
 });
 
+/** Books the people you follow want to read, the most wanted first (`model/friends.ts`). */
+export const friendsWant = query({
+  args: { limit: v.number() },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    return { items: await booksFriendsWant(ctx, viewer._id, listLimit(args.limit)) };
+  },
+});
+
 export const add = mutation({
   args: { book: bookInput, status: shelfStatus },
   handler: async (ctx, args) => {
@@ -60,6 +71,7 @@ export const update = mutation({
     rating: v.optional(v.union(v.number(), v.null())),
     startedAt: v.optional(v.union(v.number(), v.null())),
     finishedAt: v.optional(v.union(v.number(), v.null())),
+    pageCount: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, { id, ...patch }) => {
     const viewer = await requireViewer(ctx);

@@ -8,10 +8,13 @@ import { radius, spacing } from "@/constants/theme";
 import { VerifyEmailBanner } from "@/features/account";
 import { BookCover, BookTile } from "@/features/books";
 import { FeedItem } from "@/features/feed";
+import { NotificationBell } from "@/features/notifications";
 import { ShelfTiles } from "@/features/shelves";
+import { RetrospectiveBanner } from "@/features/stats";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { FirstSteps } from "./first-steps";
+import { FriendsWantRow } from "./friends-want-row";
 
 /** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
 export function Dashboard() {
@@ -52,10 +55,12 @@ export function Dashboard() {
               {me.data?.name.split(" ")[0] ?? "Início"}
             </Text>
           </View>
+          <NotificationBell />
         </View>
 
         <VerifyEmailBanner />
         <FirstSteps />
+        <RetrospectiveBanner />
 
         {current ? (
           <CurrentRead item={current} />
@@ -100,6 +105,8 @@ export function Dashboard() {
           <Text variant="heading">Estantes</Text>
           <ShelfTiles onSelect={() => router.navigate("/shelves")} />
         </View>
+
+        <FriendsWantRow />
 
         {activity.length > 0 && (
           <View style={styles.section}>

@@ -13,6 +13,7 @@ import {
 import { communityFromCounters, countEntries } from "./model/bookStats";
 import { postView } from "./model/content";
 import { parse, unauthenticated } from "./model/errors";
+import { friendsWantingBook } from "./model/friends";
 import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer } from "./model/readers";
@@ -186,12 +187,13 @@ export const detail = query({
           entry: null,
           community: { readers: 0, ratings: 0, averageRating: null },
           reviews: [],
+          friendsWant: [],
         },
         needsWork,
       };
     }
 
-    const [entry, counted, reviewPosts, blocked] = await Promise.all([
+    const [entry, counted, reviewPosts, blocked, friendsWant] = await Promise.all([
       viewer
         ? ctx.db
             .query("shelfEntries")
@@ -205,6 +207,7 @@ export const detail = query({
         .order("desc")
         .take(20),
       blockedIds(ctx, viewer?._id ?? null),
+      viewer ? friendsWantingBook(ctx, viewer._id, row._id) : [],
     ]);
     const reviews = await Promise.all(
       reviewPosts.map(async (post) => {
@@ -221,6 +224,8 @@ export const detail = query({
         entry: entry ? entryView(entry) : null,
         community: counted,
         reviews: reviews.filter((review) => review !== null),
+        /** People you follow with the book on "Quero ler". */
+        friendsWant,
       },
       needsWork,
     };

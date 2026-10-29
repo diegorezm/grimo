@@ -15,13 +15,14 @@ import { SidePeek } from "@/components/layout/side-peek";
 import { VerifyEmailBanner } from "@/features/account";
 import { BookPeek } from "@/features/books";
 import { LegalGate } from "@/features/legal";
+import { NotificationBell } from "@/features/notifications";
 import { PostPeek } from "@/features/posts";
 import { ProfilePeek } from "@/features/profile";
 import { sessionQuery, signOutLocally } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
-/** Pages a signed-out visitor may open: reader profiles, so shared links work for anyone. */
-const isPublicPath = (pathname: string) => pathname.startsWith("/u/");
+/** Pages a signed-out visitor may open: profiles and invites, so shared links work for anyone. */
+const isPublicPath = (pathname: string) => pathname.startsWith("/u/") || pathname.startsWith("/j/");
 
 /**
  * Layout for every app page. Search params open a side peek next to any screen:
@@ -86,7 +87,7 @@ function SignedInLayout({
     <ProfilePeek />
   ) : undefined;
   return (
-    <AppShell aside={aside}>
+    <AppShell aside={aside} actions={<NotificationBell />}>
       <VerifyEmailBanner />
       <Outlet />
       {/* Terms changed (or never accepted): agree again before going on. */}

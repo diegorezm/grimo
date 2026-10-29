@@ -1,13 +1,15 @@
-import { useYearOverview } from "@grimo/client";
+import { useYearOverview, type YearOverview } from "@grimo/client";
 import { GENRE_LABELS, type Genre, goalProgress } from "@grimo/core";
 import { StyleSheet, View } from "react-native";
 import { Card, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
-export function YearStats() {
+/** The year in numbers: yours, or another reader's when `overview` comes from their page. */
+export function YearStats({ overview }: { overview?: YearOverview }) {
   const theme = useTheme();
-  const { data } = useYearOverview();
+  const own = useYearOverview(undefined, { enabled: !overview });
+  const data = overview ?? own.data;
   if (!data) return null;
   const goal = data.goal ? goalProgress(data.goal.target, data.goal.done) : null;
   const genre = data.topGenre ? (GENRE_LABELS[data.topGenre as Genre] ?? data.topGenre) : "—";

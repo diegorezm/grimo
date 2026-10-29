@@ -1,7 +1,8 @@
 import { type FeedItem as FeedItemData, useMe, useToggleLike } from "@grimo/client";
-import { describeActivityGroup, timeAgo } from "@grimo/core";
+import { commentCountLabel, describeActivityGroup, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/ui/avatar";
+import { MentionText } from "@/components/ui/mention-text";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
 import { PostPeekLink } from "@/features/posts";
@@ -99,7 +100,7 @@ export function FeedItem({
 
         {post?.id && (
           <>
-            <p className="whitespace-pre-line text-sm leading-relaxed">{post.body}</p>
+            <MentionText text={post.body} className="text-sm leading-relaxed" />
             <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
               {interactive ? (
                 <button
@@ -115,10 +116,10 @@ export function FeedItem({
               )}
               {interactive ? (
                 <PostPeekLink postId={post.id} className="hover:text-text">
-                  {post.commentCount} comentários
+                  {commentCountLabel(post.commentCount)}
                 </PostPeekLink>
               ) : (
-                <span>{post.commentCount} comentários</span>
+                <span>{commentCountLabel(post.commentCount)}</span>
               )}
               {interactive && me.data && me.data.id !== actor.id && (
                 <ReportButton target="post" targetId={post.id} className="ml-auto" />

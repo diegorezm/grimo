@@ -1,4 +1,4 @@
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/native-tabs";
 import { Platform } from "react-native";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -21,6 +21,10 @@ export default function TabsLayout() {
       <NativeTabs.Trigger name="search">
         <NativeTabs.Trigger.Label>Buscar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="juntos">
+        <NativeTabs.Trigger.Label>Juntos</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.2" md="group" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="shelves">
         <NativeTabs.Trigger.Label>Estantes</NativeTabs.Trigger.Label>

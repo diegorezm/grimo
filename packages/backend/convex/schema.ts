@@ -1,6 +1,7 @@
 import {
   ACTIVITY_KINDS,
   LEGAL_DOCUMENTS,
+  NOTIFICATION_KINDS,
   POST_KINDS,
   REPORT_REASONS,
   REPORT_STATUSES,
@@ -18,6 +19,7 @@ export const shelfStatus = literals(SHELF_STATUSES);
 export const postKind = literals(POST_KINDS);
 export const activityKind = literals(ACTIVITY_KINDS);
 export const legalDocument = literals(LEGAL_DOCUMENTS);
+export const notificationKind = literals(NOTIFICATION_KINDS);
 export const reportTarget = literals(REPORT_TARGETS);
 export const reportReason = literals(REPORT_REASONS);
 export const reportStatus = literals(REPORT_STATUSES);
@@ -126,6 +128,8 @@ export default defineSchema({
     currentPage: v.number(),
     /** Furthest page logged, so going back and forward again isn't counted twice. */
     maxPage: v.optional(v.number()),
+    /** Pages in this reader's edition, when it differs from the book's (absent: the book's). */
+    pageCount: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
@@ -199,6 +203,66 @@ export default defineSchema({
     .index("by_actor_created", ["actorId", "createdAt"])
     .index("by_post", ["postId"])
     .index("by_actor_target", ["actorId", "targetUserId"]),
+
+  /**
+   * "Rafa curtiu sua resenha": what others did that concerns `userId`. Written by the follow,
+   * like, comment and post mutations, and taken back when the like/follow/comment/post goes.
+   */
+  notifications: defineTable({
+    /** Who is notified. */
+    userId: v.id("users"),
+    actorId: v.id("users"),
+    kind: notificationKind,
+    postId: v.union(v.id("posts"), v.null()),
+    commentId: v.union(v.id("postComments"), v.null()),
+    createdAt: v.number(),
+    readAt: v.union(v.number(), v.null()),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_read", ["userId", "readAt"])
+    .index("by_actor_post", ["actorId", "postId"])
+    .index("by_post", ["postId"])
+    .index("by_comment", ["commentId"]),
+
+  /**
+   * Juntos: a few readers reading one book together (`groups.ts`). Joined by invite link
+   * (`/j/<inviteCode>`); joining puts the book on your "Lendo" shelf.
+   */
+  groups: defineTable({
+    bookId: v.id("books"),
+    /** Who created it (or the earliest member left, once they leave): sets the date. */
+    ownerId: v.id("users"),
+    inviteCode: v.string(),
+    /** "Terminar até": end of that day, epoch ms. */
+    finishBy: v.union(v.number(), v.null()),
+    /** Denormalized, kept by join/leave. */
+    memberCount: v.number(),
+    createdAt: v.number(),
+    lastMessageAt: v.union(v.number(), v.null()),
+  }).index("by_inviteCode", ["inviteCode"]),
+
+  groupMembers: defineTable({
+    groupId: v.id("groups"),
+    userId: v.id("users"),
+    joinedAt: v.number(),
+  })
+    .index("by_group", ["groupId", "joinedAt"])
+    .index("by_user", ["userId", "joinedAt"])
+    .index("by_group_user", ["groupId", "userId"]),
+
+  /**
+   * The group's conversation. `percent` is how far the author had read when writing: the message
+   * only opens to members who have read as far (no spoilers).
+   */
+  groupMessages: defineTable({
+    groupId: v.id("groups"),
+    authorId: v.id("users"),
+    body: v.string(),
+    percent: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_group_created", ["groupId", "createdAt"])
+    .index("by_author", ["authorId"]),
 
   /**
    * Proof that a reader agreed to a version of a legal document (append-only). The latest row per

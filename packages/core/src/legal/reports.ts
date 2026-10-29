@@ -1,8 +1,16 @@
 import { z } from "zod";
 
-/** What can be reported. */
-export const REPORT_TARGETS = ["post", "comment", "user"] as const;
+/** What can be reported ("message": in a Juntos conversation). */
+export const REPORT_TARGETS = ["post", "comment", "user", "message"] as const;
 export type ReportTarget = (typeof REPORT_TARGETS)[number];
+
+/** Title of the report dialog/sheet. */
+export const REPORT_TARGET_TITLES: Record<ReportTarget, string> = {
+  post: "Denunciar publicação",
+  comment: "Denunciar comentário",
+  user: "Denunciar leitor",
+  message: "Denunciar mensagem",
+};
 
 export const REPORT_REASONS = [
   "spam",

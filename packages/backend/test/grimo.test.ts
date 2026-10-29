@@ -57,6 +57,10 @@ describe("shelves", () => {
     const year = new Date().getUTCFullYear();
     const overview = await rafa.as.query(api.stats.overview, { year });
     expect(overview).toMatchObject({ booksRead: 1, pagesRead: 600 });
+    const review = await rafa.as.query(api.stats.yearly, { year });
+    expect(review).toMatchObject({ year, booksRead: 1, pagesRead: 600 });
+    expect(review.favoriteBook).toMatchObject({ title: "Duna", rating: 5 });
+    await expect(rafa.as.query(api.stats.yearly, { year: 20.5 })).rejects.toThrow(/Ano inválido/);
 
     const feed = await rafa.as.query(api.feed.list, { limit: 20 });
     expect(feed.items.map((item) => item.kind)).toEqual(["finished", "progress", "shelved"]);
@@ -589,6 +593,16 @@ describe("moderation", () => {
       await expect(
         rafa.as.mutation(api.users.setFollowing, { userId: bia.id, follow: true }),
       ).rejects.toThrow(locked);
+      // Juntos: starting a group and writing in it are locked; joining by invite is not.
+      await expect(rafa.as.mutation(api.groups.create, { book, finishBy: null })).rejects.toThrow(
+        locked,
+      );
+      const group = await bia.as.mutation(api.groups.create, { book, finishBy: null });
+      const { inviteCode } = await bia.as.query(api.groups.detail, { id: group.id });
+      await rafa.as.mutation(api.groups.join, { code: inviteCode });
+      await expect(rafa.as.mutation(api.groups.send, { id: group.id, body: "Oi" })).rejects.toThrow(
+        locked,
+      );
       // Unfollowing, reporting and the reader's own shelf stay open.
       await rafa.as.mutation(api.users.setFollowing, { userId: bia.id, follow: false });
       await rafa.as.mutation(api.moderation.report, {

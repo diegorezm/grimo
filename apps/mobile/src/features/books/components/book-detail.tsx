@@ -1,5 +1,6 @@
-import { useAddToShelf, useBook, useUpdateShelfEntry } from "@grimo/client";
+import { useAddToShelf, useBook, useRemoveFromShelf, useUpdateShelfEntry } from "@grimo/client";
 import {
+  editionPages,
   readingPercent,
   SHELF_LABELS,
   SHELF_STATUSES,
@@ -8,13 +9,24 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, Card, Glass, ProgressBar, Stars, Text } from "@/components/ui";
+import {
+  Avatar,
+  Button,
+  Card,
+  Glass,
+  MentionText,
+  ProgressBar,
+  Stars,
+  Text,
+} from "@/components/ui";
 import { radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
+import { FriendsWant } from "./friends-want";
+import { StartGroup } from "./start-group";
 
 /** Book page: cover, shelf picker, progress / rating, synopsis and reviews. */
 export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
@@ -38,8 +50,10 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
     );
   }
 
-  const { book, entry, community, reviews } = data;
-  const percent = entry ? readingPercent(entry.currentPage, book.pageCount) : null;
+  const { book, entry, community, reviews, friendsWant } = data;
+  const pages = editionPages(entry?.pageCount, book.pageCount);
+  const { id: _id, description: _description, ...bookInput } = book;
+  const percent = entry ? readingPercent(entry.currentPage, pages) : null;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -60,6 +74,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
               .filter(Boolean)
               .join(" · ")}
           </Text>
+          <FriendsWant friends={friendsWant} />
         </View>
 
         <ShelfPicker book={book} entry={entry} />
@@ -69,7 +84,8 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
             <View style={styles.between}>
               <Text variant="label" color="textMuted">
                 Página {entry.currentPage}
-                {book.pageCount ? ` de ${book.pageCount}` : ""}
+                {pages ? ` de ${pages}` : ""}
+                {entry.pageCount ? " (sua edição)" : ""}
               </Text>
               {percent !== null && <Text variant="label">{percent}%</Text>}
             </View>
@@ -84,6 +100,10 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
         )}
 
         {entry?.status === "read" && <RatingCard entryId={entry.id} rating={entry.rating} />}
+
+        <StartGroup book={bookInput} />
+
+        {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}
 
         {book.description && (
           <Card>
@@ -194,19 +214,55 @@ function RatingCard({ entryId, rating }: { entryId: string; rating: number | nul
   );
 }
 
+/** Takes the book off your shelves (and its page log); confirmed first. */
+function RemoveFromShelf({ entryId, title }: { entryId: string; title: string }) {
+  const remove = useRemoveFromShelf();
+  function confirm() {
+    Alert.alert(
+      "Tirar da estante?",
+      `${title} sai das suas estantes, com o histórico de páginas. Suas resenhas continuam.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Tirar", style: "destructive", onPress: () => remove.mutate(entryId) },
+      ],
+    );
+  }
+  return (
+    <Button
+      variant="ghost"
+      title="Tirar da estante"
+      disabled={remove.isPending}
+      onPress={confirm}
+    />
+  );
+}
+
 function Review({ review }: { review: Detail["reviews"][number] }) {
   const [revealed, setRevealed] = useState(!review.hasSpoilers);
   return (
     <Card>
       <View style={styles.between}>
-        <Text style={styles.bold}>{review.author.name}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Perfil de ${review.author.name}`}
+          onPress={() =>
+            router.push({
+              pathname: "/u/[username]",
+              params: { username: review.author.username },
+            })
+          }
+          style={styles.author}
+        >
+          <Avatar image={review.author.image} name={review.author.name} size={28} />
+          <Text style={styles.bold}>{review.author.name}</Text>
+        </Pressable>
         <Text variant="label" color="textMuted">
           {timeAgo(new Date(review.createdAt))}
         </Text>
       </View>
       {review.rating ? <Stars value={review.rating} size={14} /> : null}
       {revealed ? (
-        <Text>{review.body}</Text>
+        <MentionText text={review.body} />
       ) : (
         <Pressable accessibilityRole="button" onPress={() => setRevealed(true)}>
           <Text color="textMuted">Contém spoiler · toque para ver</Text>
@@ -231,6 +287,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing[3] },
   centerCard: { alignItems: "center" },
   bold: { fontWeight: "700" },
+  author: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   picker: { flexDirection: "row", padding: spacing[1], gap: spacing[1], borderRadius: radius.xl },
   pill: {
     flex: 1,

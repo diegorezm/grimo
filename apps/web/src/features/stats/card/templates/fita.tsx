@@ -6,7 +6,7 @@ export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
   const stats = [
     { label: "Livros lidos", value: data.booksRead, delta: data.deltas.books },
     { label: "Páginas", value: data.pagesRead.toLocaleString("pt-BR"), delta: data.deltas.pages },
-    { label: "Gênero do mês", value: data.genre ?? "—", delta: null },
+    { label: `Gênero do ${data.unit}`, value: data.genre ?? "—", delta: null },
     {
       label: `Meta de ${data.year}`,
       value: data.goal ? `${data.goal.percent}%` : "—",
@@ -50,7 +50,7 @@ export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
         <span className="font-mono" style={{ fontSize: 34, letterSpacing: "0.3em" }}>
           GRIMO
         </span>
-        {["MEU MÊS", "DE LEITURA"].map((line) => (
+        {[`MEU ${data.unit.toUpperCase()}`, "DE LEITURA"].map((line) => (
           <span
             key={line}
             style={{
@@ -78,7 +78,7 @@ export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
             background: palette.bg,
           }}
         >
-          {data.monthLabel}
+          {data.kind === "year" ? `Retrospectiva ${data.year}` : data.periodLabel}
         </span>
       </div>
 

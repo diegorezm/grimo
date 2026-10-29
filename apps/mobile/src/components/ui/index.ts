@@ -1,7 +1,10 @@
+export { Avatar } from "./avatar";
+export { AvatarStack } from "./avatar-stack";
 export { Button } from "./button";
 export { Card } from "./card";
 export { Glass } from "./glass";
 export { Input } from "./input";
+export { MentionText } from "./mention-text";
 export { ProgressBar } from "./progress-bar";
 export { Screen } from "./screen";
 export { Stars } from "./stars";

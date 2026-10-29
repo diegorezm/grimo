@@ -134,3 +134,19 @@ export const CheckIcon = (p: IconProps) => (
     <path d="m5 12.5 4.5 4.5L19 7.5" />
   </Icon>
 );
+
+export const BellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" />
+    <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+  </Icon>
+);
+
+export const TogetherIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 9.5c-1.6-1.3-4.2-1.7-7.5-1.2v11c3.3-.5 5.9-.1 7.5 1.2 1.6-1.3 4.2-1.7 7.5-1.2v-11c-3.3-.5-5.9-.1-7.5 1.2z" />
+    <path d="M12 9.5v11" />
+    <circle cx="8" cy="3.8" r="1.6" />
+    <circle cx="16" cy="3.8" r="1.6" />
+  </Icon>
+);

@@ -87,11 +87,6 @@ export function CardCover({
   return <img src={book.coverUrl} alt="" crossOrigin="anonymous" style={box} />;
 }
 
-export function stars(rating: number | null) {
-  const value = rating ?? 0;
-  return "★".repeat(value) + "☆".repeat(5 - value);
-}
-
 /** "@rafa · grimo" footer line. */
 export function CardFooter({
   username,
@@ -125,14 +120,4 @@ export function CardFooter({
       )}
     </div>
   );
-}
-
-/** True for dark backgrounds (relative luminance of a `#RRGGBB` color). */
-export function isDark(hex: string) {
-  const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255) as [
-    number,
-    number,
-    number,
-  ];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.5;
 }

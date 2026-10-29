@@ -1,16 +1,14 @@
 import { type FeedItem as FeedItemData, useMe, useSetBlocked, useToggleLike } from "@grimo/client";
-import { describeActivity, timeAgo } from "@grimo/core";
+import { commentCountLabel, describeActivity, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Card, Stars, Text } from "@/components/ui";
-import { radius, spacing } from "@/constants/theme";
+import { Avatar, Card, MentionText, Stars, Text } from "@/components/ui";
+import { spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { showPostActions } from "@/features/moderation";
-import { useTheme } from "@/hooks/use-theme";
 
 /** One activity from your network: who did what, the book (tap to open) and the post. */
 export function FeedItem({ item }: { item: FeedItemData }) {
-  const theme = useTheme();
   const toggleLike = useToggleLike();
   const setBlocked = useSetBlocked();
   const me = useMe().data;
@@ -19,10 +17,15 @@ export function FeedItem({ item }: { item: FeedItemData }) {
 
   return (
     <Card>
-      <View style={styles.head}>
-        <View style={[styles.avatar, { backgroundColor: theme.surfaceMuted }]}>
-          <Text variant="label">{actor.name.slice(0, 1)}</Text>
-        </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Perfil de ${actor.name}`}
+        onPress={() =>
+          router.push({ pathname: "/u/[username]", params: { username: actor.username } })
+        }
+        style={styles.head}
+      >
+        <Avatar image={actor.image} name={actor.name} />
         <Text variant="small" style={styles.flex}>
           <Text variant="small" style={styles.bold}>
             {actor.name}
@@ -40,7 +43,7 @@ export function FeedItem({ item }: { item: FeedItemData }) {
         <Text variant="label" color="textMuted">
           {timeAgo(new Date(item.createdAt))}
         </Text>
-      </View>
+      </Pressable>
 
       {book?.id && (
         <Pressable
@@ -67,9 +70,11 @@ export function FeedItem({ item }: { item: FeedItemData }) {
       {post?.id && (
         <>
           {post.body && (
-            <Text style={styles.quote} numberOfLines={6}>
-              {post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
-            </Text>
+            <MentionText
+              style={styles.quote}
+              numberOfLines={6}
+              text={post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
+            />
           )}
           <View style={styles.actions}>
             <Pressable
@@ -90,7 +95,7 @@ export function FeedItem({ item }: { item: FeedItemData }) {
               style={styles.flex}
             >
               <Text variant="label" color="textMuted">
-                {post.commentCount} comentários
+                {commentCountLabel(post.commentCount)}
               </Text>
             </Pressable>
             {me?.id !== actor.id && (
@@ -121,13 +126,6 @@ export function FeedItem({ item }: { item: FeedItemData }) {
 const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   bold: { fontWeight: "700" },
   book: { flexDirection: "row", gap: spacing[3] },
   flex: { flex: 1 },

@@ -19,6 +19,7 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Dados de exemplo                         | `packages/backend/convex/seed.ts` + `model/seedData.ts` |
 | Landing page (visitante)                 | `apps/web/src/features/landing/` (rota `/welcome`; `/` deslogado cai nela) |
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
+| Juntos (ler em grupo)                    | `convex/groups.ts` + `model/groups.ts`, `@grimo/core` `groups/`, web `features/groups` (`/juntos`, convite público `/j/<código>`), mobile aba `juntos` + `group/[id]` |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |
 | LGPD, termos, idade (16+), App Store     | `docs/legal/README.md` (decisões e checklist: leia antes de mexer em cadastro ou dados pessoais) |
 

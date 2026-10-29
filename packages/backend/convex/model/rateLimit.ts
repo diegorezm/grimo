@@ -13,6 +13,8 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   createPost: { kind: "fixed window", rate: 10, period: HOUR },
   createComment: { kind: "fixed window", rate: 30, period: HOUR },
   report: { kind: "fixed window", rate: 10, period: DAY },
+  createGroup: { kind: "fixed window", rate: 10, period: DAY },
+  groupMessage: { kind: "fixed window", rate: 60, period: HOUR },
   // Each new book makes a request to Open Library (`books.refreshBook`).
   addToShelf: { kind: "fixed window", rate: 120, period: HOUR },
   // Open Library lookups made on a reader's behalf.
@@ -27,7 +29,15 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   emailOut: { kind: "fixed window", rate: 5, period: HOUR },
 });
 
-type Name = "createPost" | "createComment" | "report" | "addToShelf" | "bookSearch" | "loadWork";
+type Name =
+  | "createPost"
+  | "createComment"
+  | "report"
+  | "createGroup"
+  | "groupMessage"
+  | "addToShelf"
+  | "bookSearch"
+  | "loadWork";
 
 type AuthName = "signIn" | "signUp" | "signUpAll" | "emailOut";
 

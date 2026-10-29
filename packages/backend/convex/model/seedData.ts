@@ -191,6 +191,8 @@ interface ShelfSeed {
   book: BookKey;
   status: Status;
   page?: number;
+  /** Pages of this reader's edition, when it isn't the book's. */
+  pages?: number;
   rating?: number;
   /** "MM-DD" in the current year. */
   finished?: string;
@@ -223,7 +225,7 @@ export const readers: ReaderSeed[] = [
     genres: ["science_fiction", "fantasy", "literary_fiction"],
     goal: 24,
     shelves: [
-      { book: "duna", status: "reading", page: 312 },
+      { book: "duna", status: "reading", page: 312, pages: 720 },
       { book: "maoEsquerda", status: "reading", page: 118 },
       { book: "nomeDoVento", status: "reading", page: 540 },
       { book: "hobbit", status: "read", rating: 5, finished: "01-19" },
@@ -284,6 +286,8 @@ export const readers: ReaderSeed[] = [
       { book: "expressoOriente", status: "read", rating: 5, finished: "06-10" },
       { book: "meiaNoite", status: "reading", page: 190 },
       { book: "cemAnos", status: "want_to_read" },
+      { book: "pequenoPrincipe", status: "want_to_read" },
+      { book: "garotaExemplar", status: "want_to_read" },
       { book: "domCasmurro", status: "read", rating: 4, finished: "09-15" },
     ],
     posts: [
@@ -295,7 +299,7 @@ export const readers: ReaderSeed[] = [
       },
       {
         kind: "note",
-        body: "Montei uma estante só de releituras de fim de ano. Quem mais relê os favoritos em dezembro?",
+        body: "Montei uma estante só de releituras de fim de ano. @rafa, você também relê os favoritos em dezembro?",
       },
     ],
   },
@@ -311,6 +315,8 @@ export const readers: ReaderSeed[] = [
       { book: "neuromancer", status: "read", rating: 4, finished: "08-01" },
       { book: "tresCorpos", status: "abandoned", page: 90 },
       { book: "persepolis", status: "want_to_read" },
+      { book: "cemAnos", status: "want_to_read" },
+      { book: "pequenoPrincipe", status: "want_to_read" },
     ],
     posts: [
       {
@@ -357,6 +363,7 @@ export const readers: ReaderSeed[] = [
       { book: "hobbit", status: "read", rating: 5, finished: "04-04" },
       { book: "mistborn", status: "read", rating: 4, finished: "09-09" },
       { book: "sapiens", status: "want_to_read" },
+      { book: "pequenoPrincipe", status: "want_to_read" },
       { book: "nomeDoVento", status: "read", rating: 5, finished: "06-23" },
     ],
     posts: [
@@ -377,5 +384,20 @@ export const comments: { from: string; post: number; body: string }[] = [
   { from: "lu.prado", post: 1, body: "Que bom que você leu! Itamar escreve demais." },
   { from: "theo", post: 2, body: "Espera até ler O Poço da Ascensão 👀" },
   { from: "bia.lima", post: 3, body: "Eu topo! Podemos marcar um capítulo por semana." },
-  { from: "caio", post: 3, body: "Bora. Eu levo o café." },
+  { from: "caio", post: 3, body: "Bora. Eu levo o café. @bia.lima marca o dia?" },
 ];
+
+/** A Juntos group: the main reader (owner) reading `book` with `members`. */
+export const group: {
+  book: BookKey;
+  members: string[];
+  messages: { from: string; body: string; percent: number }[];
+} = {
+  book: "duna",
+  members: ["bia.lima", "caio"],
+  messages: [
+    { from: "rafa", body: "Bora terminar antes do filme? Três semanas dá.", percent: 0 },
+    { from: "caio", body: "Os Fremen são muito mais legais do que eu lembrava.", percent: 35 },
+    { from: "rafa", body: "Aquele jantar na casa do Duque… que tensão.", percent: 43 },
+  ],
+};

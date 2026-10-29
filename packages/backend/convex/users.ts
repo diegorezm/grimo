@@ -18,6 +18,7 @@ import {
   legalStatus,
 } from "./model/legal";
 import { listLimit } from "./model/limits";
+import { notify, unnotify } from "./model/notifications";
 import {
   getViewer,
   isFollowing,
@@ -402,6 +403,7 @@ export async function setFollow(
       targetUserId: targetId,
       createdAt: now,
     });
+    await notify(ctx, { userId: targetId, actorId: viewer._id, kind: "follow" }, now);
   } else if (!follow && existing) {
     await ctx.db.delete(existing._id);
     await ctx.db.patch(viewer._id, { following: Math.max(0, viewer.following - 1) });
@@ -412,6 +414,7 @@ export async function setFollow(
       .withIndex("by_actor_target", (q) => q.eq("actorId", viewer._id).eq("targetUserId", targetId))
       .collect();
     for (const line of lines) if (line.kind === "followed") await ctx.db.delete(line._id);
+    await unnotify(ctx, { userId: targetId, actorId: viewer._id, kind: "follow" });
   }
   return { following: follow };
 }

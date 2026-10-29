@@ -8,11 +8,11 @@ import {
   useRemovePost,
   useToggleLike,
 } from "@grimo/client";
-import { timeAgo } from "@grimo/core";
+import { commentCountLabel, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
-import { Button, Card, Input, Screen, Stars, Text } from "@/components/ui";
+import { Avatar, Button, Card, Input, MentionText, Screen, Stars, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { openReport } from "@/features/moderation";
@@ -64,14 +64,7 @@ function Thread({ detail }: { detail: PostDetail }) {
     <Screen>
       <Button variant="ghost" title="Voltar" onPress={() => router.back()} />
       <Card>
-        <Text variant="small">
-          <Text variant="small" style={styles.bold}>
-            {post.author.name}
-          </Text>{" "}
-          <Text variant="small" color="textMuted">
-            {timeAgo(new Date(post.createdAt))}
-          </Text>
-        </Text>
+        <AuthorLine author={post.author} createdAt={post.createdAt} />
         {book && (
           <Pressable
             accessibilityRole="button"
@@ -89,7 +82,7 @@ function Thread({ detail }: { detail: PostDetail }) {
             </View>
           </Pressable>
         )}
-        <Text>{post.body}</Text>
+        <MentionText text={post.body} />
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
@@ -98,7 +91,7 @@ function Thread({ detail }: { detail: PostDetail }) {
             hitSlop={8}
           >
             <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-              {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {post.commentCount} comentários
+              {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {commentCountLabel(post.commentCount)}
             </Text>
           </Pressable>
           {isMine ? (
@@ -162,15 +155,8 @@ function CommentRow({
 
   return (
     <Card>
-      <Text variant="small">
-        <Text variant="small" style={styles.bold}>
-          {comment.author.name}
-        </Text>{" "}
-        <Text variant="small" color="textMuted">
-          {timeAgo(new Date(comment.createdAt))}
-        </Text>
-      </Text>
-      <Text>{comment.body}</Text>
+      <AuthorLine author={comment.author} createdAt={comment.createdAt} />
+      <MentionText text={comment.body} />
       {(canRemove || canReport) && (
         <View style={styles.actions}>
           {canRemove && (
@@ -197,6 +183,34 @@ function CommentRow({
   );
 }
 
+/** Photo, name and time; opens the author's profile. */
+function AuthorLine({
+  author,
+  createdAt,
+}: {
+  author: PostDetail["post"]["author"];
+  createdAt: number;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Perfil de ${author.name}`}
+      onPress={() =>
+        router.push({ pathname: "/u/[username]", params: { username: author.username } })
+      }
+      style={styles.author}
+    >
+      <Avatar image={author.image} name={author.name} size={28} />
+      <Text variant="small" style={styles.bold}>
+        {author.name}
+      </Text>
+      <Text variant="small" color="textMuted">
+        {timeAgo(new Date(createdAt))}
+      </Text>
+    </Pressable>
+  );
+}
+
 function CommentComposer({ postId }: { postId: string }) {
   const add = useAddComment(postId);
   const [body, setBody] = useState("");
@@ -204,7 +218,7 @@ function CommentComposer({ postId }: { postId: string }) {
   return (
     <View style={styles.composer}>
       <Input
-        placeholder="Escreva um comentário"
+        placeholder="Escreva um comentário (@ para mencionar)"
         multiline
         maxLength={2000}
         value={body}
@@ -221,6 +235,7 @@ function CommentComposer({ postId }: { postId: string }) {
 }
 
 const styles = StyleSheet.create({
+  author: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   bold: { fontWeight: "700" },
   book: { flexDirection: "row", gap: spacing[3] },

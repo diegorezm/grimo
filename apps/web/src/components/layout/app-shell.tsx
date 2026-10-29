@@ -3,25 +3,47 @@ import { greetingFor } from "@grimo/core";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { HomeIcon, PeopleIcon, SearchIcon, ShelvesIcon, UserIcon } from "@/components/ui/icons";
+import {
+  HomeIcon,
+  PeopleIcon,
+  SearchIcon,
+  ShelvesIcon,
+  TogetherIcon,
+  UserIcon,
+} from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
-/** Main sections (also drawn by the landing page demo). */
+/**
+ * Main sections (also drawn by the landing page demo). The phone bar has room for five:
+ * "Leitores" stays in the sidebar (on phones it's reached from search and profiles).
+ */
 export const APP_NAV = [
-  { to: "/", label: "Início", icon: HomeIcon },
-  { to: "/shelves", label: "Estantes", icon: ShelvesIcon },
-  { to: "/search", label: "Buscar", icon: SearchIcon },
-  { to: "/people", label: "Leitores", icon: PeopleIcon },
-  { to: "/me", label: "Perfil", icon: UserIcon },
+  { to: "/", label: "Início", icon: HomeIcon, phone: true },
+  { to: "/search", label: "Buscar", icon: SearchIcon, phone: true },
+  { to: "/juntos", label: "Juntos", icon: TogetherIcon, phone: true },
+  { to: "/shelves", label: "Estantes", icon: ShelvesIcon, phone: true },
+  { to: "/people", label: "Leitores", icon: PeopleIcon, phone: false },
+  { to: "/me", label: "Perfil", icon: UserIcon, phone: true },
 ] as const;
 
 /**
  * Desktop: full-screen app — icon sidebar on the left, search bar on top.
  * Mobile: compact header and a floating glass tab bar.
  */
-/** `aside` is a side peek shown beside the page (see `SidePeek`). */
-export function AppShell({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+/**
+ * `aside` is a side peek shown beside the page (see `SidePeek`); `actions` sit in the top bar
+ * (the notification bell).
+ */
+export function AppShell({
+  children,
+  aside,
+  actions,
+}: {
+  children: ReactNode;
+  aside?: ReactNode;
+  actions?: ReactNode;
+}) {
   const { data: me } = useMe();
 
   return (
@@ -65,14 +87,14 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
 
         {/* `@container/main`: screens adapt to the space left when a side peek is open. */}
         <div className="@container/main flex min-w-0 flex-1 flex-col">
-          <TopBar />
+          <TopBar actions={actions} />
           <main className="flex-1 pb-32 lg:pb-0">{children}</main>
         </div>
         {aside}
       </div>
 
       <nav className="glass fixed inset-x-4 bottom-6 z-10 mx-auto flex max-w-lg justify-around gap-1 rounded-full p-1.5 font-mono text-[10px] uppercase tracking-wider lg:hidden">
-        {APP_NAV.map((item) => (
+        {APP_NAV.filter((item) => item.phone).map((item) => (
           <Link
             key={item.to}
             to={item.to}
@@ -89,7 +111,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
   );
 }
 
-function TopBar() {
+function TopBar({ actions }: { actions?: ReactNode }) {
   const { data: me } = useMe();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -130,6 +152,7 @@ function TopBar() {
 
       <div className="flex items-center gap-4">
         <ThemeToggle className="lg:hidden" />
+        {actions}
         {me && (
           <Link to="/me" className="hidden items-center gap-3 lg:flex">
             <span className="text-right text-sm leading-tight">

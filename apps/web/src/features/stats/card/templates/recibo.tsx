@@ -1,5 +1,6 @@
+import { isDarkColor, ratingStars } from "@grimo/core";
 import type { ReactNode } from "react";
-import { isDark, stars } from "../parts";
+
 import type { CardProps } from "../types";
 
 /** Saw-tooth edge for the top and bottom of the receipt. */
@@ -14,7 +15,7 @@ function edge(color: string, flip: boolean) {
 /** The month as a store receipt: itemized books, totals and a barcode. */
 export function ReciboCard({ data, palette, showDeltas }: CardProps) {
   // Receipts are printed on light paper, whatever the palette.
-  const dark = isDark(palette.bg);
+  const dark = isDarkColor(palette.bg);
   const paper = dark ? palette.ink : palette.paper;
   const ink = dark ? palette.bg : palette.ink;
   const muted = dark ? `${palette.bg}A6` : palette.muted;
@@ -42,19 +43,19 @@ export function ReciboCard({ data, palette, showDeltas }: CardProps) {
           <p style={{ textAlign: "center", color: muted }}>LIVRARIA DO EU · DESDE SEMPRE</p>
           <Rule color={muted} />
           <p style={{ textAlign: "center", fontSize: 38 }}>
-            RESUMO DE {data.monthLabel.toUpperCase()}
+            {data.kind === "year" ? "RETROSPECTIVA" : "RESUMO DE"} {data.periodLabel.toUpperCase()}
           </p>
           <p style={{ textAlign: "center", color: muted }}>CLIENTE: {data.name.toUpperCase()}</p>
           <Rule color={muted} />
 
           {books.length === 0 ? (
-            <p style={{ color: muted }}>NENHUM LIVRO FECHADO ESTE MÊS</p>
+            <p style={{ color: muted }}>NENHUM LIVRO FECHADO ESTE {data.unit.toUpperCase()}</p>
           ) : (
             books.map((book) => (
               <Line
                 key={book.title}
                 left={`1x ${book.title.toUpperCase()}`}
-                right={stars(book.rating)}
+                right={ratingStars(book.rating)}
                 muted={muted}
               />
             ))
@@ -69,7 +70,11 @@ export function ReciboCard({ data, palette, showDeltas }: CardProps) {
             right={`${data.booksRead}${delta(data.deltas.books)}`}
             muted={muted}
           />
-          <Line left="GÊNERO DO MÊS" right={(data.genre ?? "—").toUpperCase()} muted={muted} />
+          <Line
+            left={`GÊNERO DO ${data.unit.toUpperCase()}`}
+            right={(data.genre ?? "—").toUpperCase()}
+            muted={muted}
+          />
           <Line
             left={`META ${data.year}`}
             right={data.goal ? `${data.goal.done}/${data.goal.target}` : "—"}

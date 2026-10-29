@@ -17,9 +17,25 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      {me.data && <ProfileHeader profile={me.data} editable />}
+      {me.data && (
+        <ProfileHeader
+          profile={me.data}
+          editable
+          onPressCount={(kind) =>
+            router.push({
+              pathname: "/u/[username]/[kind]",
+              params: { username: me.data!.username, kind },
+            })
+          }
+        />
+      )}
+      <Button
+        variant="secondary"
+        title="Editar perfil"
+        onPress={() => router.push("/profile-edit")}
+      />
       <YearStats />
-      <Text variant="heading">Resumo do mês</Text>
+      <Text variant="heading">Card do mês</Text>
       <MonthlyCard />
       <AppearancePicker />
       <Button

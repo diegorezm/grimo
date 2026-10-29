@@ -3,6 +3,7 @@ import {
   firstIssue,
   REPORT_REASON_LABELS,
   REPORT_REASONS,
+  REPORT_TARGET_TITLES,
   type ReportReason,
   type ReportTarget,
   reportSchema,
@@ -13,12 +14,6 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Input, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
-
-const TITLES: Record<ReportTarget, string> = {
-  post: "Denunciar publicação",
-  comment: "Denunciar comentário",
-  user: "Denunciar leitor",
-};
 
 /** Pick a reason (and say more when it's "other"); validated with the core `reportSchema`. */
 export function ReportSheet({ target, targetId }: { target: ReportTarget; targetId: string }) {
@@ -63,7 +58,7 @@ export function ReportSheet({ target, targetId }: { target: ReportTarget; target
       contentContainerStyle={styles.sheet}
       keyboardShouldPersistTaps="handled"
     >
-      <Text variant="heading">{TITLES[target]}</Text>
+      <Text variant="heading">{REPORT_TARGET_TITLES[target]}</Text>
       <Text color="textMuted">Qual é o problema?</Text>
       {REPORT_REASONS.filter((r) => target === "user" || r !== "underage").map((r) => (
         <Pressable

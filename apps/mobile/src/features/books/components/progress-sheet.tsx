@@ -1,36 +1,63 @@
 import { useBook, useUpdateShelfEntry } from "@grimo/client";
-import { readingPercent } from "@grimo/core";
+import { editionPages, firstIssue, readingPercent, updateShelfEntrySchema } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Button, ProgressBar, Text } from "@/components/ui";
+import { Button, Input, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
-/** "Registrar leitura": a page stepper for the book you are reading, or mark it as finished. */
+/**
+ * "Registrar leitura": a page stepper for the book you are reading, or mark it as finished. The
+ * pages of your edition can be set here too (empty: the book's).
+ */
 export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
   const { data } = useBook(openLibraryId);
   const update = useUpdateShelfEntry();
   const entry = data?.entry;
-  const pageCount = data?.book.pageCount ?? null;
+  const bookPages = data?.book.pageCount ?? null;
   const [page, setPage] = useState<number | null>(null);
+  const [edition, setEdition] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   if (!data || !entry) return null;
+
+  const editionText = edition ?? String(editionPages(entry.pageCount, bookPages) ?? "");
+  // Empty or the book's own number: no edition of your own.
+  const editionValue =
+    editionText.trim() === "" || Number(editionText) === bookPages ? null : Number(editionText);
+  const parsedEdition = updateShelfEntrySchema.shape.pageCount.safeParse(editionValue);
+  const pageCount = editionPages(parsedEdition.success ? editionValue : entry.pageCount, bookPages);
+  const editionPatch =
+    parsedEdition.success && editionValue !== entry.pageCount ? { pageCount: editionValue } : {};
 
   const current = page ?? entry.currentPage;
   const max = pageCount ?? Number.MAX_SAFE_INTEGER;
   const set = (value: number) => setPage(Math.min(max, Math.max(0, value)));
   const percent = readingPercent(current, pageCount);
 
+  function valid() {
+    if (parsedEdition.success) return true;
+    setError(firstIssue(parsedEdition.error));
+    return false;
+  }
+
   function save() {
-    update.mutate({ id: entry!.id, currentPage: current });
+    if (!valid()) return;
+    update.mutate({
+      id: entry!.id,
+      currentPage: Math.min(current, pageCount ?? current),
+      ...editionPatch,
+    });
     router.back();
   }
 
   function finish() {
+    if (!valid()) return;
     update.mutate({
       id: entry!.id,
       status: "read",
+      ...editionPatch,
       ...(pageCount ? { currentPage: pageCount } : {}),
     });
     router.back();
@@ -75,6 +102,28 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
             {percent}% · +{Math.max(0, current - entry.currentPage)} páginas hoje
           </Text>
         </View>
+      )}
+
+      <View style={styles.edition}>
+        <Text variant="label" color="textMuted" style={styles.flex}>
+          Páginas da sua edição
+        </Text>
+        <Input
+          value={editionText}
+          onChangeText={(text) => {
+            setEdition(text.replace(/\D/g, ""));
+            setError(null);
+          }}
+          keyboardType="number-pad"
+          placeholder={bookPages ? String(bookPages) : "páginas"}
+          accessibilityLabel="Páginas da sua edição"
+          style={styles.editionInput}
+        />
+      </View>
+      {error && (
+        <Text variant="small" color="danger">
+          {error}
+        </Text>
       )}
 
       <View style={styles.actions}>
@@ -136,5 +185,7 @@ const styles = StyleSheet.create({
   gap: { gap: spacing[1] },
   end: { alignSelf: "flex-end" },
   actions: { flexDirection: "row", gap: spacing[3] },
+  edition: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  editionInput: { width: 96, textAlign: "center", paddingVertical: spacing[2] },
   flex: { flex: 1 },
 });

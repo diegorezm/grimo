@@ -2,6 +2,7 @@ import { reportSchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internalMutation, type MutationCtx, mutation, query } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
+import { deleteNotificationsBetween } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, requireViewer } from "./model/readers";
 import { MAX_BLOCKS } from "./model/safety";
@@ -21,6 +22,12 @@ async function reportedContent(ctx: MutationCtx, target: string, targetId: strin
     const comment = id ? await ctx.db.get(id) : null;
     if (!comment) throw notFound("Comentário");
     return { userId: comment.authorId, snapshot: comment.body };
+  }
+  if (target === "message") {
+    const id = ctx.db.normalizeId("groupMessages", targetId);
+    const message = id ? await ctx.db.get(id) : null;
+    if (!message) throw notFound("Mensagem");
+    return { userId: message.authorId, snapshot: message.body };
   }
   const id = ctx.db.normalizeId("users", targetId);
   const user = id ? await ctx.db.get(id) : null;
@@ -95,6 +102,7 @@ export const setBlocked = mutation({
       await setFollow(ctx, viewer, userId, false);
       await setFollow(ctx, target, viewer._id, false);
       await ctx.db.insert("blocks", { blockerId: viewer._id, blockedId: userId });
+      await deleteNotificationsBetween(ctx, viewer._id, userId);
     } else if (!block && existing) {
       await ctx.db.delete(existing._id);
     }

@@ -63,7 +63,14 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="book/[id]" />
         <Stack.Screen name="post/[id]" />
+        <Stack.Screen name="u/[username]/index" />
+        <Stack.Screen name="u/[username]/[kind]" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="profile-edit" />
+        <Stack.Screen name="card" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="group/[id]" />
+        <Stack.Screen name="group-card/[id]" />
         <Stack.Screen
           name="report"
           options={{
