@@ -2,6 +2,7 @@ import { reportSchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internalMutation, type MutationCtx, mutation, query } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
+import { deleteNotificationsBetween } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, requireViewer } from "./model/readers";
 import { MAX_BLOCKS } from "./model/safety";
@@ -95,6 +96,7 @@ export const setBlocked = mutation({
       await setFollow(ctx, viewer, userId, false);
       await setFollow(ctx, target, viewer._id, false);
       await ctx.db.insert("blocks", { blockerId: viewer._id, blockedId: userId });
+      await deleteNotificationsBetween(ctx, viewer._id, userId);
     } else if (!block && existing) {
       await ctx.db.delete(existing._id);
     }

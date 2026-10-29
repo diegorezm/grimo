@@ -4,6 +4,13 @@ import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
+import {
+  deleteCommentNotifications,
+  deletePostNotifications,
+  notify,
+  notifyMentions,
+  unnotify,
+} from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireViewer } from "./model/readers";
 import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
@@ -35,6 +42,7 @@ export async function createPost(
     bookId: input.bookId,
     createdAt: now,
   });
+  await notifyMentions(ctx, { actorId: authorId, text: input.body, postId }, now);
   return postId;
 }
 
@@ -62,9 +70,11 @@ export async function setLike(
   if (like && !existing) {
     await ctx.db.insert("postLikes", { postId, userId });
     await ctx.db.patch(postId, { likeCount: post.likeCount + 1 });
+    await notify(ctx, { userId: post.authorId, actorId: userId, kind: "like", postId });
   } else if (!like && existing) {
     await ctx.db.delete(existing._id);
     await ctx.db.patch(postId, { likeCount: Math.max(0, post.likeCount - 1) });
+    await unnotify(ctx, { userId: post.authorId, actorId: userId, kind: "like", postId });
   }
   return { liked: like };
 }
@@ -78,6 +88,9 @@ export async function addComment(
   const post = await interactablePost(ctx, authorId, postId);
   const id = await ctx.db.insert("postComments", { postId, authorId, body });
   await ctx.db.patch(postId, { commentCount: post.commentCount + 1 });
+  const target = { postId, commentId: id, actorId: authorId };
+  await notify(ctx, { ...target, userId: post.authorId, kind: "comment" });
+  await notifyMentions(ctx, { ...target, text: body, skip: [post.authorId] });
   return id;
 }
 
@@ -162,6 +175,7 @@ export const remove = mutation({
         .collect(),
     ]);
     for (const doc of related.flat()) await ctx.db.delete(doc._id);
+    await deletePostNotifications(ctx, id);
     await ctx.db.delete(id);
     return null;
   },
@@ -198,6 +212,7 @@ export const removeComment = mutation({
       throw appError("FORBIDDEN", "Você não pode apagar esse comentário.");
     }
     await ctx.db.delete(id);
+    await deleteCommentNotifications(ctx, id);
     if (post) await ctx.db.patch(post._id, { commentCount: Math.max(0, post.commentCount - 1) });
     return null;
   },

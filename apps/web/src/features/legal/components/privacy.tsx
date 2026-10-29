@@ -51,7 +51,8 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Social:</strong> resenhas, notas, comentários, curtidas, quem você segue,
-            bloqueios e denúncias que você faz.
+            bloqueios e denúncias que você faz, e as notificações do que outros leitores fizeram com
+            você (seguiram, curtiram, comentaram ou mencionaram com @).
           </li>
           <li>
             <strong>Aceites:</strong> versão e data em que você aceitou os Termos e esta Política, e
@@ -172,9 +173,9 @@ export function PrivacyPage() {
           <li>Enquanto sua conta existir.</li>
           <li>
             Ao excluir a conta, apagamos perfil, estantes, leituras, resenhas, notas, comentários,
-            curtidas, seguidores, bloqueios e aceites em poucos minutos. Cópias de segurança
-            mantidas pelo provedor podem guardar esses dados por um período limitado, até serem
-            substituídas.
+            curtidas, seguidores, notificações, bloqueios e aceites em poucos minutos. Cópias de
+            segurança mantidas pelo provedor podem guardar esses dados por um período limitado, até
+            serem substituídas.
           </li>
           <li>
             Denúncias feitas sobre você ou seu conteúdo são mantidas como registro de moderação pelo

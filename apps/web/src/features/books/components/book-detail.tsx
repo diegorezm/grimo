@@ -18,6 +18,7 @@ import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { MentionText } from "@/components/ui/mention-text";
 import { Stars } from "@/components/ui/stars";
 import { cn } from "@/utils/cn";
 import { Book3D } from "./book-3d";
@@ -169,7 +170,7 @@ function Reviews({ detail }: { detail: BookDetail }) {
                     {timeAgo(new Date(review.createdAt))}
                   </span>
                 </p>
-                <p className="leading-relaxed whitespace-pre-line">{review.body}</p>
+                <MentionText text={review.body} className="leading-relaxed" />
                 <button
                   type="button"
                   aria-pressed={review.likedByMe}

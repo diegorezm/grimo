@@ -1,8 +1,8 @@
 import { type FeedItem as FeedItemData, useMe, useSetBlocked, useToggleLike } from "@grimo/client";
-import { describeActivity, timeAgo } from "@grimo/core";
+import { commentCountLabel, describeActivity, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Avatar, Card, Stars, Text } from "@/components/ui";
+import { Avatar, Card, MentionText, Stars, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { showPostActions } from "@/features/moderation";
@@ -70,9 +70,11 @@ export function FeedItem({ item }: { item: FeedItemData }) {
       {post?.id && (
         <>
           {post.body && (
-            <Text style={styles.quote} numberOfLines={6}>
-              {post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
-            </Text>
+            <MentionText
+              style={styles.quote}
+              numberOfLines={6}
+              text={post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
+            />
           )}
           <View style={styles.actions}>
             <Pressable
@@ -93,7 +95,7 @@ export function FeedItem({ item }: { item: FeedItemData }) {
               style={styles.flex}
             >
               <Text variant="label" color="textMuted">
-                {post.commentCount} comentários
+                {commentCountLabel(post.commentCount)}
               </Text>
             </Pressable>
             {me?.id !== actor.id && (

@@ -20,8 +20,19 @@ export const APP_NAV = [
  * Desktop: full-screen app — icon sidebar on the left, search bar on top.
  * Mobile: compact header and a floating glass tab bar.
  */
-/** `aside` is a side peek shown beside the page (see `SidePeek`). */
-export function AppShell({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+/**
+ * `aside` is a side peek shown beside the page (see `SidePeek`); `actions` sit in the top bar
+ * (the notification bell).
+ */
+export function AppShell({
+  children,
+  aside,
+  actions,
+}: {
+  children: ReactNode;
+  aside?: ReactNode;
+  actions?: ReactNode;
+}) {
   const { data: me } = useMe();
 
   return (
@@ -65,7 +76,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
 
         {/* `@container/main`: screens adapt to the space left when a side peek is open. */}
         <div className="@container/main flex min-w-0 flex-1 flex-col">
-          <TopBar />
+          <TopBar actions={actions} />
           <main className="flex-1 pb-32 lg:pb-0">{children}</main>
         </div>
         {aside}
@@ -89,7 +100,7 @@ export function AppShell({ children, aside }: { children: ReactNode; aside?: Rea
   );
 }
 
-function TopBar() {
+function TopBar({ actions }: { actions?: ReactNode }) {
   const { data: me } = useMe();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -130,6 +141,7 @@ function TopBar() {
 
       <div className="flex items-center gap-4">
         <ThemeToggle className="lg:hidden" />
+        {actions}
         {me && (
           <Link to="/me" className="hidden items-center gap-3 lg:flex">
             <span className="text-right text-sm leading-tight">

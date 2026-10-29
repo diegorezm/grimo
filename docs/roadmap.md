@@ -46,8 +46,8 @@ Ao decidir se algo entra, pergunte:
 | Busca e sugestões de leitores                                            | todos             |   ◐    | Agora (falta no mobile, F3) |
 | Feed da rede com agrupamento                                             | todos             |   ✓    | —       |
 | Curtidas e comentários em posts                                          | todos             |   ✓    | —       |
-| **Notificações** (seguidor, curtida, comentário) + push no iPhone (F6)   | todos             |   —    | Próximo |
-| **Menções** com @ em posts e comentários (notifica o mencionado)         | Twitter/Letterboxd |  —    | Próximo |
+| **Notificações** (seguidor, curtida, comentário) + push no iPhone (F6)   | todos             |   ◐    | Agora (falta o push) |
+| **Menções** com @ em posts e comentários (notifica o mencionado)         | Twitter/Letterboxd |  ✓    | —       |
 | Respostas a comentários (um nível de thread)                             | Goodreads         |   —    | Depois  |
 | "Leitores como você": gosto parecido por lidos e gêneros (F10)           | StoryGraph        |   —    | Depois (precisa de volume de dados para não sugerir ruído) |
 | Convidar amigos (link de convite, contatos com consentimento)            | —                 |   —    | Próximo |

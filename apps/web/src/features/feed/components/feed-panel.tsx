@@ -1,10 +1,11 @@
 import { type FeedItem, useCreatePost, useFeed, useMe, useToggleLike } from "@grimo/client";
-import { describeActivity, timeAgo } from "@grimo/core";
+import { commentCountLabel, describeActivity, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
 import { LoadMore } from "@/components/ui/load-more";
+import { MentionText } from "@/components/ui/mention-text";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { cn } from "@/utils/cn";
 
@@ -144,7 +145,7 @@ function PostBubble({ item, mine }: { item: FeedItem; mine: boolean }) {
             <span className="font-serif text-sm font-medium italic leading-snug">{book.title}</span>
           </BookPeekLink>
         )}
-        <p className="whitespace-pre-line leading-relaxed">{post.body}</p>
+        <MentionText text={post.body} className="leading-relaxed" />
         <div
           className={cn(
             "flex items-center gap-3 font-mono text-[10px]",
@@ -159,7 +160,7 @@ function PostBubble({ item, mine }: { item: FeedItem; mine: boolean }) {
           >
             {post.likedByMe ? "♥" : "♡"} {post.likeCount}
           </button>
-          <span>{post.commentCount} comentários</span>
+          <span>{commentCountLabel(post.commentCount)}</span>
           <span className="ml-auto">{timeAgo(new Date(item.createdAt))}</span>
         </div>
       </div>

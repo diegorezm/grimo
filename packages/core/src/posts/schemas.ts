@@ -22,3 +22,7 @@ export const createCommentSchema = z.object({
   body: z.string().trim().min(1).max(2000),
 });
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+
+/** "1 comentário", "3 comentários". */
+export const commentCountLabel = (count: number) =>
+  `${count} ${count === 1 ? "comentário" : "comentários"}`;

@@ -9,7 +9,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef } from "react";
-import { CONVEX_QUERY, convexQuery } from "../../lib/convex-cache";
+import { CONVEX_QUERY, convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
 import { useGrowingList } from "../../lib/list";
 import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
@@ -20,6 +20,7 @@ import {
   applyAcceptance,
   type LegalSource,
 } from "../legal/hooks";
+import { followInNotifications, type NotificationPage } from "../notifications/hooks";
 
 /**
  * The signed-in reader. `needsSetup`: the onboarding hasn't asked for name and @ yet; `legal`:
@@ -250,7 +251,16 @@ export function useToggleFollow() {
             queryKey[1].startsWith(readerQueries[1]),
         })
         .map((query) => query.queryKey);
-      return patchQueries<unknown>(keys, (data) => patchFollow(data, userId, follow));
+      const [readers, notifications] = await Promise.all([
+        patchQueries<unknown>(keys, (data) => patchFollow(data, userId, follow)),
+        patchQueries<NotificationPage>([convexQueryPrefix(api.notifications.list)], (data) =>
+          followInNotifications(data, userId, follow),
+        ),
+      ]);
+      return () => {
+        readers();
+        notifications();
+      };
     },
     onError: (_error, _input, rollback) => rollback?.(),
   });
