@@ -123,6 +123,8 @@ export default defineSchema({
     currentPage: v.number(),
     /** Furthest page logged, so going back and forward again isn't counted twice. */
     maxPage: v.optional(v.number()),
+    /** Pages in this reader's edition, when it differs from the book's (absent: the book's). */
+    pageCount: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),

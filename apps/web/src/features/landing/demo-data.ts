@@ -138,6 +138,7 @@ const SHELF: ShelfItem[] = ENTRIES.map((entry) => {
       bookId: id(`book-${book.key}`),
       status: entry.status,
       currentPage: entry.page,
+      pageCount: null,
       rating: entry.rating ?? null,
       startedAt: entry.status === "want_to_read" ? null : at - 10 * DAY,
       finishedAt: entry.status === "read" ? at : null,

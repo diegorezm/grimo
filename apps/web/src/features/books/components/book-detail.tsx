@@ -7,6 +7,7 @@ import {
   useUpdateShelfEntry,
 } from "@grimo/client";
 import {
+  editionPages,
   GENRE_LABELS,
   type Genre,
   SHELF_LABELS,
@@ -22,6 +23,8 @@ import { MentionText } from "@/components/ui/mention-text";
 import { Stars } from "@/components/ui/stars";
 import { cn } from "@/utils/cn";
 import { Book3D } from "./book-3d";
+import { EditionPages } from "./edition-pages";
+import { FriendsWant } from "./friends-want";
 import { PageLogger } from "./page-logger";
 
 /** Header, your reading, synopsis and reviews of a book. */
@@ -57,6 +60,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
               {community.readers} {community.readers === 1 ? "leitor" : "leitores"} no Grimo
             </p>
           )}
+          <FriendsWant friends={detail.friendsWant} />
         </div>
       </header>
 
@@ -72,10 +76,15 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             Sua leitura
           </h2>
           {entry.status === "reading" ? (
-            <PageLogger entryId={entry.id} page={entry.currentPage} pageCount={book.pageCount} />
+            <PageLogger
+              entryId={entry.id}
+              page={entry.currentPage}
+              pageCount={editionPages(entry.pageCount, book.pageCount)}
+            />
           ) : (
             <RatingRow entryId={entry.id} rating={entry.rating} />
           )}
+          <EditionPages entryId={entry.id} pageCount={entry.pageCount} bookPages={book.pageCount} />
         </section>
       )}
 

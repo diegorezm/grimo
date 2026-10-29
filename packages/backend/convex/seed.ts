@@ -142,6 +142,7 @@ export const populate = internalMutation({
         );
         bookIds.set(shelf.book, entry.bookId);
         const patch = {
+          ...(shelf.pages && { pageCount: shelf.pages }),
           ...(shelf.page && { currentPage: shelf.page }),
           ...(shelf.rating && { rating: shelf.rating }),
           ...(finishedAt && { finishedAt: new Date(finishedAt) }),

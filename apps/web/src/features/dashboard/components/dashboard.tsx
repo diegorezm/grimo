@@ -5,6 +5,7 @@ import { FeedPanel } from "@/features/feed";
 import { OnboardingChecklist } from "@/features/onboarding";
 import { ShelfTiles } from "@/features/shelves";
 import { RetrospectiveBanner } from "@/features/stats";
+import { FriendsWantRow } from "./friends-want-row";
 import { GoalHero } from "./goal-hero";
 import { MonthList } from "./month-list";
 import { ShelfCarousel } from "./shelf-carousel";
@@ -35,6 +36,7 @@ export function Dashboard() {
           <GoalHero />
           <MonthList />
         </div>
+        <FriendsWantRow />
       </div>
       <FeedPanel className="h-[36rem] @5xl/main:sticky @5xl/main:top-6 @5xl/main:h-[calc(100dvh-8.5rem)]" />
     </div>

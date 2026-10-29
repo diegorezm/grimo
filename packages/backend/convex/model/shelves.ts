@@ -1,5 +1,6 @@
 import {
   type BookInput,
+  editionPages,
   planShelfTransition,
   type ShelfStatus,
   type UpdateShelfEntryInput,
@@ -16,6 +17,8 @@ export const entryView = (entry: Doc<"shelfEntries">) => ({
   bookId: entry.bookId,
   status: entry.status,
   currentPage: entry.currentPage,
+  /** Pages of this reader's edition, when they set one. */
+  pageCount: entry.pageCount ?? null,
   rating: entry.rating,
   startedAt: entry.startedAt,
   finishedAt: entry.finishedAt,
@@ -34,12 +37,17 @@ export const bookView = (book: Doc<"books">) => ({
   genres: book.genres,
 });
 
-/** `{ entry, book }` rows for these entries (entries whose book is gone are dropped). */
+/**
+ * `{ entry, book }` rows for these entries (entries whose book is gone are dropped). The book's
+ * `pageCount` is the reader's edition, so progress is right wherever the row is shown.
+ */
 export async function withBooks(ctx: QueryCtx | MutationCtx, entries: Doc<"shelfEntries">[]) {
   const rows = await Promise.all(
     entries.map(async (entry) => {
       const book = await ctx.db.get(entry.bookId);
-      return book ? { entry: entryView(entry), book: bookView(book) } : null;
+      if (!book) return null;
+      const pageCount = editionPages(entry.pageCount, book.pageCount);
+      return { entry: entryView(entry), book: { ...bookView(book), pageCount } };
     }),
   );
   return rows.filter((row) => row !== null);
@@ -77,6 +85,8 @@ function storedPatch(set: UpdateShelfEntryInput) {
   if (set.status !== undefined) patch.status = set.status;
   if (set.currentPage !== undefined) patch.currentPage = set.currentPage;
   if (set.rating !== undefined) patch.rating = set.rating;
+  // null clears it (back to the book's pages).
+  if (set.pageCount !== undefined) patch.pageCount = set.pageCount ?? undefined;
   const startedAt = toMs(set.startedAt);
   if (startedAt !== undefined) patch.startedAt = startedAt;
   const finishedAt = toMs(set.finishedAt);
@@ -131,7 +141,10 @@ export async function updateShelfEntry(
       startedAt: entry.startedAt === null ? null : new Date(entry.startedAt),
     },
     patch,
-    book?.pageCount ?? null,
+    editionPages(
+      patch.pageCount !== undefined ? patch.pageCount : entry.pageCount,
+      book?.pageCount ?? null,
+    ),
     new Date(now),
   );
   await ctx.db.patch(entryId, {

@@ -1,5 +1,6 @@
 import { useAddToShelf, useBook, useRemoveFromShelf, useUpdateShelfEntry } from "@grimo/client";
 import {
+  editionPages,
   readingPercent,
   SHELF_LABELS,
   SHELF_STATUSES,
@@ -24,6 +25,7 @@ import { radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
+import { FriendsWant } from "./friends-want";
 
 /** Book page: cover, shelf picker, progress / rating, synopsis and reviews. */
 export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
@@ -47,8 +49,9 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
     );
   }
 
-  const { book, entry, community, reviews } = data;
-  const percent = entry ? readingPercent(entry.currentPage, book.pageCount) : null;
+  const { book, entry, community, reviews, friendsWant } = data;
+  const pages = editionPages(entry?.pageCount, book.pageCount);
+  const percent = entry ? readingPercent(entry.currentPage, pages) : null;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -69,6 +72,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
               .filter(Boolean)
               .join(" · ")}
           </Text>
+          <FriendsWant friends={friendsWant} />
         </View>
 
         <ShelfPicker book={book} entry={entry} />
@@ -78,7 +82,8 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
             <View style={styles.between}>
               <Text variant="label" color="textMuted">
                 Página {entry.currentPage}
-                {book.pageCount ? ` de ${book.pageCount}` : ""}
+                {pages ? ` de ${pages}` : ""}
+                {entry.pageCount ? " (sua edição)" : ""}
               </Text>
               {percent !== null && <Text variant="label">{percent}%</Text>}
             </View>
