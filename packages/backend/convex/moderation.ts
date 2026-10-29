@@ -1,4 +1,4 @@
-import { type ReportTarget, reportSchema } from "@grimo/core";
+import { MAX_SUSPENSION_REASON, type ReportTarget, reportSchema } from "@grimo/core";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import {
@@ -12,8 +12,15 @@ import { appError, notFound, parse } from "./model/errors";
 import { deleteComment, deletePost, reviewBook as reviewBookIn } from "./model/moderation";
 import { deleteNotificationsBetween } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
-import { authorOf, requireAdmin, requireViewer, userByUsername } from "./model/readers";
-import { MAX_BLOCKS } from "./model/safety";
+import {
+  authorOf,
+  canModerate,
+  requireAdmin,
+  requireStaff,
+  requireViewer,
+  userByUsername,
+} from "./model/readers";
+import { isSuspended, MAX_BLOCKS } from "./model/safety";
 import { reportReason, reportTarget } from "./schema";
 import { setFollow } from "./users";
 
@@ -161,16 +168,79 @@ export const removeContent = internalMutation({
   },
 });
 
-/** Suspends (or, with `suspend: false`, restores) a reader: hidden and unable to use the app. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How long a moderator may suspend for; `"permanent"` is for admins. */
+const suspensionDuration = v.union(
+  v.literal(1),
+  v.literal(7),
+  v.literal(30),
+  v.literal("permanent"),
+);
+
+type LogAction = Doc<"moderationLog">["action"];
+
+/** Appends to the moderation history (`actor` null: the CLI). */
+async function logAction(
+  ctx: MutationCtx,
+  actor: Doc<"users"> | null,
+  action: LogAction,
+  extra: { targetUserId?: Doc<"users">["_id"] | null; targetId?: string; details?: string } = {},
+) {
+  await ctx.db.insert("moderationLog", {
+    actorId: actor?._id ?? null,
+    action,
+    targetUserId: extra.targetUserId ?? null,
+    targetId: extra.targetId ?? null,
+    details: extra.details ?? null,
+    createdAt: Date.now(),
+  });
+}
+
+/** Suspends a reader for `days` (or for good) and says why; they see it when they sign in. */
+async function suspendUser(
+  ctx: MutationCtx,
+  user: Doc<"users">,
+  duration: 1 | 7 | 30 | "permanent",
+  reason: string | undefined,
+) {
+  const now = Date.now();
+  await ctx.db.patch(user._id, {
+    suspendedAt: now,
+    suspendedUntil: duration === "permanent" ? undefined : now + duration * DAY_MS,
+    suspendReason: reason || undefined,
+  });
+}
+
+/**
+ * Suspends (or, with `suspend: false`, restores) a reader: hidden and unable to use the app.
+ * `days` omitted means permanent.
+ */
 export const suspend = internalMutation({
-  args: { username: v.string(), suspend: v.boolean() },
-  handler: async (ctx, { username, suspend }) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", username.toLowerCase()))
-      .unique();
+  args: {
+    username: v.string(),
+    suspend: v.boolean(),
+    days: v.optional(v.number()),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { username, suspend, days, reason }) => {
+    const user = await userByUsername(ctx, username.toLowerCase());
     if (!user) throw notFound("Leitor");
-    await ctx.db.patch(user._id, { suspendedAt: suspend ? Date.now() : undefined });
+    if (suspend) {
+      const now = Date.now();
+      await ctx.db.patch(user._id, {
+        suspendedAt: now,
+        suspendedUntil: days ? now + days * DAY_MS : undefined,
+        suspendReason: reason || undefined,
+      });
+    } else {
+      await ctx.db.patch(user._id, {
+        suspendedAt: undefined,
+        suspendedUntil: undefined,
+        suspendReason: undefined,
+      });
+    }
+    await logAction(ctx, null, suspend ? "suspend" : "unsuspend", { targetUserId: user._id });
     return null;
   },
 });
@@ -187,13 +257,33 @@ export const reviewBook = internalMutation({
   },
 });
 
-/** Gives (or takes back) access to the moderation panel: `npx convex run moderation:setAdmin`. */
+/** Gives (or takes back) the admin role: `npx convex run moderation:setAdmin`. */
 export const setAdmin = internalMutation({
   args: { username: v.string(), admin: v.boolean() },
   handler: async (ctx, { username, admin }) => {
     const user = await userByUsername(ctx, username.toLowerCase());
     if (!user) throw notFound("Leitor");
     await ctx.db.patch(user._id, { role: admin ? "admin" : undefined });
+    await logAction(ctx, null, admin ? "role_grant" : "role_revoke", {
+      targetUserId: user._id,
+      details: "admin",
+    });
+    return null;
+  },
+});
+
+/** Gives (or takes back) the moderator role without an invite: `moderation:setModerator`. */
+export const setModerator = internalMutation({
+  args: { username: v.string(), moderator: v.boolean() },
+  handler: async (ctx, { username, moderator }) => {
+    const user = await userByUsername(ctx, username.toLowerCase());
+    if (!user) throw notFound("Leitor");
+    if (user.role === "admin") throw appError("INVALID", "Essa conta é admin.");
+    await ctx.db.patch(user._id, { role: moderator ? "moderator" : undefined });
+    await logAction(ctx, null, moderator ? "role_grant" : "role_revoke", {
+      targetUserId: user._id,
+      details: "moderator",
+    });
     return null;
   },
 });
@@ -229,7 +319,7 @@ async function removeReported(ctx: MutationCtx, target: ReportTarget, targetId: 
 export const queue = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    const staff = await requireStaff(ctx);
     const [reports, books] = await Promise.all([
       ctx.db
         .query("reports")
@@ -240,8 +330,10 @@ export const queue = query({
         .withIndex("by_reviewStatus", (q) => q.eq("reviewStatus", "pending"))
         .take(QUEUE_SIZE),
     ]);
+    const views = await Promise.all(reports.map((report) => reportView(ctx, staff, report)));
     return {
-      reports: await Promise.all(reports.map((report) => reportView(ctx, report))),
+      // Reports about the team (or yourself) are for admins only.
+      reports: views.filter((view) => staff.role === "admin" || view.targetUser?.canAct !== false),
       books: await Promise.all(
         books.map(async (book) => {
           const author = book.createdBy ? await ctx.db.get(book.createdBy) : null;
@@ -260,7 +352,7 @@ export const queue = query({
   },
 });
 
-async function reportView(ctx: QueryCtx, report: Doc<"reports">) {
+async function reportView(ctx: QueryCtx, staff: Doc<"users">, report: Doc<"reports">) {
   const [reporter, targetUser, location] = await Promise.all([
     report.reporterId ? ctx.db.get(report.reporterId) : null,
     report.targetUserId ? ctx.db.get(report.targetUserId) : null,
@@ -276,7 +368,12 @@ async function reportView(ctx: QueryCtx, report: Doc<"reports">) {
     createdAt: report.createdAt,
     reporter: reporter ? authorOf(reporter) : null,
     targetUser: targetUser
-      ? { ...authorOf(targetUser), suspended: Boolean(targetUser.suspendedAt) }
+      ? {
+          ...authorOf(targetUser),
+          suspended: isSuspended(targetUser),
+          /** False for the team and yourself: no removing or suspending them from here. */
+          canAct: canModerate(staff, targetUser),
+        }
       : null,
     /** Where to see it; null when the content is already gone. */
     location,
@@ -304,21 +401,44 @@ async function reportLocation(ctx: QueryCtx, report: Doc<"reports">) {
 
 /**
  * Decides a report: dismiss it, remove the content, or suspend its author (who disappears from
- * the app). Other open reports about the same thing are closed with it.
+ * the app for `duration`, with a `reason` they can read). Other open reports about the same thing
+ * are closed with it. Nobody acts on themselves, moderators never on the team (`canModerate`),
+ * and only admins suspend for good. Every action goes to `moderationLog`.
  */
 export const act = mutation({
   args: {
     reportId: v.id("reports"),
     action: v.union(v.literal("dismiss"), v.literal("remove"), v.literal("suspend")),
+    duration: v.optional(suspensionDuration),
+    reason: v.optional(v.string()),
   },
-  handler: async (ctx, { reportId, action }) => {
-    await requireAdmin(ctx);
+  handler: async (ctx, { reportId, action, duration, reason }) => {
+    const staff = await requireStaff(ctx);
     const report = await ctx.db.get(reportId);
     if (!report) throw notFound("Denúncia");
+    const target = report.targetUserId ? await ctx.db.get(report.targetUserId) : null;
+    // Admins may always close a report about the team; everything else needs `canModerate`.
+    const allowed =
+      action === "dismiss" && staff.role === "admin" ? true : canModerate(staff, target);
+    if (!allowed) throw appError("FORBIDDEN", "Você não pode agir sobre essa conta.");
+    let details: string | undefined;
     if (action === "remove") await removeReported(ctx, report.target, report.targetId);
-    if (action === "suspend" && report.targetUserId) {
-      await ctx.db.patch(report.targetUserId, { suspendedAt: Date.now() });
+    if (action === "suspend") {
+      if (!target) throw appError("INVALID", "Essa conta não existe mais.");
+      if (!duration) throw appError("INVALID", "Escolha por quanto tempo.");
+      if (duration === "permanent" && staff.role !== "admin") {
+        throw appError("FORBIDDEN", "Só admins suspendem para sempre.");
+      }
+      const text = reason?.trim().slice(0, MAX_SUSPENSION_REASON);
+      if (!text) throw appError("INVALID", "Diga o motivo da suspensão.");
+      await suspendUser(ctx, target, duration, text);
+      details = `${duration === "permanent" ? "permanente" : `${duration} d`}: ${text}`;
     }
+    await logAction(ctx, staff, action, {
+      targetUserId: report.targetUserId,
+      targetId: report.targetId,
+      details: details ?? report.target,
+    });
     const status = action === "dismiss" ? "dismissed" : "actioned";
     const now = Date.now();
     const open = await ctx.db
@@ -338,8 +458,49 @@ export const act = mutation({
 export const decideBook = mutation({
   args: { openLibraryId: v.string(), approve: v.boolean() },
   handler: async (ctx, { openLibraryId, approve }) => {
-    await requireAdmin(ctx);
+    const staff = await requireStaff(ctx);
     await decide(ctx, openLibraryId, approve);
+    await logAction(ctx, staff, approve ? "book_approve" : "book_reject", {
+      targetId: openLibraryId,
+    });
     return null;
+  },
+});
+
+/** Moderation history, newest first (admins only). */
+export const log = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rows = await ctx.db
+      .query("moderationLog")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(100);
+    const people = new Map<string, Promise<Doc<"users"> | null>>();
+    const person = (id: Doc<"users">["_id"] | null) => {
+      if (!id) return Promise.resolve(null);
+      if (!people.has(id)) people.set(id, ctx.db.get(id));
+      return people.get(id)!;
+    };
+    return {
+      items: await Promise.all(
+        rows.map(async (row) => {
+          const [actor, targetUser] = await Promise.all([
+            person(row.actorId),
+            person(row.targetUserId),
+          ]);
+          return {
+            id: row._id,
+            action: row.action,
+            targetId: row.targetId,
+            details: row.details,
+            createdAt: row.createdAt,
+            actor: actor ? authorOf(actor) : null,
+            targetUser: targetUser ? authorOf(targetUser) : null,
+          };
+        }),
+      ),
+    };
   },
 });

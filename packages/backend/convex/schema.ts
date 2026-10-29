@@ -102,8 +102,15 @@ export default defineSchema({
     ageRejectedAt: v.optional(v.number()),
     /** Suspended by moderation (`moderation.suspend`): hidden, and signed-in calls fail. */
     suspendedAt: v.optional(v.number()),
-    /** Moderation team: opens `/admin` (`moderation.queue`). Granted with `moderation:setAdmin`. */
-    role: v.optional(v.literal("admin")),
+    /** When a temporary suspension ends; absent while suspended means permanent. */
+    suspendedUntil: v.optional(v.number()),
+    /** Why, shown to the suspended reader. */
+    suspendReason: v.optional(v.string()),
+    /**
+     * Moderation team: opens `/admin` (`moderation.queue`). Admins are set with
+     * `moderation:setAdmin`; moderators by invite (or `moderation:setModerator`).
+     */
+    role: v.optional(v.union(v.literal("admin"), v.literal("moderator"))),
     /** Account deleted: hidden while `account.purge` erases its data (then the row goes too). */
     deletedAt: v.optional(v.number()),
   })
@@ -360,6 +367,33 @@ export default defineSchema({
   })
     .index("by_status_created", ["status", "createdAt"])
     .index("by_reporter_target", ["reporterId", "target", "targetId"]),
+
+  /**
+   * Who did what in moderation (admin-only history). `actorId` is null for the CLI and once the
+   * moderator's account is deleted; `targetUserId` likewise for the reader acted on.
+   */
+  moderationLog: defineTable({
+    actorId: v.union(v.id("users"), v.null()),
+    action: v.union(
+      v.literal("dismiss"),
+      v.literal("remove"),
+      v.literal("suspend"),
+      v.literal("unsuspend"),
+      v.literal("book_approve"),
+      v.literal("book_reject"),
+      v.literal("role_grant"),
+      v.literal("role_revoke"),
+    ),
+    targetUserId: v.union(v.id("users"), v.null()),
+    /** Reported thing or book id, when the action had one. */
+    targetId: v.union(v.string(), v.null()),
+    /** Suspension length / reason, or the role granted. */
+    details: v.union(v.string(), v.null()),
+    createdAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_actor", ["actorId"])
+    .index("by_targetUser", ["targetUserId"]),
 
   /** Open Library search results, reused for 24 h (see `books.search`). */
   bookSearchCache: defineTable({

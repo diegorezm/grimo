@@ -1,13 +1,25 @@
 import {
   errorMessage,
+  type ModerationLogItem,
   type QueuedBook,
   type QueuedReport,
   useActOnReport,
   useDecideBook,
+  useMe,
+  useModerationLog,
   useModerationQueue,
 } from "@grimo/client";
-import { REPORT_REASON_LABELS, type ReportTarget, timeAgo } from "@grimo/core";
+import {
+  MAX_SUSPENSION_REASON,
+  REPORT_REASON_LABELS,
+  type ReportTarget,
+  SUSPENSION_DURATION_LABELS,
+  SUSPENSION_DURATIONS,
+  type SuspensionDuration,
+  timeAgo,
+} from "@grimo/core";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +36,7 @@ const TARGET_LABELS: Record<ReportTarget, string> = {
  */
 export function ModerationPanel() {
   const queue = useModerationQueue();
+  const isAdmin = useMe().data?.isAdmin ?? false;
   if (queue.isPending) return <Spinner />;
   if (queue.error) {
     return <p className="rounded-xl bg-surface-muted p-6">{errorMessage(queue.error)}</p>;
@@ -41,7 +54,7 @@ export function ModerationPanel() {
         ) : (
           <ul className="flex flex-col gap-4">
             {reports.map((report) => (
-              <ReportItem key={report.id} report={report} />
+              <ReportItem key={report.id} report={report} isAdmin={isAdmin} />
             ))}
           </ul>
         )}
@@ -65,14 +78,18 @@ export function ModerationPanel() {
           </ul>
         )}
       </section>
+
+      {isAdmin && <ModerationHistory />}
     </div>
   );
 }
 
-function ReportItem({ report }: { report: QueuedReport }) {
+function ReportItem({ report, isAdmin }: { report: QueuedReport; isAdmin: boolean }) {
   const act = useActOnReport();
-  const run = (action: "dismiss" | "remove" | "suspend") => act.mutate({ report, action });
+  const [suspending, setSuspending] = useState(false);
+  const run = (action: "dismiss" | "remove") => act.mutate({ report, action });
   const canRemove = report.target !== "user" && report.location !== null;
+  const canAct = report.targetUser?.canAct !== false;
 
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border p-5">
@@ -117,30 +134,163 @@ function ReportItem({ report }: { report: QueuedReport }) {
         <Button variant="secondary" onClick={() => run("dismiss")} disabled={act.isPending}>
           Dispensar
         </Button>
-        {canRemove && (
+        {canRemove && canAct && (
           <Button onClick={() => run("remove")} disabled={act.isPending}>
             Remover conteúdo
           </Button>
         )}
-        {report.targetUser && !report.targetUser.suspended && (
+        {report.targetUser && canAct && !report.targetUser.suspended && !suspending && (
           <Button
             variant="ghost"
             className="text-danger"
             disabled={act.isPending}
-            onClick={() => {
-              if (
-                window.confirm(`Suspender @${report.targetUser!.username}? A conta some do app.`)
-              ) {
-                run("suspend");
-              }
-            }}
+            onClick={() => setSuspending(true)}
           >
             Suspender leitor
           </Button>
         )}
       </div>
+      {report.targetUser && !canAct && (
+        <p className="text-sm text-text-muted">
+          Essa conta é da moderação (ou é a sua): só dá para dispensar.
+        </p>
+      )}
+      {suspending && report.targetUser && (
+        <SuspendForm
+          username={report.targetUser.username}
+          isAdmin={isAdmin}
+          pending={act.isPending}
+          onCancel={() => setSuspending(false)}
+          onSubmit={(duration, reason) =>
+            act.mutate({ report, action: "suspend", duration, reason })
+          }
+        />
+      )}
       {act.error && <p className="text-sm text-danger">{errorMessage(act.error)}</p>}
     </li>
+  );
+}
+
+function SuspendForm({
+  username,
+  isAdmin,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  username: string;
+  isAdmin: boolean;
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: (duration: SuspensionDuration, reason: string) => void;
+}) {
+  const [duration, setDuration] = useState<SuspensionDuration>(7);
+  const [reason, setReason] = useState("");
+  const options = SUSPENSION_DURATIONS.filter((item) => isAdmin || item !== "permanent");
+
+  return (
+    <form
+      noValidate
+      className="flex flex-col gap-3 rounded-md border border-border p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit(duration, reason.trim());
+      }}
+    >
+      <p className="text-sm">
+        Suspender <strong>@{username}</strong>: a conta some do app pelo tempo escolhido.
+      </p>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          Por quanto tempo
+        </span>
+        <select
+          value={String(duration)}
+          onChange={(event) => {
+            const value = event.target.value;
+            setDuration(value === "permanent" ? "permanent" : (Number(value) as 1 | 7 | 30));
+          }}
+          className="w-fit rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+        >
+          {options.map((item) => (
+            <option key={item} value={String(item)}>
+              {SUSPENSION_DURATION_LABELS[String(item)]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+          Motivo (a pessoa lê isso)
+        </span>
+        <textarea
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          maxLength={MAX_SUSPENSION_REASON}
+          rows={3}
+          className="w-full rounded-md border border-border bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+        />
+      </label>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={pending || reason.trim() === ""}>
+          Suspender
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+const LOG_LABELS: Record<ModerationLogItem["action"], string> = {
+  dismiss: "dispensou",
+  remove: "removeu conteúdo de",
+  suspend: "suspendeu",
+  unsuspend: "reabilitou",
+  book_approve: "aprovou o livro",
+  book_reject: "recusou o livro",
+  role_grant: "deu o papel a",
+  role_revoke: "tirou o papel de",
+};
+
+/** Admins only: the last moderation actions, newest first. */
+function ModerationHistory() {
+  const log = useModerationLog();
+  return (
+    <section aria-labelledby="log-title" className="flex flex-col gap-4">
+      <h2 id="log-title" className="text-2xl font-medium italic">
+        Histórico
+      </h2>
+      {log.isPending ? (
+        <Spinner />
+      ) : log.error ? (
+        <p className="text-text-muted">{errorMessage(log.error)}</p>
+      ) : log.data.items.length === 0 ? (
+        <p className="text-text-muted">Nenhuma ação ainda.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-border">
+          {log.data.items.map((item) => (
+            <li key={item.id} className="py-3 text-sm">
+              <span className="font-semibold">
+                {item.actor ? `@${item.actor.username}` : "CLI"}
+              </span>{" "}
+              {LOG_LABELS[item.action]}{" "}
+              {item.targetUser ? (
+                <span className="font-semibold">@{item.targetUser.username}</span>
+              ) : (
+                item.targetId && <span className="font-mono text-xs">{item.targetId}</span>
+              )}
+              {item.details && <span className="text-text-muted"> · {item.details}</span>}
+              <span className="font-mono text-[11px] text-text-muted">
+                {" "}
+                · {timeAgo(new Date(item.createdAt))}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

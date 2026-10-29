@@ -3,7 +3,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { emailEnabled } from "./env";
 import { appError, notFound, unauthenticated } from "./errors";
-import { isHidden } from "./safety";
+import { isHidden, isSuspended } from "./safety";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -20,27 +20,49 @@ async function viewerAccount(ctx: Ctx) {
 /** The signed-in reader, or null when signed out (or the account is deleted or suspended). */
 export async function getViewer(ctx: Ctx): Promise<Doc<"users"> | null> {
   const viewer = await viewerAccount(ctx);
-  return viewer && !viewer.deletedAt && !viewer.suspendedAt ? viewer : null;
+  return viewer && !viewer.deletedAt && !isSuspended(viewer) ? viewer : null;
 }
 
 /** The signed-in reader, or an UNAUTHENTICATED error. First line of every protected function. */
 export async function requireViewer(ctx: Ctx): Promise<Doc<"users">> {
   const viewer = await viewerAccount(ctx);
-  if (viewer?.suspendedAt) {
+  if (viewer && isSuspended(viewer)) {
+    const until = viewer.suspendedUntil
+      ? ` até ${new Date(viewer.suspendedUntil).toLocaleDateString("pt-BR", { timeZone: viewer.timeZone ?? DEFAULT_TIME_ZONE })}`
+      : "";
+    const reason = viewer.suspendReason ? ` Motivo: ${viewer.suspendReason}` : "";
     throw appError(
       "FORBIDDEN",
-      "Sua conta está suspensa. Fale com a gente se achar que é um erro.",
+      `Sua conta está suspensa${until}.${reason} Fale com a gente se achar que é um erro.`,
     );
   }
   if (!viewer || viewer.deletedAt) throw unauthenticated();
   return viewer;
 }
 
-/** The signed-in reader if on the moderation team; anyone else gets FORBIDDEN. */
+/** The signed-in reader if on the moderation team (admin or moderator); others get FORBIDDEN. */
+export async function requireStaff(ctx: Ctx): Promise<Doc<"users">> {
+  const viewer = await requireViewer(ctx);
+  if (!viewer.role) throw appError("FORBIDDEN", "Só a moderação pode ver isso.");
+  return viewer;
+}
+
+/** The signed-in admin; moderators and everyone else get FORBIDDEN. */
 export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
   const viewer = await requireViewer(ctx);
-  if (viewer.role !== "admin") throw appError("FORBIDDEN", "Só a moderação pode ver isso.");
+  if (viewer.role !== "admin") throw appError("FORBIDDEN", "Só admins podem fazer isso.");
   return viewer;
+}
+
+/**
+ * Whether `actor` (staff) may act on `target`: never on themselves, moderators never on the
+ * team, admins on everyone but other admins. Null target (account gone) is fine.
+ */
+export function canModerate(actor: Doc<"users">, target: Doc<"users"> | null) {
+  if (!target) return true;
+  if (target._id === actor._id) return false;
+  if (actor.role === "admin") return target.role !== "admin";
+  return target.role === undefined;
 }
 
 /**

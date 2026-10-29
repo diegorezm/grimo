@@ -436,6 +436,23 @@ const steps: Step[] = [
     for (const row of rows) await ctx.db.patch(row._id, { reporterId: null });
     return rows.length === BATCH;
   },
+  // Moderation history stays, without the moderator or the reader acted on.
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("moderationLog")
+      .withIndex("by_actor", (q) => q.eq("actorId", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { actorId: null });
+    return rows.length === BATCH;
+  },
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("moderationLog")
+      .withIndex("by_targetUser", (q) => q.eq("targetUserId", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { targetUserId: null });
+    return rows.length === BATCH;
+  },
 ];
 
 async function deleteAll(

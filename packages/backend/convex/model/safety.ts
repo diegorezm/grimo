@@ -6,9 +6,16 @@ type Ctx = QueryCtx | MutationCtx;
 /** How many blocks a reader can have; plenty, and keeps `blockedIds` a bounded read. */
 export const MAX_BLOCKS = 1000;
 
+/** Whether the suspension is in force: set, and not a temporary one that already ended. */
+export const isSuspended = (
+  user: Pick<Doc<"users">, "suspendedAt" | "suspendedUntil">,
+  now = Date.now(),
+) => Boolean(user.suspendedAt) && (user.suspendedUntil === undefined || user.suspendedUntil > now);
+
 /** Readers nobody else sees: deleted, suspended, or who declared being under 16. */
-export const isHidden = (user: Pick<Doc<"users">, "deletedAt" | "suspendedAt" | "ageRejectedAt">) =>
-  Boolean(user.deletedAt || user.suspendedAt || user.ageRejectedAt);
+export const isHidden = (
+  user: Pick<Doc<"users">, "deletedAt" | "suspendedAt" | "suspendedUntil" | "ageRejectedAt">,
+) => Boolean(user.deletedAt || isSuspended(user) || user.ageRejectedAt);
 
 /** Whether `blockerId` blocked `blockedId` (one direction). */
 export async function hasBlocked(ctx: Ctx, blockerId: Id<"users">, blockedId: Id<"users">) {

@@ -1,5 +1,5 @@
 import { api, type Id } from "@grimo/backend";
-import type { ReportReason, ReportTarget } from "@grimo/core";
+import type { ReportReason, ReportTarget, SuspensionDuration } from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
@@ -86,7 +86,22 @@ export function useModerationQueue(options: { enabled?: boolean } = {}) {
 
 const queue = [convexQueryPrefix(api.moderation.queue)];
 
-/** Dismiss, remove the content, or suspend its author; the report (and its twins) leave at once. */
+export type ModerationLog = FunctionReturnType<typeof api.moderation.log>;
+export type ModerationLogItem = ModerationLog["items"][number];
+
+/** The moderation history (admins only). */
+export function moderationLogQuery() {
+  return convexQuery(api.moderation.log, {}, "required");
+}
+
+export function useModerationLog(options: { enabled?: boolean } = {}) {
+  return useQuery({ ...moderationLogQuery(), ...options });
+}
+
+/**
+ * Dismiss, remove the content, or suspend its author (with `duration` and `reason`); the report
+ * (and its twins) leave at once.
+ */
 export function useActOnReport() {
   const { convex } = useConvexCache();
   const patchQueries = usePatchQueries();
@@ -94,10 +109,14 @@ export function useActOnReport() {
     mutationFn: ({
       report,
       action,
+      duration,
+      reason,
     }: {
       report: QueuedReport;
       action: "dismiss" | "remove" | "suspend";
-    }) => convex.mutation(api.moderation.act, { reportId: report.id, action }),
+      duration?: SuspensionDuration;
+      reason?: string;
+    }) => convex.mutation(api.moderation.act, { reportId: report.id, action, duration, reason }),
     onMutate: ({ report }) =>
       patchQueries<ModerationQueue>(queue, (data) => ({
         ...data,

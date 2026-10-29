@@ -28,8 +28,8 @@ describe("moderation panel", () => {
   it("is only for the moderation team", async () => {
     const { mod, rafa } = await setup();
     await expect(rafa.as.query(api.moderation.queue, {})).rejects.toThrow(/moderação/);
-    expect((await mod.as.query(api.users.me, {})).isAdmin).toBe(true);
-    expect((await rafa.as.query(api.users.me, {})).isAdmin).toBe(false);
+    expect(await mod.as.query(api.users.me, {})).toMatchObject({ isAdmin: true, isStaff: true });
+    expect(await rafa.as.query(api.users.me, {})).toMatchObject({ isAdmin: false, isStaff: false });
     expect(await mod.as.query(api.moderation.queue, {})).toEqual({ reports: [], books: [] });
   });
 
@@ -73,8 +73,13 @@ describe("moderation panel", () => {
       reason: "harassment",
     });
     let { reports } = await mod.as.query(api.moderation.queue, {});
-    await mod.as.mutation(api.moderation.act, { reportId: reports[0]!.id, action: "suspend" });
-    await expect(rafa.as.query(api.users.me, {})).rejects.toThrow(/suspensa/);
+    await mod.as.mutation(api.moderation.act, {
+      reportId: reports[0]!.id,
+      action: "suspend",
+      duration: "permanent",
+      reason: "assédio",
+    });
+    await expect(rafa.as.query(api.users.me, {})).rejects.toThrow(/suspensa.*assédio/);
 
     const { post } = await bia.as.mutation(api.posts.create, { kind: "note", body: "ok" });
     await mod.as.mutation(api.moderation.report, {
@@ -103,5 +108,110 @@ describe("moderation panel", () => {
     expect((await mod.as.query(api.moderation.queue, {})).books).toEqual([]);
     const { detail } = await mod.as.query(api.books.detail, { openLibraryId });
     expect(detail?.book.reviewStatus).toBe("approved");
+  });
+});
+
+describe("moderators", () => {
+  async function team() {
+    const { t, mod: admin, rafa, bia } = await setup();
+    const moderator = await reader(t, "moderadora");
+    await t.mutation(internal.moderation.setModerator, { username: "moderadora", moderator: true });
+    return { t, admin, moderator, rafa, bia };
+  }
+
+  async function reportUser(from: Awaited<ReturnType<typeof reader>>, userId: string) {
+    await from.as.mutation(api.moderation.report, {
+      target: "user",
+      targetId: userId,
+      reason: "spam",
+    });
+  }
+
+  it("works the queue but can't hand out roles or suspend for good", async () => {
+    const { admin, moderator, rafa, bia } = await team();
+    expect(await moderator.as.query(api.users.me, {})).toMatchObject({
+      isAdmin: false,
+      isStaff: true,
+    });
+    await reportUser(bia, rafa.id);
+    const { reports } = await moderator.as.query(api.moderation.queue, {});
+    expect(reports).toHaveLength(1);
+
+    await expect(moderator.as.query(api.moderation.log, {})).rejects.toThrow(/admins/);
+    await expect(
+      moderator.as.mutation(api.moderation.act, {
+        reportId: reports[0]!.id,
+        action: "suspend",
+        duration: "permanent",
+        reason: "x",
+      }),
+    ).rejects.toThrow(/admins/);
+    await expect(
+      moderator.as.mutation(api.moderation.act, {
+        reportId: reports[0]!.id,
+        action: "suspend",
+        duration: 7,
+      }),
+    ).rejects.toThrow(/motivo/);
+
+    await moderator.as.mutation(api.moderation.act, {
+      reportId: reports[0]!.id,
+      action: "suspend",
+      duration: 7,
+      reason: "spam repetido",
+    });
+    const { items } = await admin.as.query(api.moderation.log, {});
+    expect(items[0]).toMatchObject({
+      action: "suspend",
+      actor: { username: "moderadora" },
+      targetUser: { username: "rafa" },
+    });
+  });
+
+  it("lifts a temporary suspension when it ends", async () => {
+    const { moderator, rafa, bia } = await team();
+    await reportUser(bia, rafa.id);
+    const { reports } = await moderator.as.query(api.moderation.queue, {});
+    await moderator.as.mutation(api.moderation.act, {
+      reportId: reports[0]!.id,
+      action: "suspend",
+      duration: 1,
+      reason: "calma",
+    });
+    await expect(rafa.as.query(api.users.me, {})).rejects.toThrow(/suspensa até/);
+    vi.advanceTimersByTime(25 * 60 * 60 * 1000);
+    await expect(rafa.as.query(api.users.me, {})).resolves.toMatchObject({ username: "rafa" });
+  });
+
+  it("keeps the team out of reach of moderators, and hides their reports", async () => {
+    const { admin, moderator, bia } = await team();
+    await reportUser(bia, admin.id);
+    await reportUser(bia, moderator.id);
+    expect((await moderator.as.query(api.moderation.queue, {})).reports).toEqual([]);
+    const { reports } = await admin.as.query(api.moderation.queue, {});
+    expect(reports).toHaveLength(2);
+    const ofAdmin = reports.find((report) => report.targetUser?.username === "mod")!;
+    const ofModerator = reports.find((report) => report.targetUser?.username === "moderadora")!;
+    expect(ofAdmin.targetUser?.canAct).toBe(false);
+    expect(ofModerator.targetUser?.canAct).toBe(true);
+    await expect(
+      moderator.as.mutation(api.moderation.act, { reportId: ofAdmin.id, action: "dismiss" }),
+    ).rejects.toThrow(/não pode/);
+    await expect(
+      admin.as.mutation(api.moderation.act, {
+        reportId: ofAdmin.id,
+        action: "suspend",
+        duration: 7,
+        reason: "x",
+      }),
+    ).rejects.toThrow(/não pode/);
+    // An admin may still close a report about themselves, and suspend a moderator.
+    await admin.as.mutation(api.moderation.act, { reportId: ofAdmin.id, action: "dismiss" });
+    await admin.as.mutation(api.moderation.act, {
+      reportId: ofModerator.id,
+      action: "suspend",
+      duration: 30,
+      reason: "abuso do papel",
+    });
   });
 });

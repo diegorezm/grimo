@@ -163,6 +163,7 @@ const ME: Me = {
   needsEmailVerification: false,
   needsSetup: false,
   isAdmin: false,
+  isStaff: false,
   legal: { needsAcceptance: false, needsAge: false, underage: false },
 };
 
