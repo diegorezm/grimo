@@ -189,3 +189,20 @@ export const suspend = internalMutation({
     return null;
   },
 });
+
+/**
+ * Approves (public: in everyone's search) or rejects (stays only on the shelf of whoever added
+ * it) a hand-added book. Moderation runs it from the panel or the Convex dashboard.
+ */
+export const reviewBook = internalMutation({
+  args: { openLibraryId: v.string(), approve: v.boolean() },
+  handler: async (ctx, { openLibraryId, approve }) => {
+    const book = await ctx.db
+      .query("books")
+      .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", openLibraryId))
+      .unique();
+    if (!book?.reviewStatus) throw notFound("Livro cadastrado");
+    await ctx.db.patch(book._id, { reviewStatus: approve ? "approved" : "rejected" });
+    return null;
+  },
+});

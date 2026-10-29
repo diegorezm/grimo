@@ -43,3 +43,12 @@ export async function blockedIds(ctx: Ctx, viewerId: Id<"users"> | null) {
     ...theirs.map((row) => row.blockerId),
   ]);
 }
+
+/**
+ * Whether `viewerId` may see this book: Open Library books and approved hand-added ones are
+ * public; one still in review (or rejected) only to whoever added it.
+ */
+export const isBookVisible = (book: Doc<"books">, viewerId: Id<"users"> | null) =>
+  book.reviewStatus === undefined ||
+  book.reviewStatus === "approved" ||
+  book.createdBy === viewerId;

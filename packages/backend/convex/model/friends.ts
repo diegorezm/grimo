@@ -1,7 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { authorOf } from "./readers";
-import { isHidden } from "./safety";
+import { isBookVisible, isHidden } from "./safety";
 import { bookView } from "./shelves";
 
 /** People read for "amigos querem ler" (the earliest follows, like the feed). */
@@ -82,7 +82,7 @@ export async function booksFriendsWant(ctx: QueryCtx, viewerId: Id<"users">, lim
   const rows = await Promise.all(
     ranked.map(async ([bookId, row]) => {
       const book = await ctx.db.get(bookId);
-      return book
+      return book && isBookVisible(book, viewerId)
         ? {
             book: bookView(book),
             friends: row.friends.map(authorOf),

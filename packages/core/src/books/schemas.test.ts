@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bookInputSchema } from "./schemas";
+import {
+  bookInputSchema,
+  isManualBookId,
+  manualBookSchema,
+  newManualBookId,
+  splitAuthors,
+} from "./schemas";
 
 const book = {
   openLibraryId: "OL45804W",
@@ -40,5 +46,30 @@ describe("bookInputSchema", () => {
     });
     expect(parsed.authors).toHaveLength(10);
     expect(parsed.genres).toEqual(["fantasy"]);
+  });
+});
+
+describe("hand-added books", () => {
+  it("have their own ids, accepted next to Open Library's", () => {
+    const id = newManualBookId(() => 0.5);
+    expect(isManualBookId(id)).toBe(true);
+    expect(bookInputSchema.safeParse({ ...book, openLibraryId: id }).success).toBe(true);
+    expect(isManualBookId("GRabc")).toBe(false);
+  });
+
+  it("need a title and an author", () => {
+    const empty = manualBookSchema.safeParse({
+      title: " ",
+      authors: [],
+      pageCount: null,
+      publishedYear: null,
+    });
+    expect(empty.success).toBe(false);
+    expect(splitAuthors("Itamar Vieira Junior, Fulana; Sicrano e Beltrana")).toEqual([
+      "Itamar Vieira Junior",
+      "Fulana",
+      "Sicrano",
+      "Beltrana",
+    ]);
   });
 });

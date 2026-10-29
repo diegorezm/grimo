@@ -1,5 +1,6 @@
 import { api } from "@grimo/backend";
-import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query";
+import type { ManualBookInput, ShelfStatus } from "@grimo/core";
+import { keepPreviousData, queryOptions, useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useState } from "react";
 import { type ConvexCache, convexQuery } from "../../lib/convex-cache";
@@ -25,6 +26,12 @@ export function useBookSearch(q: string) {
 }
 
 export type BookDetail = NonNullable<FunctionReturnType<typeof api.books.detail>["detail"]>;
+
+/** The book page's book as `shelves.add` and `groups.create` take it (only the book's fields). */
+export function bookInputOf(book: BookDetail["book"]): BookSearchResult {
+  const { openLibraryId, title, authors, coverUrl, pageCount, publishedYear, genres } = book;
+  return { openLibraryId, title, authors, coverUrl, pageCount, publishedYear, genres };
+}
 
 /** Book page: the book, your shelf entry, community numbers and reviews. */
 export function bookQuery(openLibraryId: string) {
@@ -59,4 +66,13 @@ export function useBook(openLibraryId: string) {
   const detail = query.data?.detail ?? undefined;
   const missing = query.data !== undefined && !detail && (!needsWork || failed);
   return { ...query, data: detail, isError: query.isError || missing };
+}
+
+/** "Cadastrar livro": a book Open Library doesn't have. Resolves with its id (to open it). */
+export function useAddManualBook() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: (input: ManualBookInput & { status: ShelfStatus }) =>
+      convex.mutation(api.books.addManual, input),
+  });
 }
