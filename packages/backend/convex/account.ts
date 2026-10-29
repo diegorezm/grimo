@@ -30,6 +30,7 @@ export const exportData = query({
       notifications,
       memberships,
       groupMessages,
+      imports,
     ] = await Promise.all([
       ctx.db
         .query("readingGoals")
@@ -82,6 +83,10 @@ export const exportData = query({
       ctx.db
         .query("groupMessages")
         .withIndex("by_author", (q) => q.eq("authorId", userId))
+        .collect(),
+      ctx.db
+        .query("imports")
+        .withIndex("by_user_created", (q) => q.eq("userId", userId))
         .collect(),
     ]);
 
@@ -174,6 +179,13 @@ export const exportData = query({
           at: date(row.createdAt),
         })),
       ),
+      imports: imports.map((row) => ({
+        source: row.source,
+        at: date(row.createdAt),
+        total: row.total,
+        added: row.added,
+        notFound: row.notFound,
+      })),
       legalAcceptances: consents.map((row) => ({
         document: row.document,
         version: row.version,
@@ -321,6 +333,23 @@ const steps: Step[] = [
       ctx,
       ctx.db.query("notifications").withIndex("by_actor_post", (q) => q.eq("actorId", userId)),
     ),
+  // Imports: rows still waiting (an import running when the account went), then the summaries.
+  async (ctx, userId) => {
+    const jobs = await ctx.db
+      .query("imports")
+      .withIndex("by_user_created", (q) => q.eq("userId", userId))
+      .take(BATCH);
+    for (const job of jobs) {
+      const rows = await ctx.db
+        .query("importRows")
+        .withIndex("by_import_index", (q) => q.eq("importId", job._id))
+        .take(BATCH);
+      for (const row of rows) await ctx.db.delete(row._id);
+      if (rows.length < BATCH) await ctx.db.delete(job._id);
+      else return true;
+    }
+    return jobs.length === BATCH;
+  },
   // Juntos: the reader's messages, then their seats (a group left empty goes too).
   async (ctx, userId) =>
     deleteAll(

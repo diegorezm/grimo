@@ -35,6 +35,18 @@ export const bookInput = v.object({
   genres: v.array(v.string()),
 });
 
+/** A book read from another app's export (`@grimo/core` `importedBookSchema`). */
+export const importedBook = v.object({
+  title: v.string(),
+  authors: v.array(v.string()),
+  isbn13: v.union(v.string(), v.null()),
+  isbn10: v.union(v.string(), v.null()),
+  status: shelfStatus,
+  rating: v.union(v.number(), v.null()),
+  finishedAt: v.union(v.number(), v.null()),
+  pageCount: v.union(v.number(), v.null()),
+});
+
 /** Open Library work page (synopsis, cover, authors). */
 export const workDetails = v.object({
   title: v.union(v.string(), v.null()),
@@ -223,6 +235,34 @@ export default defineSchema({
     .index("by_actor_post", ["actorId", "postId"])
     .index("by_post", ["postId"])
     .index("by_comment", ["commentId"]),
+
+  /**
+   * A shelf import from another app (`imports.ts`). Its rows are worked through in the
+   * background and deleted as they go; what's left is the summary (and up to 100 titles Open
+   * Library didn't know, so the reader can add them by hand).
+   */
+  imports: defineTable({
+    userId: v.id("users"),
+    source: v.literal("goodreads"),
+    total: v.number(),
+    processed: v.number(),
+    added: v.number(),
+    /** Already on the shelf: left as they were. */
+    skipped: v.number(),
+    notFound: v.array(v.string()),
+    notFoundCount: v.number(),
+    status: v.union(v.literal("running"), v.literal("done")),
+    createdAt: v.number(),
+    finishedAt: v.union(v.number(), v.null()),
+  }).index("by_user_created", ["userId", "createdAt"]),
+
+  importRows: defineTable({
+    importId: v.id("imports"),
+    index: v.number(),
+    book: importedBook,
+    /** Open Library lookups that failed (network): retried, then given up as not found. */
+    attempts: v.number(),
+  }).index("by_import_index", ["importId", "index"]),
 
   /**
    * Juntos: a few readers reading one book together (`groups.ts`). Joined by invite link

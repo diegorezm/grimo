@@ -1,6 +1,7 @@
 import {
   type BookInput,
   editionPages,
+  type ImportedBook,
   planShelfTransition,
   type ShelfStatus,
   type UpdateShelfEntryInput,
@@ -197,6 +198,45 @@ export async function addToShelf(
   // Adding a book is always worth a feed entry ("shelved"/"finished").
   await recordSideEffects(ctx, entry, plan.pagesRead, plan.activity ?? "shelved", now);
   return entry;
+}
+
+/**
+ * Puts a book from an import on the shelf as it was in the other app: status, rating, finish
+ * date and edition pages. Quietly: no feed line, no reading log (pages read elsewhere aren't this
+ * month's reading). Returns false when the book is already on the shelf (left untouched).
+ */
+export async function importToShelf(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  book: BookInput,
+  imported: Pick<ImportedBook, "status" | "rating" | "finishedAt" | "pageCount">,
+  now = Date.now(),
+) {
+  const bookId = await upsertBook(ctx, book);
+  const existing = await ctx.db
+    .query("shelfEntries")
+    .withIndex("by_user_book", (q) => q.eq("userId", userId).eq("bookId", bookId))
+    .unique();
+  if (existing) return false;
+  const editionPagesDiffer = imported.pageCount !== null && imported.pageCount !== book.pageCount;
+  const pages = editionPages(editionPagesDiffer ? imported.pageCount : null, book.pageCount);
+  const currentPage = imported.status === "read" ? (pages ?? 0) : 0;
+  await ctx.db.insert("shelfEntries", {
+    userId,
+    bookId,
+    status: imported.status,
+    currentPage,
+    maxPage: currentPage,
+    ...(editionPagesDiffer && { pageCount: imported.pageCount! }),
+    rating: imported.rating,
+    startedAt: null,
+    finishedAt: imported.status === "read" ? imported.finishedAt : null,
+    updatedAt: imported.finishedAt ?? now,
+  });
+  const user = await ctx.db.get(userId);
+  if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
+  await recordBookCounters(ctx, bookId, null, { rating: imported.rating });
+  return true;
 }
 
 export async function removeFromShelf(

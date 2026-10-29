@@ -31,6 +31,14 @@ export function AccountSettings({ me }: { me: Me }) {
       >
         <ExportButton username={me.username} />
       </Block>
+      <Block
+        title="Trazer suas estantes"
+        text="Importe sua biblioteca do Goodreads: livros, notas e datas de leitura."
+      >
+        <Link to="/importar" className="w-fit font-semibold text-accent hover:underline">
+          Importar do Goodreads
+        </Link>
+      </Block>
       <Block title="Leitores bloqueados" text="Quem você bloqueia não vê nem interage com você.">
         <BlockedList />
       </Block>
