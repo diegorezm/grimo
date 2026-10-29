@@ -155,8 +155,8 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Recurso                                                                  | Inspiração        | Status | Quando  |
 | ------------------------------------------------------------------------ | ----------------- | :----: | ------- |
 | Card do mês para Stories (4 modelos) na web                              | Spotify Wrapped   |   ✓    | —       |
-| **Estúdio do card do mês no mobile** com compartilhamento nativo (F3)    | —                 |   ◐    | Agora   |
-| **Retrospectiva do ano** (dezembro, mesmos modelos) (F9)                 | Skoob/Spotify     |   —    | Agora (tem prazo: dezembro) |
+| **Estúdio do card do mês no mobile** com compartilhamento nativo (F3)    | —                 |   ✓    | —       |
+| **Retrospectiva do ano** (dezembro, mesmos modelos) (F9)                 | Skoob/Spotify     |   ✓    | —       |
 | Card de resenha e card de citação                                        | Letterboxd        |   —    | Próximo |
 | Card de "terminei de ler" (capa + nota + frase)                          | —                 |   —    | Próximo |
 | Link do perfil bonito (preview com OG image)                             | Letterboxd        |   —    | Próximo |
@@ -202,7 +202,7 @@ Exigem logística, endereço ou parceiros: só fazem sentido com uma base grande
 
 1. **Paridade do mobile** (F3, F2): perfil de outros leitores, seguir, busca de leitores, editar
    perfil, remover da estante. Sem isso o app não é social, e o Juntos depende disso.
-2. **Estúdio do card no mobile + Retrospectiva do ano**: crescimento, e dezembro está perto.
+2. ~~**Estúdio do card no mobile + Retrospectiva do ano**~~ (feito).
 3. **Notificações com push** (F6) e **menções**: o que traz o leitor de volta (e o Juntos precisa).
 4. **Juntos, etapa 1**: leitura conjunta com convite por link, progresso em %, conversa sem
    spoiler, ritmo e cards. Antes: páginas da sua edição (F13) e "amigos querem ler" (F10).

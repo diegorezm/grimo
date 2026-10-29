@@ -19,6 +19,15 @@ export function useYearOverview(year?: number, options: { enabled?: boolean } = 
   return useQuery({ ...yearOverviewQuery(year), ...options });
 }
 
-export function useMonthlySummary(month?: string) {
-  return useQuery(monthlySummaryQuery(month));
+/** Data for the "retrospectiva" card. */
+export function yearlySummaryQuery(year = yearOf(new Date())) {
+  return convexQuery(api.stats.yearly, { year }, "required");
+}
+
+export function useMonthlySummary(month?: string, options: { enabled?: boolean } = {}) {
+  return useQuery({ ...monthlySummaryQuery(month), ...options });
+}
+
+export function useYearlySummary(year?: number, options: { enabled?: boolean } = {}) {
+  return useQuery({ ...yearlySummaryQuery(year), ...options });
 }

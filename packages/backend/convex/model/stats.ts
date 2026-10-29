@@ -1,4 +1,10 @@
-import { computeMonthlySummary, monthRange, mostFrequent, yearRange } from "@grimo/core";
+import {
+  computeMonthlySummary,
+  computeYearlySummary,
+  monthRange,
+  mostFrequent,
+  yearRange,
+} from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { timeZoneOf } from "./readers";
@@ -88,5 +94,21 @@ export async function monthlySummary(ctx: QueryCtx, user: Doc<"users">, month: s
     finished,
     pagesRead: pages,
     goal: target ? { target, finishedThisYear: yearFinished.length } : null,
+  });
+}
+
+/** The year in review: every book finished in `year`, favorite, top genre and the goal. */
+export async function yearlySummary(ctx: QueryCtx, user: Doc<"users">, year: number) {
+  const userId = user._id;
+  const range = yearRange(year, timeZoneOf(user));
+  const [finished, pages, target] = await Promise.all([
+    finishedBooks(ctx, userId, range),
+    pagesRead(ctx, userId, range),
+    goalTarget(ctx, userId, year),
+  ]);
+  return computeYearlySummary(year, {
+    finished,
+    pagesRead: pages,
+    goal: target ? { target, finishedThisYear: finished.length } : null,
   });
 }

@@ -32,7 +32,7 @@ export function DiarioCard({ data, palette, showCover, showDeltas }: CardProps) 
         className="font-mono"
         style={{ fontSize: 34, letterSpacing: "0.25em", color: palette.muted }}
       >
-        MEU MÊS DE LEITURA
+        MEU {data.unit.toUpperCase()} DE LEITURA
       </p>
       <h1
         className="font-serif"
@@ -44,9 +44,11 @@ export function DiarioCard({ data, palette, showCover, showDeltas }: CardProps) 
           marginTop: 24,
         }}
       >
-        <span style={{ textTransform: "capitalize" }}>{data.monthName}</span>
+        <span style={{ textTransform: "capitalize" }}>{data.periodName}</span>
         <br />
-        <span style={{ color: palette.muted }}>{data.year}</span>
+        <span style={{ color: palette.muted }}>
+          {data.kind === "year" ? "retrospectiva" : data.year}
+        </span>
       </h1>
 
       <div className="flex items-center" style={{ gap: 70, marginTop: 110 }}>

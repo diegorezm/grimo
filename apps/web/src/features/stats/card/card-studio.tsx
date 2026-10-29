@@ -1,5 +1,11 @@
-import { useCardStudioStore } from "@grimo/client";
-import { CARD_TEMPLATE_LABELS, CARD_TEMPLATES, shiftMonth, toMonthKey } from "@grimo/core";
+import { useCardData, useCardStudioStore } from "@grimo/client";
+import {
+  CARD_TEMPLATE_LABELS,
+  CARD_TEMPLATES,
+  type CardPeriod,
+  shiftMonth,
+  toMonthKey,
+} from "@grimo/core";
 import { type CardPaletteKey, cardPalettes } from "@grimo/tokens";
 import { type ReactNode, useRef, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
@@ -7,27 +13,39 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 import { downloadCard, StoryCanvas, shareCard } from "./story-canvas";
 import { CARD_COMPONENTS } from "./templates";
-import { useCardData } from "./use-card-data";
 
 const THIS_MONTH = toMonthKey(new Date());
-const MONTHS = Array.from({ length: 6 }, (_, i) => shiftMonth(THIS_MONTH, -i));
+const THIS_YEAR = Number(THIS_MONTH.slice(0, 4));
+/** The year so far, the last six months, and last year's retrospectiva. */
+const PERIODS: CardPeriod[] = [
+  { kind: "year", year: THIS_YEAR },
+  ...Array.from({ length: 6 }, (_, i) => ({
+    kind: "month" as const,
+    month: shiftMonth(THIS_MONTH, -i),
+  })),
+  { kind: "year", year: THIS_YEAR - 1 },
+];
+const periodKey = (period: CardPeriod) =>
+  period.kind === "month" ? period.month : String(period.year);
 const monthChip = new Intl.DateTimeFormat("pt-BR", {
   month: "short",
   year: "2-digit",
   timeZone: "UTC",
 });
 
-/** Pick a layout, colors, month and details; preview live; share or download the PNG. */
-export function CardStudio() {
+/** Pick a layout, colors, period and details; preview live; share or download the PNG. */
+export function CardStudio({ year }: { year?: number }) {
   const studio = useCardStudioStore();
-  const [month, setMonth] = useState(THIS_MONTH);
-  const data = useCardData(month);
+  const [period, setPeriod] = useState<CardPeriod>(
+    year ? { kind: "year", year } : { kind: "month", month: THIS_MONTH },
+  );
+  const data = useCardData(period);
   const preview = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
 
   const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
   const Card = CARD_COMPONENTS[studio.template];
-  const fileName = `grimo-${month}-${studio.template}.png`;
+  const fileName = `grimo-${periodKey(period)}-${studio.template}.png`;
 
   async function run(action: typeof shareCard) {
     if (!preview.current) return;
@@ -136,24 +154,30 @@ export function CardStudio() {
           </div>
         </Section>
 
-        <Section title="Mês">
+        <Section title="Período">
           <div className="flex flex-wrap gap-2">
-            {MONTHS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={key === month}
-                onClick={() => setMonth(key)}
-                className={cn(
-                  "rounded-full border px-4 py-1.5 font-mono text-xs uppercase tracking-wider transition",
-                  key === month
-                    ? "border-transparent bg-primary text-primary-foreground"
-                    : "border-border text-text-muted hover:text-text",
-                )}
-              >
-                {monthChip.format(new Date(`${key}-15T12:00:00Z`))}
-              </button>
-            ))}
+            {PERIODS.map((option) => {
+              const key = periodKey(option);
+              const active = key === periodKey(period);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setPeriod(option)}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 font-mono text-xs uppercase tracking-wider transition",
+                    active
+                      ? "border-transparent bg-primary text-primary-foreground"
+                      : "border-border text-text-muted hover:text-text",
+                  )}
+                >
+                  {option.kind === "year"
+                    ? `Ano ${option.year}`
+                    : monthChip.format(new Date(`${option.month}-15T12:00:00Z`))}
+                </button>
+              );
+            })}
           </div>
         </Section>
 
