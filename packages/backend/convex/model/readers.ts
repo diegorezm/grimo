@@ -36,6 +36,13 @@ export async function requireViewer(ctx: Ctx): Promise<Doc<"users">> {
   return viewer;
 }
 
+/** The signed-in reader if on the moderation team; anyone else gets FORBIDDEN. */
+export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
+  const viewer = await requireViewer(ctx);
+  if (viewer.role !== "admin") throw appError("FORBIDDEN", "Só a moderação pode ver isso.");
+  return viewer;
+}
+
 /**
  * Like `requireViewer`, for the social features (comment, post, like, follow): the email must be
  * verified. Not enforced while the deployment can't send email (`emailEnabled`), since nobody

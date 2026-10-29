@@ -46,6 +46,8 @@ export const me = query({
       ...(await profileOf(ctx, viewer)),
       timeZone: timeZoneOf(viewer),
       needsSetup: viewer.setupDone === false,
+      /** On the moderation team (`/admin`). */
+      isAdmin: viewer.role === "admin",
       /** Social features are locked until the email is verified (see `requireVerifiedViewer`). */
       needsEmailVerification: needsEmailVerification(viewer),
       legal: await legalStatus(ctx, viewer),

@@ -31,6 +31,13 @@ export function AccountSettings({ me }: { me: Me }) {
       >
         <ExportButton username={me.username} />
       </Block>
+      {me.isAdmin && (
+        <Block title="Moderação" text="Denúncias abertas e livros cadastrados para revisar.">
+          <Link to="/admin" className="w-fit font-semibold text-accent hover:underline">
+            Abrir o painel
+          </Link>
+        </Block>
+      )}
       <Block
         title="Trazer suas estantes"
         text="Importe sua biblioteca do Goodreads: livros, notas e datas de leitura."

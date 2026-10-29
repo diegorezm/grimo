@@ -102,6 +102,8 @@ export default defineSchema({
     ageRejectedAt: v.optional(v.number()),
     /** Suspended by moderation (`moderation.suspend`): hidden, and signed-in calls fail. */
     suspendedAt: v.optional(v.number()),
+    /** Moderation team: opens `/admin` (`moderation.queue`). Granted with `moderation:setAdmin`. */
+    role: v.optional(v.literal("admin")),
     /** Account deleted: hidden while `account.purge` erases its data (then the row goes too). */
     deletedAt: v.optional(v.number()),
   })
