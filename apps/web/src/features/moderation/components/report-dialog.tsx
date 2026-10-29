@@ -3,6 +3,7 @@ import {
   firstIssue,
   REPORT_REASON_LABELS,
   REPORT_REASONS,
+  REPORT_TARGET_TITLES,
   type ReportReason,
   type ReportTarget,
   reportSchema,
@@ -10,12 +11,6 @@ import {
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
-
-const TITLES: Record<ReportTarget, string> = {
-  post: "Denunciar publicação",
-  comment: "Denunciar comentário",
-  user: "Denunciar leitor",
-};
 
 /** "Denunciar" link that opens the report dialog for a post, comment or reader. */
 export function ReportButton({
@@ -93,7 +88,7 @@ export function ReportDialog({
         ) : (
           <form onSubmit={submit} noValidate className="flex flex-col gap-4">
             <h2 id="report-title" className="text-2xl font-medium italic">
-              {TITLES[target]}
+              {REPORT_TARGET_TITLES[target]}
             </h2>
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm text-text-muted">Qual é o problema?</legend>

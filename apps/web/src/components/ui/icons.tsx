@@ -141,3 +141,12 @@ export const BellIcon = (p: IconProps) => (
     <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
   </Icon>
 );
+
+export const TogetherIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 9.5c-1.6-1.3-4.2-1.7-7.5-1.2v11c3.3-.5 5.9-.1 7.5 1.2 1.6-1.3 4.2-1.7 7.5-1.2v-11c-3.3-.5-5.9-.1-7.5 1.2z" />
+    <path d="M12 9.5v11" />
+    <circle cx="8" cy="3.8" r="1.6" />
+    <circle cx="16" cy="3.8" r="1.6" />
+  </Icon>
+);

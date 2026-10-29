@@ -22,6 +22,10 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Buscar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="juntos">
+        <NativeTabs.Trigger.Label>Juntos</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.2" md="group" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="shelves">
         <NativeTabs.Trigger.Label>Estantes</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="books.vertical" md="book" />

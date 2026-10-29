@@ -5,6 +5,7 @@ import {
   useAddToShelf,
   useBookSearch,
   useCompleteSetup,
+  useJoinGroup,
   useMe,
   useUpdateMe,
   useUpdateShelfEntry,
@@ -26,6 +27,7 @@ import { SearchIcon } from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
 import { Sparkle } from "@/components/ui/sparkle";
 import { BookCover } from "@/features/books";
+import { takePendingInvite } from "@/features/groups";
 import { AgreementFields, UnderageNotice } from "@/features/legal";
 import { cn } from "@/utils/cn";
 
@@ -43,6 +45,7 @@ const SUGGESTIONS = ["Torto Arado", "Clarice Lispector", "Duna", "Agatha Christi
  * does the thing the product is for: puts the book they're reading on the shelf and marks the
  * page (activation), then commits to a yearly goal (with a sensible default). Progress starts
  * with the account already done, and the last screen celebrates instead of just confirming.
+ * Coming from an invite (`/j/<code>`), the group's book is the book: no need to pick one.
  */
 export function OnboardingFlow() {
   const me = useMe();
@@ -52,6 +55,22 @@ export function OnboardingFlow() {
   const [book, setBook] = useState<{ entryId: string; info: BookSearchResult } | null>(null);
   const [page, setPage] = useState<number | null>(null);
   const [goal, setGoal] = useState<number | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const join = useJoinGroup();
+
+  function afterProfile() {
+    const code = takePendingInvite();
+    if (!code) return setStep("book");
+    join.mutate(code, {
+      onSuccess: ({ id, entryId, book: joined }) => {
+        setGroupId(id);
+        setBook({ entryId, info: joined });
+        setStep("page");
+      },
+      // Expired or full: the reader just picks a book.
+      onError: () => setStep("book"),
+    });
+  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
@@ -74,7 +93,7 @@ export function OnboardingFlow() {
           <ProfileStep
             initialName={me.data.name}
             initialUsername={me.data.name ? me.data.username : ""}
-            onDone={() => setStep("book")}
+            onDone={afterProfile}
           />
         )}
         {step === "book" && (
@@ -104,7 +123,9 @@ export function OnboardingFlow() {
             }}
           />
         )}
-        {step === "done" && <DoneStep book={book?.info ?? null} page={page} goal={goal} />}
+        {step === "done" && (
+          <DoneStep book={book?.info ?? null} page={page} goal={goal} groupId={groupId} />
+        )}
       </main>
     </div>
   );
@@ -488,14 +509,20 @@ function label(goal: number) {
   return "um por semana";
 }
 
+const doneLink =
+  "bg-accent-gradient rounded-full px-7 py-4 font-mono text-sm font-medium uppercase tracking-wider text-accent-foreground shadow-lg shadow-accent/30 transition hover:opacity-95";
+
 function DoneStep({
   book,
   page,
   goal,
+  groupId,
 }: {
   book: BookSearchResult | null;
   page: number | null;
   goal: number | null;
+  /** Joined a group by invite: the way out leads there. */
+  groupId: string | null;
 }) {
   const me = useMe().data;
   const firstName = me?.name.split(" ")[0];
@@ -530,12 +557,15 @@ function DoneStep({
           </div>
         )}
       </div>
-      <Link
-        to="/"
-        className="bg-accent-gradient rounded-full px-7 py-4 font-mono text-sm font-medium uppercase tracking-wider text-accent-foreground shadow-lg shadow-accent/30 transition hover:opacity-95"
-      >
-        Abrir meu grimório
-      </Link>
+      {groupId ? (
+        <Link to="/juntos/$id" params={{ id: groupId }} className={doneLink}>
+          Abrir o grupo
+        </Link>
+      ) : (
+        <Link to="/" className={doneLink}>
+          Abrir meu grimório
+        </Link>
+      )}
     </section>
   );
 }

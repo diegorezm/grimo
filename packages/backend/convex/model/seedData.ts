@@ -386,3 +386,18 @@ export const comments: { from: string; post: number; body: string }[] = [
   { from: "bia.lima", post: 3, body: "Eu topo! Podemos marcar um capítulo por semana." },
   { from: "caio", post: 3, body: "Bora. Eu levo o café. @bia.lima marca o dia?" },
 ];
+
+/** A Juntos group: the main reader (owner) reading `book` with `members`. */
+export const group: {
+  book: BookKey;
+  members: string[];
+  messages: { from: string; body: string; percent: number }[];
+} = {
+  book: "duna",
+  members: ["bia.lima", "caio"],
+  messages: [
+    { from: "rafa", body: "Bora terminar antes do filme? Três semanas dá.", percent: 0 },
+    { from: "caio", body: "Os Fremen são muito mais legais do que eu lembrava.", percent: 35 },
+    { from: "rafa", body: "Aquele jantar na casa do Duque… que tensão.", percent: 43 },
+  ],
+};

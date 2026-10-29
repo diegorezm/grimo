@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx, query } from "./_generated/server";
 import { recordBookCounters } from "./model/bookStats";
+import { leaveGroup } from "./model/groups";
 import { requireViewer } from "./model/readers";
 
 /**
@@ -27,6 +28,8 @@ export const exportData = query({
       blocks,
       consents,
       notifications,
+      memberships,
+      groupMessages,
     ] = await Promise.all([
       ctx.db
         .query("readingGoals")
@@ -72,6 +75,14 @@ export const exportData = query({
         .query("notifications")
         .withIndex("by_user_created", (q) => q.eq("userId", userId))
         .collect(),
+      ctx.db
+        .query("groupMembers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("groupMessages")
+        .withIndex("by_author", (q) => q.eq("authorId", userId))
+        .collect(),
     ]);
 
     const books = new Map<Id<"books">, Doc<"books"> | null>();
@@ -82,6 +93,7 @@ export const exportData = query({
     };
     const username = async (id: Id<"users">) => (await ctx.db.get(id))?.username ?? null;
     const date = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
+    const groupBook = async (id: Id<"groups">) => bookTitle((await ctx.db.get(id))?.bookId ?? null);
 
     return {
       exportedAt: new Date().toISOString(),
@@ -144,6 +156,22 @@ export const exportData = query({
           postId: row.postId,
           at: date(row.createdAt),
           readAt: date(row.readAt),
+        })),
+      ),
+      readingGroups: await Promise.all(
+        memberships.map(async (row) => ({
+          groupId: row.groupId,
+          book: await groupBook(row.groupId),
+          joinedAt: date(row.joinedAt),
+        })),
+      ),
+      groupMessages: await Promise.all(
+        groupMessages.map(async (row) => ({
+          groupId: row.groupId,
+          book: await groupBook(row.groupId),
+          body: row.body,
+          atPercent: row.percent,
+          at: date(row.createdAt),
         })),
       ),
       legalAcceptances: consents.map((row) => ({
@@ -293,6 +321,24 @@ const steps: Step[] = [
       ctx,
       ctx.db.query("notifications").withIndex("by_actor_post", (q) => q.eq("actorId", userId)),
     ),
+  // Juntos: the reader's messages, then their seats (a group left empty goes too).
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("groupMessages").withIndex("by_author", (q) => q.eq("authorId", userId)),
+    ),
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(POST_BATCH);
+    for (const row of rows) {
+      const group = await ctx.db.get(row.groupId);
+      if (group) await leaveGroup(ctx, group, userId);
+      else await ctx.db.delete(row._id);
+    }
+    return rows.length === POST_BATCH;
+  },
   async (ctx, userId) =>
     deleteAll(
       ctx,

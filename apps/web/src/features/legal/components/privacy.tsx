@@ -53,6 +53,9 @@ export function PrivacyPage() {
             <strong>Social:</strong> resenhas, notas, comentários, curtidas, quem você segue,
             bloqueios e denúncias que você faz, e as notificações do que outros leitores fizeram com
             você (seguiram, curtiram, comentaram ou mencionaram com @).
+            <br />
+            <strong>Juntos:</strong> os grupos de leitura em que você está, quando entrou e as
+            mensagens que você escreve neles (com o ponto do livro em que você estava).
           </li>
           <li>
             <strong>Aceites:</strong> versão e data em que você aceitou os Termos e esta Política, e
@@ -99,6 +102,11 @@ export function PrivacyPage() {
           ver seu nome, @, foto, bio, gêneros favoritos, livros que você está lendo e já leu,
           avaliações, resenhas, notas, comentários, quem você segue e quem segue você, e suas
           estatísticas de leitura. Seu email e os dados técnicos nunca são públicos.
+        </p>
+        <p>
+          Num grupo do Juntos, os outros participantes veem seu progresso no livro e suas mensagens.
+          Quem tiver o link de convite do grupo vê o livro, quem participa e o progresso de cada um,
+          mas não as mensagens.
         </p>
       </Section>
 
@@ -173,9 +181,9 @@ export function PrivacyPage() {
           <li>Enquanto sua conta existir.</li>
           <li>
             Ao excluir a conta, apagamos perfil, estantes, leituras, resenhas, notas, comentários,
-            curtidas, seguidores, notificações, bloqueios e aceites em poucos minutos. Cópias de
-            segurança mantidas pelo provedor podem guardar esses dados por um período limitado, até
-            serem substituídas.
+            curtidas, seguidores, notificações, grupos e mensagens do Juntos, bloqueios e aceites em
+            poucos minutos. Cópias de segurança mantidas pelo provedor podem guardar esses dados por
+            um período limitado, até serem substituídas.
           </li>
           <li>
             Denúncias feitas sobre você ou seu conteúdo são mantidas como registro de moderação pelo

@@ -98,11 +98,11 @@ convite**, e o convite é um link que traz gente nova.
 
 | Etapa | Recurso | Inspiração | Status | Quando |
 | ----- | ------- | ---------- | :----: | ------ |
-| 1 | **Leitura conjunta**: 2 a 20 pessoas, um livro, link de convite, progresso de todos lado a lado | Maratona/StoryGraph | — | Próximo |
-| 1 | Conversa por trecho, **liberada conforme o seu progresso** (sem spoiler) | Fable | — | Próximo |
-| 1 | Ritmo do grupo: data para terminar → meta de páginas por semana calculada | Bookclubs | — | Próximo |
-| 1 | Botão **"Ler com alguém"** na página do livro e nos livros de "Quero ler" | — | — | Próximo |
-| 1 | Card do grupo e card de "terminamos juntos" | Spotify Wrapped | — | Próximo |
+| 1 | **Leitura conjunta**: 2 a 20 pessoas, um livro, link de convite, progresso de todos lado a lado | Maratona/StoryGraph | ✓ | — |
+| 1 | Conversa por trecho, **liberada conforme o seu progresso** (sem spoiler) | Fable | ✓ | — |
+| 1 | Ritmo do grupo: data para terminar → meta de páginas por dia calculada | Bookclubs | ✓ | — |
+| 1 | Botão **"Ler com alguém"** na página do livro e nos livros de "Quero ler" | — | ✓ | — |
+| 1 | Card do grupo e card de "terminamos juntos" | Spotify Wrapped | — | Próximo (o que falta da etapa 1) |
 | 2 | **Clubes**: grupo fixo que lê um livro depois do outro, enquete para o próximo | Bookclubs/Fable | — | Depois |
 | 2 | Encontros do clube com data (lembrete, link da chamada ou local) | Bookclubs | — | Depois |
 | 3 | **Leituras abertas**: grupos públicos por livro, qualquer um entra (resolve a aba vazia de quem não tem amigos no app) | Maratona | — | Depois |
@@ -145,7 +145,7 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Busca e página do livro com resenhas da comunidade                       | todos             |   ✓    | —       |
 | **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas e seguíveis | Letterboxd | — | Próximo |
 | Em alta entre quem você segue (F10)                                      | Letterboxd        |   —    | Próximo |
-| Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   ◐    | Agora ("Amigos querem ler" no Início e no livro; falta o botão "ler juntos?", que vem com o Juntos) |
+| Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   ✓    | —       |
 | Livros parecidos na página do livro                                      | StoryGraph        |   —    | Depois  |
 | Explorar por gênero / humor                                              | StoryGraph        |   —    | Depois  |
 | Lançamentos de editoras parceiras                                        | Skoob             |   —    | Talvez  |
