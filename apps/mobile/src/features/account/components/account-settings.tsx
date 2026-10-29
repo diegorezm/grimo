@@ -5,6 +5,7 @@ import {
   type Me,
   useBlockedReaders,
   useExportData,
+  useLatestImport,
   useSetBlocked,
 } from "@grimo/client";
 import { deleteConfirmationMatches } from "@grimo/core";
@@ -12,11 +13,13 @@ import { useQuery } from "@tanstack/react-query";
 import { File, Paths } from "expo-file-system";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
+import * as WebBrowser from "expo-web-browser";
 import { type ReactNode, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { LegalLinks } from "@/features/legal";
+import { SITE_URL } from "@/lib/server";
 import { useAppCache, useAuthClient } from "@/providers/app-providers";
 
 /**
@@ -31,6 +34,12 @@ export function AccountSettings({ me }: { me: Me }) {
         text="Uma cópia de tudo o que o Grimo guarda sobre você, em um arquivo JSON."
       >
         <ExportButton username={me.username} />
+      </Section>
+      <Section
+        title="Trazer suas estantes"
+        text="Importe sua biblioteca do Goodreads (livros, notas e datas de leitura). O arquivo é escolhido no site, de preferência no computador."
+      >
+        <ImportStatus />
       </Section>
       <Section title="Leitores bloqueados" text="Quem você bloqueia não vê nem interage com você.">
         <BlockedList />
@@ -55,6 +64,34 @@ function Section({ title, text, children }: { title: string; text: string; child
       <Text color="textMuted">{text}</Text>
       {children}
     </Card>
+  );
+}
+
+/** Shortcut to the web import, and its progress or result once there is one. */
+function ImportStatus() {
+  const latest = useLatestImport().data;
+  return (
+    <>
+      {latest?.status === "running" && (
+        <Text>
+          Importando: {latest.processed} de {latest.total} livros.
+        </Text>
+      )}
+      {latest?.status === "done" && (
+        <Text color="textMuted">
+          Última importação: {latest.added} livros entraram
+          {latest.notFoundCount > 0
+            ? `, ${latest.notFoundCount} ${latest.notFoundCount === 1 ? "não encontrado" : "não encontrados"}`
+            : ""}
+          .
+        </Text>
+      )}
+      <Button
+        variant="secondary"
+        title="Importar do Goodreads (no site)"
+        onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/importar`)}
+      />
+    </>
   );
 }
 

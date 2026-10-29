@@ -56,6 +56,11 @@ export function PrivacyPage() {
             <br />
             <strong>Juntos:</strong> os grupos de leitura em que você está, quando entrou e as
             mensagens que você escreve neles (com o ponto do livro em que você estava).
+            <br />
+            <strong>Importação:</strong> se você importar do Goodreads, o arquivo é lido no seu
+            navegador e enviamos só os livros (título, autores, ISBN, estante, nota, data de leitura
+            e páginas). Eles vão para a sua estante; do resto guardamos um resumo e os títulos que
+            não encontramos.
           </li>
           <li>
             <strong>Aceites:</strong> versão e data em que você aceitou os Termos e esta Política, e
@@ -181,9 +186,9 @@ export function PrivacyPage() {
           <li>Enquanto sua conta existir.</li>
           <li>
             Ao excluir a conta, apagamos perfil, estantes, leituras, resenhas, notas, comentários,
-            curtidas, seguidores, notificações, grupos e mensagens do Juntos, bloqueios e aceites em
-            poucos minutos. Cópias de segurança mantidas pelo provedor podem guardar esses dados por
-            um período limitado, até serem substituídas.
+            curtidas, seguidores, notificações, grupos e mensagens do Juntos, importações, bloqueios
+            e aceites em poucos minutos. Cópias de segurança mantidas pelo provedor podem guardar
+            esses dados por um período limitado, até serem substituídas.
           </li>
           <li>
             Denúncias feitas sobre você ou seu conteúdo são mantidas como registro de moderação pelo
