@@ -1,5 +1,7 @@
 export { CardPreview } from "./card/card-preview";
 export { CardStudio } from "./card/card-studio";
+export { CardCover, CardFooter, CardSparkle } from "./card/parts";
+export { downloadCard, StoryCanvas, shareCard } from "./card/story-canvas";
 export type { CardData } from "./card/types";
 export { GenreBreakdown } from "./components/genre-breakdown";
 export { MonthlyCard } from "./components/monthly-card";

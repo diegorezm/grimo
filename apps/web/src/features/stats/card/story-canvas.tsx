@@ -49,11 +49,11 @@ function download(file: File) {
 }
 
 /** Share the card as a PNG via the Web Share API, falling back to a download. */
-export async function shareCard(node: HTMLElement, name: string) {
+export async function shareCard(node: HTMLElement, name: string, title = "Meu mês de leitura") {
   const file = await toFile(node, name);
   if (!file) return;
   if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file], title: "Meu mês de leitura" });
+    await navigator.share({ files: [file], title });
     return;
   }
   download(file);

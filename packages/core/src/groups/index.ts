@@ -3,6 +3,8 @@ import { readingPercent } from "../lib/dashboard";
 import type { ShelfStatus } from "../shelves/constants";
 import { editionPages } from "../shelves/transition";
 
+export * from "./card";
+
 /**
  * Juntos: a few people reading one book together. Progress is compared in percent (editions
  * have different page counts) and the conversation opens up as you read (no spoilers).

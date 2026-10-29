@@ -1,4 +1,5 @@
 import { api, type Id } from "@grimo/backend";
+import { buildGroupCard } from "@grimo/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
@@ -7,7 +8,7 @@ import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
 import { PAGE_SIZE } from "../../lib/query";
 import type { BookSearchResult } from "../books/hooks";
-import { meQuery } from "../profiles/hooks";
+import { meQuery, useMe } from "../profiles/hooks";
 
 export type GroupList = FunctionReturnType<typeof api.groups.mine>;
 export type GroupSummary = GroupList["items"][number];
@@ -38,6 +39,13 @@ export function groupQuery(id: string) {
 /** One group from inside: members side by side, date and invite. Live. */
 export function useGroup(id: string) {
   return useQuery(groupQuery(id));
+}
+
+/** The group's story card ("Lendo juntos" / "Terminamos juntos"), once the group is loaded. */
+export function useGroupCard(id: string) {
+  const group = useGroup(id).data;
+  const username = useMe().data?.username ?? null;
+  return group ? buildGroupCard(group, username, new Date()) : null;
 }
 
 /** What an invite link shows; works signed out too (null: wrong or expired code). */

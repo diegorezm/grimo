@@ -93,6 +93,7 @@ export const detail = query({
       id: group._id,
       inviteCode: group.inviteCode,
       finishBy: group.finishBy,
+      createdAt: group.createdAt,
       isOwner: group.ownerId === viewer._id,
       book: bookView(book),
       members,
