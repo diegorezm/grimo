@@ -23,6 +23,12 @@ async function reportedContent(ctx: MutationCtx, target: string, targetId: strin
     if (!comment) throw notFound("Comentário");
     return { userId: comment.authorId, snapshot: comment.body };
   }
+  if (target === "message") {
+    const id = ctx.db.normalizeId("groupMessages", targetId);
+    const message = id ? await ctx.db.get(id) : null;
+    if (!message) throw notFound("Mensagem");
+    return { userId: message.authorId, snapshot: message.body };
+  }
   const id = ctx.db.normalizeId("users", targetId);
   const user = id ? await ctx.db.get(id) : null;
   if (!user) throw notFound("Leitor");

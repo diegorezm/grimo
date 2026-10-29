@@ -26,6 +26,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
 import { FriendsWant } from "./friends-want";
+import { StartGroup } from "./start-group";
 
 /** Book page: cover, shelf picker, progress / rating, synopsis and reviews. */
 export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
@@ -51,6 +52,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
 
   const { book, entry, community, reviews, friendsWant } = data;
   const pages = editionPages(entry?.pageCount, book.pageCount);
+  const { id: _id, description: _description, ...bookInput } = book;
   const percent = entry ? readingPercent(entry.currentPage, pages) : null;
 
   return (
@@ -98,6 +100,8 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
         )}
 
         {entry?.status === "read" && <RatingCard entryId={entry.id} rating={entry.rating} />}
+
+        <StartGroup book={bookInput} />
 
         {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}
 

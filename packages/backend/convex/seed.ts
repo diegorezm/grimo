@@ -15,10 +15,11 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation } from "./_generated/server";
 import { createAuth } from "./auth";
 import { env } from "./model/env";
+import { ensureReading, freeInviteCode, joinGroup } from "./model/groups";
 import { acceptLegal, legalStatus } from "./model/legal";
 import { searchOpenLibrary } from "./model/openLibrary";
-import { type BookKey, catalog, comments, readers } from "./model/seedData";
-import { addToShelf, updateShelfEntry } from "./model/shelves";
+import { type BookKey, catalog, comments, group, readers } from "./model/seedData";
+import { addToShelf, bookByOpenLibraryId, updateShelfEntry } from "./model/shelves";
 import { addComment, createPost, setLike } from "./posts";
 import { bookInput } from "./schema";
 import { setFollow, updateProfile } from "./users";
@@ -187,6 +188,42 @@ export const populate = internalMutation({
       const postId = mainPosts[comment.post];
       const author = users.get(comment.from);
       if (postId && author) await addComment(ctx, author._id, postId, comment.body);
+    }
+
+    // Juntos: the main reader and two friends reading one book, with a few messages.
+    const groupInput = books[group.book];
+    const groupBook = groupInput ? await bookByOpenLibraryId(ctx, groupInput.openLibraryId) : null;
+    if (groupBook) {
+      const createdAt = tick();
+      const groupId = await ctx.db.insert("groups", {
+        bookId: groupBook._id,
+        ownerId: main.user._id,
+        inviteCode: await freeInviteCode(ctx),
+        finishBy: Date.now() + 21 * 24 * HOUR,
+        memberCount: 1,
+        createdAt,
+        lastMessageAt: null,
+      });
+      await ctx.db.insert("groupMembers", { groupId, userId: main.user._id, joinedAt: createdAt });
+      for (const username of group.members) {
+        const member = users.get(username);
+        if (!member) continue;
+        await joinGroup(ctx, member, (await ctx.db.get(groupId))!);
+        await ensureReading(ctx, member._id, groupBook, tick());
+      }
+      for (const message of group.messages) {
+        const author = users.get(message.from);
+        if (!author) continue;
+        const at = tick();
+        await ctx.db.insert("groupMessages", {
+          groupId,
+          authorId: author._id,
+          body: message.body,
+          percent: message.percent,
+          createdAt: at,
+        });
+        await ctx.db.patch(groupId, { lastMessageAt: at });
+      }
     }
 
     return `Pronto! Entre como ${emailOf(main.reader.username)} (senha: ${DEFAULT_PASSWORD} ou a que você passou).`;

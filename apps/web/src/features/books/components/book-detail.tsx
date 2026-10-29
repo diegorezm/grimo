@@ -26,10 +26,12 @@ import { Book3D } from "./book-3d";
 import { EditionPages } from "./edition-pages";
 import { FriendsWant } from "./friends-want";
 import { PageLogger } from "./page-logger";
+import { StartGroup } from "./start-group";
 
 /** Header, your reading, synopsis and reviews of a book. */
 export function BookDetailBody({ detail }: { detail: BookDetail }) {
   const { book, entry, community } = detail;
+  const { id: _id, description: _description, ...bookInput } = book;
 
   return (
     <div className="flex flex-col gap-10">
@@ -87,6 +89,8 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
           <EditionPages entryId={entry.id} pageCount={entry.pageCount} bookPages={book.pageCount} />
         </section>
       )}
+
+      <StartGroup book={bookInput} />
 
       {book.description && <Synopsis text={book.description} />}
 

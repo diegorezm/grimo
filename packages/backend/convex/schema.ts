@@ -220,6 +220,46 @@ export default defineSchema({
     .index("by_comment", ["commentId"]),
 
   /**
+   * Juntos: a few readers reading one book together (`groups.ts`). Joined by invite link
+   * (`/j/<inviteCode>`); joining puts the book on your "Lendo" shelf.
+   */
+  groups: defineTable({
+    bookId: v.id("books"),
+    /** Who created it (or the earliest member left, once they leave): sets the date. */
+    ownerId: v.id("users"),
+    inviteCode: v.string(),
+    /** "Terminar até": end of that day, epoch ms. */
+    finishBy: v.union(v.number(), v.null()),
+    /** Denormalized, kept by join/leave. */
+    memberCount: v.number(),
+    createdAt: v.number(),
+    lastMessageAt: v.union(v.number(), v.null()),
+  }).index("by_inviteCode", ["inviteCode"]),
+
+  groupMembers: defineTable({
+    groupId: v.id("groups"),
+    userId: v.id("users"),
+    joinedAt: v.number(),
+  })
+    .index("by_group", ["groupId", "joinedAt"])
+    .index("by_user", ["userId", "joinedAt"])
+    .index("by_group_user", ["groupId", "userId"]),
+
+  /**
+   * The group's conversation. `percent` is how far the author had read when writing: the message
+   * only opens to members who have read as far (no spoilers).
+   */
+  groupMessages: defineTable({
+    groupId: v.id("groups"),
+    authorId: v.id("users"),
+    body: v.string(),
+    percent: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_group_created", ["groupId", "createdAt"])
+    .index("by_author", ["authorId"]),
+
+  /**
    * Proof that a reader agreed to a version of a legal document (append-only). The latest row per
    * document is compared with the current version (`@grimo/core` CURRENT_LEGAL_VERSIONS).
    */
