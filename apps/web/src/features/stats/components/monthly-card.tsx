@@ -1,15 +1,14 @@
-import { useCardStudioStore } from "@grimo/client";
+import { useCardData, useCardStudioStore } from "@grimo/client";
 import { toMonthKey } from "@grimo/core";
 import { type CardPaletteKey, cardPalettes } from "@grimo/tokens";
 import { Link } from "@tanstack/react-router";
 import { StoryCanvas } from "../card/story-canvas";
 import { CARD_COMPONENTS } from "../card/templates";
-import { useCardData } from "../card/use-card-data";
 
 /** Small preview of this month's shareable card (last style picked in the studio). */
 export function MonthlyCard() {
   const studio = useCardStudioStore();
-  const data = useCardData(toMonthKey(new Date()));
+  const data = useCardData({ kind: "month", month: toMonthKey(new Date()) });
   if (!data) return null;
   const Card = CARD_COMPONENTS[studio.template];
   const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;

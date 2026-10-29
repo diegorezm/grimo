@@ -5,6 +5,10 @@ export const monthlySummaryQuerySchema = z.object({
   month: z.string().regex(MONTH_KEY_REGEX, "Use o formato YYYY-MM"),
 });
 
+export const yearlySummaryQuerySchema = z.object({
+  year: z.number().int("Ano inválido").min(1900, "Ano inválido").max(2200, "Ano inválido"),
+});
+
 export interface FinishedBook {
   bookId: string;
   title: string;
@@ -14,11 +18,14 @@ export interface FinishedBook {
   rating: number | null;
 }
 
-export interface MonthlySummaryInput {
-  month: string;
+export interface ReadingSummaryInput {
   finished: FinishedBook[];
   pagesRead: number;
   goal: { target: number; finishedThisYear: number } | null;
+}
+
+export interface MonthlySummaryInput extends ReadingSummaryInput {
+  month: string;
 }
 
 export interface GoalProgress {
@@ -28,8 +35,7 @@ export interface GoalProgress {
   percent: number;
 }
 
-export interface MonthlySummary {
-  month: string;
+export interface ReadingSummary {
   booksRead: number;
   pagesRead: number;
   topGenre: string | null;
@@ -37,6 +43,14 @@ export interface MonthlySummary {
   /** Books finished this month, best rated first (for the shareable card's shelf). */
   books: FinishedBook[];
   goal: GoalProgress | null;
+}
+
+export interface MonthlySummary extends ReadingSummary {
+  month: string;
+}
+
+export interface YearlySummary extends ReadingSummary {
+  year: number;
 }
 
 export function goalProgress(target: number, done: number): GoalProgress {
@@ -56,15 +70,14 @@ export function mostFrequent(values: string[]): string | null {
   return best;
 }
 
-/** Pure: shared by the API (card endpoint) and the clients (card preview). */
-export function computeMonthlySummary(input: MonthlySummaryInput): MonthlySummary {
+/** Pure: shared by the API (card queries) and the clients (card preview). */
+export function computeReadingSummary(input: ReadingSummaryInput): ReadingSummary {
   let favoriteBook: FinishedBook | null = null;
   for (const book of input.finished) {
     if (!favoriteBook || (book.rating ?? 0) > (favoriteBook.rating ?? 0)) favoriteBook = book;
   }
 
   return {
-    month: input.month,
     booksRead: input.finished.length,
     pagesRead: input.pagesRead,
     topGenre: mostFrequent(input.finished.flatMap((book) => book.genres)),
@@ -72,4 +85,13 @@ export function computeMonthlySummary(input: MonthlySummaryInput): MonthlySummar
     books: [...input.finished].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)),
     goal: input.goal ? goalProgress(input.goal.target, input.goal.finishedThisYear) : null,
   };
+}
+
+export function computeMonthlySummary({ month, ...input }: MonthlySummaryInput): MonthlySummary {
+  return { month, ...computeReadingSummary(input) };
+}
+
+/** The year in review ("retrospectiva"): the same numbers as the month, over the whole year. */
+export function computeYearlySummary(year: number, input: ReadingSummaryInput): YearlySummary {
+  return { year, ...computeReadingSummary(input) };
 }

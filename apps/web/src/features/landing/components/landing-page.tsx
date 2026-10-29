@@ -17,9 +17,11 @@ const cover = (id: number) => `https://covers.openlibrary.org/b/id/${id}-L.jpg`;
 
 /** What a real month card looks like (an example). */
 const SAMPLE_MONTH: CardData = {
-  monthLabel: "outubro de 2026",
-  monthName: "outubro",
+  kind: "month",
+  periodLabel: "outubro de 2026",
+  periodName: "outubro",
   previousShort: "set.",
+  unit: "mês",
   year: 2026,
   booksRead: 4,
   pagesRead: 1312,

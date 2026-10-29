@@ -35,7 +35,7 @@ export default function ProfileScreen() {
         onPress={() => router.push("/profile-edit")}
       />
       <YearStats />
-      <Text variant="heading">Resumo do mês</Text>
+      <Text variant="heading">Card do mês</Text>
       <MonthlyCard />
       <AppearancePicker />
       <Button

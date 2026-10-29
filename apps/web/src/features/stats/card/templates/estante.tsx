@@ -1,4 +1,5 @@
-import { CardFooter, CardSparkle, Delta, stars } from "../parts";
+import { ratingStars } from "@grimo/core";
+import { CardFooter, CardSparkle, Delta } from "../parts";
 import type { CardProps } from "../types";
 
 /** Spine heights/widths cycle so the shelf looks hand-arranged. */
@@ -31,13 +32,13 @@ export function EstanteCard({ data, palette, showDeltas }: CardProps) {
         className="font-mono"
         style={{ fontSize: 34, letterSpacing: "0.25em", color: palette.muted }}
       >
-        NA ESTANTE EM
+        {data.kind === "year" ? "MINHA ESTANTE DE" : "NA ESTANTE EM"}
       </p>
       <h1
         className="font-serif"
         style={{ fontSize: 150, fontStyle: "italic", lineHeight: 1, marginTop: 16 }}
       >
-        <span style={{ textTransform: "capitalize" }}>{data.monthName}</span>
+        <span style={{ textTransform: "capitalize" }}>{data.periodName}</span>
       </h1>
 
       {/* Shelf */}
@@ -152,7 +153,7 @@ export function EstanteCard({ data, palette, showDeltas }: CardProps) {
         <p className="font-serif" style={{ fontSize: 46, marginTop: 70, fontStyle: "italic" }}>
           Favorito: {data.favorite.title}{" "}
           <span style={{ color: palette.accent2, fontStyle: "normal" }}>
-            {stars(data.favorite.rating)}
+            {ratingStars(data.favorite.rating)}
           </span>
         </p>
       )}

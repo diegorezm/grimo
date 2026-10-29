@@ -8,6 +8,7 @@ import { radius, spacing } from "@/constants/theme";
 import { BookCover, BookTile } from "@/features/books";
 import { FeedItem } from "@/features/feed";
 import { ShelfTiles } from "@/features/shelves";
+import { RetrospectiveBanner } from "@/features/stats";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { FirstSteps } from "./first-steps";
@@ -54,6 +55,7 @@ export function Dashboard() {
         </View>
 
         <FirstSteps />
+        <RetrospectiveBanner />
 
         {current ? (
           <CurrentRead item={current} />

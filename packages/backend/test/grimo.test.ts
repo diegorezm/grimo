@@ -57,6 +57,10 @@ describe("shelves", () => {
     const year = new Date().getUTCFullYear();
     const overview = await rafa.as.query(api.stats.overview, { year });
     expect(overview).toMatchObject({ booksRead: 1, pagesRead: 600 });
+    const review = await rafa.as.query(api.stats.yearly, { year });
+    expect(review).toMatchObject({ year, booksRead: 1, pagesRead: 600 });
+    expect(review.favoriteBook).toMatchObject({ title: "Duna", rating: 5 });
+    await expect(rafa.as.query(api.stats.yearly, { year: 20.5 })).rejects.toThrow(/Ano inválido/);
 
     const feed = await rafa.as.query(api.feed.list, { limit: 20 });
     expect(feed.items.map((item) => item.kind)).toEqual(["finished", "progress", "shelved"]);
