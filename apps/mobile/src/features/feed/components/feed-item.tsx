@@ -1,5 +1,5 @@
 import { type FeedItem as FeedItemData, useMe, useSetBlocked, useToggleLike } from "@grimo/client";
-import { describeActivity, timeAgo } from "@grimo/core";
+import { commentCountLabel, describeActivity, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar, Card, MentionText, Stars, Text } from "@/components/ui";
@@ -95,7 +95,7 @@ export function FeedItem({ item }: { item: FeedItemData }) {
               style={styles.flex}
             >
               <Text variant="label" color="textMuted">
-                {post.commentCount} comentários
+                {commentCountLabel(post.commentCount)}
               </Text>
             </Pressable>
             {me?.id !== actor.id && (

@@ -1,5 +1,5 @@
 import { type FeedItem, useCreatePost, useFeed, useMe, useToggleLike } from "@grimo/client";
-import { describeActivity, timeAgo } from "@grimo/core";
+import { commentCountLabel, describeActivity, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
@@ -160,7 +160,7 @@ function PostBubble({ item, mine }: { item: FeedItem; mine: boolean }) {
           >
             {post.likedByMe ? "♥" : "♡"} {post.likeCount}
           </button>
-          <span>{post.commentCount} comentários</span>
+          <span>{commentCountLabel(post.commentCount)}</span>
           <span className="ml-auto">{timeAgo(new Date(item.createdAt))}</span>
         </div>
       </div>

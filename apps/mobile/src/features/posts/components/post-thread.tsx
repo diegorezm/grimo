@@ -8,7 +8,7 @@ import {
   useRemovePost,
   useToggleLike,
 } from "@grimo/client";
-import { timeAgo } from "@grimo/core";
+import { commentCountLabel, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
@@ -91,7 +91,7 @@ function Thread({ detail }: { detail: PostDetail }) {
             hitSlop={8}
           >
             <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-              {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {post.commentCount} comentários
+              {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {commentCountLabel(post.commentCount)}
             </Text>
           </Pressable>
           {isMine ? (

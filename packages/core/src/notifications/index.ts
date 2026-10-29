@@ -57,7 +57,7 @@ export function describeNotification(
     case "like":
       return `curtiu ${post}`;
     case "comment":
-      return `comentou em ${post}`;
+      return `comentou na ${post}`;
     case "mention":
       return context.inComment ? "mencionou você em um comentário" : "mencionou você em um post";
   }

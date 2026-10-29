@@ -7,7 +7,7 @@ import {
   useRemovePost,
   useToggleLike,
 } from "@grimo/client";
-import { timeAgo } from "@grimo/core";
+import { commentCountLabel, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -74,7 +74,7 @@ export function PostThread({
           ) : (
             <span>♡ {post.likeCount}</span>
           )}
-          <span>{post.commentCount} comentários</span>
+          <span>{commentCountLabel(post.commentCount)}</span>
           {isMine ? (
             <span className="ml-auto">
               <ConfirmButton
