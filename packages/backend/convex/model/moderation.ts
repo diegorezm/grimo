@@ -35,3 +35,22 @@ export async function deleteComment(ctx: MutationCtx, comment: Doc<"postComments
 export async function reviewBook(ctx: MutationCtx, book: Doc<"books">, approve: boolean) {
   await ctx.db.patch(book._id, { reviewStatus: approve ? "approved" : "rejected" });
 }
+
+export type LogAction = Doc<"moderationLog">["action"];
+
+/** Appends to the moderation history (`actor` null: the CLI). */
+export async function logAction(
+  ctx: MutationCtx,
+  actor: Doc<"users"> | null,
+  action: LogAction,
+  extra: { targetUserId?: Doc<"users">["_id"] | null; targetId?: string; details?: string } = {},
+) {
+  await ctx.db.insert("moderationLog", {
+    actorId: actor?._id ?? null,
+    action,
+    targetUserId: extra.targetUserId ?? null,
+    targetId: extra.targetId ?? null,
+    details: extra.details ?? null,
+    createdAt: Date.now(),
+  });
+}

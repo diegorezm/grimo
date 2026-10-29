@@ -117,6 +117,7 @@ export default defineSchema({
     .index("by_authId", ["authId"])
     .index("by_username", ["username"])
     .index("by_followers", ["followers"])
+    .index("by_role", ["role"])
     .searchIndex("search", { searchField: "searchText" }),
 
   readingGoals: defineTable({
@@ -367,6 +368,29 @@ export default defineSchema({
   })
     .index("by_status_created", ["status", "createdAt"])
     .index("by_reporter_target", ["reporterId", "target", "targetId"]),
+
+  /**
+   * An admin's invite for one specific reader to become a moderator. Valid for 24 h
+   * (`expiresAt`); a `pending` one past that is expired (checked when read, no cron). Kept as the
+   * record of who was invited by whom; `invitedBy` goes null when the admin's account is deleted.
+   */
+  moderatorInvites: defineTable({
+    userId: v.id("users"),
+    invitedBy: v.union(v.id("users"), v.null()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("revoked"),
+      v.literal("expired"),
+    ),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    respondedAt: v.union(v.number(), v.null()),
+  })
+    .index("by_user_status", ["userId", "status"])
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_invitedBy", ["invitedBy"]),
 
   /**
    * Who did what in moderation (admin-only history). `actorId` is null for the CLI and once the

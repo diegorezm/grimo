@@ -22,6 +22,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Button } from "@/components/ui/button";
+import { ModerationTeam } from "./moderation-team";
 
 const TARGET_LABELS: Record<ReportTarget, string> = {
   post: "Publicação",
@@ -78,6 +79,8 @@ export function ModerationPanel() {
           </ul>
         )}
       </section>
+
+      {isAdmin && <ModerationTeam />}
 
       {isAdmin && <ModerationHistory />}
     </div>

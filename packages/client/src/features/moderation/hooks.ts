@@ -143,3 +143,81 @@ export function useDecideBook() {
     onError: (_error, _input, rollback) => rollback?.(),
   });
 }
+
+export type ModerationTeam = FunctionReturnType<typeof api.moderators.team>;
+export type ModeratorInvite = ModerationTeam["invites"][number];
+export type MyModeratorInvite = NonNullable<FunctionReturnType<typeof api.moderators.myInvite>>;
+
+export function myModeratorInviteQuery() {
+  return convexQuery(api.moderators.myInvite, {}, "required");
+}
+
+/** The viewer's open invite to become a moderator (null when there is none). */
+export function useMyModeratorInvite() {
+  return useQuery(myModeratorInviteQuery());
+}
+
+const myInvite = [convexQueryPrefix(api.moderators.myInvite)];
+
+/** Accept or decline the invite; the banner goes away at once. */
+export function useRespondToModeratorInvite() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (input: { inviteId: Id<"moderatorInvites">; accept: boolean }) =>
+      convex.mutation(api.moderators.respond, input),
+    onMutate: () => patchQueries<MyModeratorInvite | null>(myInvite, () => null),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** Moderators and open invites (admins only). */
+export function moderationTeamQuery() {
+  return convexQuery(api.moderators.team, {}, "required");
+}
+
+export function useModerationTeam(options: { enabled?: boolean } = {}) {
+  return useQuery({ ...moderationTeamQuery(), ...options });
+}
+
+const team = [convexQueryPrefix(api.moderators.team)];
+
+/** Invite a reader (by @) to moderate. The new invite arrives through the team subscription. */
+export function useInviteModerator() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: (username: string) => convex.mutation(api.moderators.invite, { username }),
+  });
+}
+
+/** Withdraw an open invite. */
+export function useRevokeModeratorInvite() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (inviteId: Id<"moderatorInvites">) =>
+      convex.mutation(api.moderators.revoke, { inviteId }),
+    onMutate: (inviteId) =>
+      patchQueries<ModerationTeam>(team, (data) => ({
+        ...data,
+        invites: data.invites.filter((invite) => invite.id !== inviteId),
+      })),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** Take the moderator role from someone. */
+export function useRemoveModerator() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (userId: Id<"users">) =>
+      convex.mutation(api.moderators.removeModerator, { userId }),
+    onMutate: (userId) =>
+      patchQueries<ModerationTeam>(team, (data) => ({
+        ...data,
+        moderators: data.moderators.filter((reader) => reader.id !== userId),
+      })),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}

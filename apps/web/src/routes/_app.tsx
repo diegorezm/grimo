@@ -15,6 +15,7 @@ import { SidePeek } from "@/components/layout/side-peek";
 import { VerifyEmailBanner } from "@/features/account";
 import { BookPeek } from "@/features/books";
 import { LegalGate } from "@/features/legal";
+import { ModeratorInviteBanner } from "@/features/moderation";
 import { NotificationBell } from "@/features/notifications";
 import { PostPeek } from "@/features/posts";
 import { ProfilePeek } from "@/features/profile";
@@ -89,6 +90,7 @@ function SignedInLayout({
   return (
     <AppShell aside={aside} actions={<NotificationBell />}>
       <VerifyEmailBanner />
+      <ModeratorInviteBanner />
       <Outlet />
       {/* Terms changed (or never accepted): agree again before going on. */}
       <LegalGate />

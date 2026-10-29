@@ -21,7 +21,7 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Juntos (ler em grupo)                    | `convex/groups.ts` + `model/groups.ts`, `@grimo/core` `groups/`, web `features/groups` (`/juntos`, convite público `/j/<código>`), mobile aba `juntos` + `group/[id]` |
 | Importar estantes (Goodreads)            | `@grimo/core` `imports/` (lê o CSV), `convex/imports.ts` (Open Library em lotes, `importToShelf` sem feed), web `/importar` |
-| Moderação (denúncias, livros cadastrados) | `convex/moderation.ts` (`queue`, `act`, `decideBook`, `log`; papéis `admin`/`moderator` via `npx convex run moderation:setAdmin` / `setModerator`; suspensão com prazo e motivo; limites em `canModerate`), web `/admin` |
+| Moderação (denúncias, livros cadastrados) | `convex/moderation.ts` (`queue`, `act`, `decideBook`, `log`; convites de moderador em `convex/moderators.ts` (24 h, só admin convida); papéis também via `npx convex run moderation:setAdmin` / `setModerator`; suspensão com prazo e motivo; limites em `canModerate`), web `/admin` |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |
 | LGPD, termos, idade (16+), App Store     | `docs/legal/README.md` (decisões e checklist: leia antes de mexer em cadastro ou dados pessoais) |
 

@@ -9,7 +9,12 @@ import {
   query,
 } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
-import { deleteComment, deletePost, reviewBook as reviewBookIn } from "./model/moderation";
+import {
+  deleteComment,
+  deletePost,
+  logAction,
+  reviewBook as reviewBookIn,
+} from "./model/moderation";
 import { deleteNotificationsBetween } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import {
@@ -177,25 +182,6 @@ const suspensionDuration = v.union(
   v.literal(30),
   v.literal("permanent"),
 );
-
-type LogAction = Doc<"moderationLog">["action"];
-
-/** Appends to the moderation history (`actor` null: the CLI). */
-async function logAction(
-  ctx: MutationCtx,
-  actor: Doc<"users"> | null,
-  action: LogAction,
-  extra: { targetUserId?: Doc<"users">["_id"] | null; targetId?: string; details?: string } = {},
-) {
-  await ctx.db.insert("moderationLog", {
-    actorId: actor?._id ?? null,
-    action,
-    targetUserId: extra.targetUserId ?? null,
-    targetId: extra.targetId ?? null,
-    details: extra.details ?? null,
-    createdAt: Date.now(),
-  });
-}
 
 /** Suspends a reader for `days` (or for good) and says why; they see it when they sign in. */
 async function suspendUser(

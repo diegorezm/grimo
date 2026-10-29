@@ -38,6 +38,7 @@ import type * as model_seedData from "../model/seedData.js";
 import type * as model_shelves from "../model/shelves.js";
 import type * as model_stats from "../model/stats.js";
 import type * as moderation from "../moderation.js";
+import type * as moderators from "../moderators.js";
 import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as seed from "../seed.js";
@@ -82,6 +83,7 @@ declare const fullApi: ApiFromModules<{
   "model/shelves": typeof model_shelves;
   "model/stats": typeof model_stats;
   moderation: typeof moderation;
+  moderators: typeof moderators;
   notifications: typeof notifications;
   posts: typeof posts;
   seed: typeof seed;
