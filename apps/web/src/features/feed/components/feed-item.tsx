@@ -2,6 +2,7 @@ import { type FeedItem as FeedItemData, useMe, useToggleLike } from "@grimo/clie
 import { describeActivityGroup, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/ui/avatar";
+import { MentionText } from "@/components/ui/mention-text";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
 import { PostPeekLink } from "@/features/posts";
@@ -99,7 +100,7 @@ export function FeedItem({
 
         {post?.id && (
           <>
-            <p className="whitespace-pre-line text-sm leading-relaxed">{post.body}</p>
+            <MentionText text={post.body} className="text-sm leading-relaxed" />
             <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
               {interactive ? (
                 <button

@@ -68,6 +68,7 @@ function RootNavigator() {
         <Stack.Screen name="account" />
         <Stack.Screen name="profile-edit" />
         <Stack.Screen name="card" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen
           name="report"
           options={{

@@ -12,7 +12,7 @@ import { timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
-import { Avatar, Button, Card, Input, Screen, Stars, Text } from "@/components/ui";
+import { Avatar, Button, Card, Input, MentionText, Screen, Stars, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { openReport } from "@/features/moderation";
@@ -82,7 +82,7 @@ function Thread({ detail }: { detail: PostDetail }) {
             </View>
           </Pressable>
         )}
-        <Text>{post.body}</Text>
+        <MentionText text={post.body} />
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
@@ -156,7 +156,7 @@ function CommentRow({
   return (
     <Card>
       <AuthorLine author={comment.author} createdAt={comment.createdAt} />
-      <Text>{comment.body}</Text>
+      <MentionText text={comment.body} />
       {(canRemove || canReport) && (
         <View style={styles.actions}>
           {canRemove && (
@@ -218,7 +218,7 @@ function CommentComposer({ postId }: { postId: string }) {
   return (
     <View style={styles.composer}>
       <Input
-        placeholder="Escreva um comentário"
+        placeholder="Escreva um comentário (@ para mencionar)"
         multiline
         maxLength={2000}
         value={body}

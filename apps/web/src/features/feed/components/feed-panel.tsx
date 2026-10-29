@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
 import { LoadMore } from "@/components/ui/load-more";
+import { MentionText } from "@/components/ui/mention-text";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { cn } from "@/utils/cn";
 
@@ -144,7 +145,7 @@ function PostBubble({ item, mine }: { item: FeedItem; mine: boolean }) {
             <span className="font-serif text-sm font-medium italic leading-snug">{book.title}</span>
           </BookPeekLink>
         )}
-        <p className="whitespace-pre-line leading-relaxed">{post.body}</p>
+        <MentionText text={post.body} className="leading-relaxed" />
         <div
           className={cn(
             "flex items-center gap-3 font-mono text-[10px]",

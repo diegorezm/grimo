@@ -10,7 +10,16 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Avatar, Button, Card, Glass, ProgressBar, Stars, Text } from "@/components/ui";
+import {
+  Avatar,
+  Button,
+  Card,
+  Glass,
+  MentionText,
+  ProgressBar,
+  Stars,
+  Text,
+} from "@/components/ui";
 import { radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
@@ -244,7 +253,7 @@ function Review({ review }: { review: Detail["reviews"][number] }) {
       </View>
       {review.rating ? <Stars value={review.rating} size={14} /> : null}
       {revealed ? (
-        <Text>{review.body}</Text>
+        <MentionText text={review.body} />
       ) : (
         <Pressable accessibilityRole="button" onPress={() => setRevealed(true)}>
           <Text color="textMuted">Contém spoiler · toque para ver</Text>

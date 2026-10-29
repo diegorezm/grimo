@@ -7,6 +7,7 @@ import { Button, Card, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover, BookTile } from "@/features/books";
 import { FeedItem } from "@/features/feed";
+import { NotificationBell } from "@/features/notifications";
 import { ShelfTiles } from "@/features/shelves";
 import { RetrospectiveBanner } from "@/features/stats";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -52,6 +53,7 @@ export function Dashboard() {
               {me.data?.name.split(" ")[0] ?? "Início"}
             </Text>
           </View>
+          <NotificationBell />
         </View>
 
         <FirstSteps />

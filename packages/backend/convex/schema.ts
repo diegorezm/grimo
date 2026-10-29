@@ -1,6 +1,7 @@
 import {
   ACTIVITY_KINDS,
   LEGAL_DOCUMENTS,
+  NOTIFICATION_KINDS,
   POST_KINDS,
   REPORT_REASONS,
   REPORT_STATUSES,
@@ -18,6 +19,7 @@ export const shelfStatus = literals(SHELF_STATUSES);
 export const postKind = literals(POST_KINDS);
 export const activityKind = literals(ACTIVITY_KINDS);
 export const legalDocument = literals(LEGAL_DOCUMENTS);
+export const notificationKind = literals(NOTIFICATION_KINDS);
 export const reportTarget = literals(REPORT_TARGETS);
 export const reportReason = literals(REPORT_REASONS);
 export const reportStatus = literals(REPORT_STATUSES);
@@ -194,6 +196,26 @@ export default defineSchema({
     .index("by_actor_created", ["actorId", "createdAt"])
     .index("by_post", ["postId"])
     .index("by_actor_target", ["actorId", "targetUserId"]),
+
+  /**
+   * "Rafa curtiu sua resenha": what others did that concerns `userId`. Written by the follow,
+   * like, comment and post mutations, and taken back when the like/follow/comment/post goes.
+   */
+  notifications: defineTable({
+    /** Who is notified. */
+    userId: v.id("users"),
+    actorId: v.id("users"),
+    kind: notificationKind,
+    postId: v.union(v.id("posts"), v.null()),
+    commentId: v.union(v.id("postComments"), v.null()),
+    createdAt: v.number(),
+    readAt: v.union(v.number(), v.null()),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_read", ["userId", "readAt"])
+    .index("by_actor_post", ["actorId", "postId"])
+    .index("by_post", ["postId"])
+    .index("by_comment", ["commentId"]),
 
   /**
    * Proof that a reader agreed to a version of a legal document (append-only). The latest row per

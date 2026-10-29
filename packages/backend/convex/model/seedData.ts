@@ -295,7 +295,7 @@ export const readers: ReaderSeed[] = [
       },
       {
         kind: "note",
-        body: "Montei uma estante só de releituras de fim de ano. Quem mais relê os favoritos em dezembro?",
+        body: "Montei uma estante só de releituras de fim de ano. @rafa, você também relê os favoritos em dezembro?",
       },
     ],
   },
@@ -377,5 +377,5 @@ export const comments: { from: string; post: number; body: string }[] = [
   { from: "lu.prado", post: 1, body: "Que bom que você leu! Itamar escreve demais." },
   { from: "theo", post: 2, body: "Espera até ler O Poço da Ascensão 👀" },
   { from: "bia.lima", post: 3, body: "Eu topo! Podemos marcar um capítulo por semana." },
-  { from: "caio", post: 3, body: "Bora. Eu levo o café." },
+  { from: "caio", post: 3, body: "Bora. Eu levo o café. @bia.lima marca o dia?" },
 ];

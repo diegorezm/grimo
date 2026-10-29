@@ -12,6 +12,7 @@ import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { MentionText } from "@/components/ui/mention-text";
 import { Stars } from "@/components/ui/stars";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
@@ -58,7 +59,7 @@ export function PostThread({
           </BookPeekLink>
         )}
         {post.rating && <Stars rating={post.rating} />}
-        <p className="whitespace-pre-line leading-relaxed">{post.body}</p>
+        <MentionText text={post.body} className="leading-relaxed" />
 
         <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
           {signedIn ? (
@@ -158,7 +159,7 @@ function Comment({
             {timeAgo(new Date(comment.createdAt))}
           </span>
         </p>
-        <p className="whitespace-pre-line text-sm leading-relaxed">{comment.body}</p>
+        <MentionText text={comment.body} className="text-sm leading-relaxed" />
         {(canRemove || canReport) && (
           <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
             {canRemove && (
@@ -193,7 +194,7 @@ function CommentComposer({ postId }: { postId: string }) {
         onChange={(event) => setBody(event.target.value)}
         rows={2}
         maxLength={2000}
-        placeholder="Escreva um comentário"
+        placeholder="Escreva um comentário (@ para mencionar)"
         aria-label="Seu comentário"
         className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-text-muted"
       />

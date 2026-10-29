@@ -14,6 +14,7 @@ import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
 import { BookPeek } from "@/features/books";
 import { LegalGate } from "@/features/legal";
+import { NotificationBell } from "@/features/notifications";
 import { PostPeek } from "@/features/posts";
 import { ProfilePeek } from "@/features/profile";
 import { sessionQuery, signOutLocally } from "@/lib/api";
@@ -85,7 +86,7 @@ function SignedInLayout({
     <ProfilePeek />
   ) : undefined;
   return (
-    <AppShell aside={aside}>
+    <AppShell aside={aside} actions={<NotificationBell />}>
       <Outlet />
       {/* Terms changed (or never accepted): agree again before going on. */}
       <LegalGate />

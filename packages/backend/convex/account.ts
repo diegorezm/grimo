@@ -15,49 +15,64 @@ export const exportData = query({
     const viewer = await requireViewer(ctx);
     const userId = viewer._id;
     const identity = await ctx.auth.getUserIdentity();
-    const [goals, entries, logs, posts, comments, likes, following, followers, blocks, consents] =
-      await Promise.all([
-        ctx.db
-          .query("readingGoals")
-          .withIndex("by_user_year", (q) => q.eq("userId", userId))
-          .collect(),
-        ctx.db
-          .query("shelfEntries")
-          .withIndex("by_user_updated", (q) => q.eq("userId", userId))
-          .collect(),
-        ctx.db
-          .query("readingLogs")
-          .withIndex("by_user_created", (q) => q.eq("userId", userId))
-          .collect(),
-        ctx.db
-          .query("posts")
-          .withIndex("by_author", (q) => q.eq("authorId", userId))
-          .collect(),
-        ctx.db
-          .query("postComments")
-          .withIndex("by_author", (q) => q.eq("authorId", userId))
-          .collect(),
-        ctx.db
-          .query("postLikes")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect(),
-        ctx.db
-          .query("follows")
-          .withIndex("by_follower", (q) => q.eq("followerId", userId))
-          .collect(),
-        ctx.db
-          .query("follows")
-          .withIndex("by_following", (q) => q.eq("followingId", userId))
-          .collect(),
-        ctx.db
-          .query("blocks")
-          .withIndex("by_blocker_blocked", (q) => q.eq("blockerId", userId))
-          .collect(),
-        ctx.db
-          .query("legalAcceptances")
-          .withIndex("by_user_document", (q) => q.eq("userId", userId))
-          .collect(),
-      ]);
+    const [
+      goals,
+      entries,
+      logs,
+      posts,
+      comments,
+      likes,
+      following,
+      followers,
+      blocks,
+      consents,
+      notifications,
+    ] = await Promise.all([
+      ctx.db
+        .query("readingGoals")
+        .withIndex("by_user_year", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("shelfEntries")
+        .withIndex("by_user_updated", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("readingLogs")
+        .withIndex("by_user_created", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("posts")
+        .withIndex("by_author", (q) => q.eq("authorId", userId))
+        .collect(),
+      ctx.db
+        .query("postComments")
+        .withIndex("by_author", (q) => q.eq("authorId", userId))
+        .collect(),
+      ctx.db
+        .query("postLikes")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("follows")
+        .withIndex("by_follower", (q) => q.eq("followerId", userId))
+        .collect(),
+      ctx.db
+        .query("follows")
+        .withIndex("by_following", (q) => q.eq("followingId", userId))
+        .collect(),
+      ctx.db
+        .query("blocks")
+        .withIndex("by_blocker_blocked", (q) => q.eq("blockerId", userId))
+        .collect(),
+      ctx.db
+        .query("legalAcceptances")
+        .withIndex("by_user_document", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("notifications")
+        .withIndex("by_user_created", (q) => q.eq("userId", userId))
+        .collect(),
+    ]);
 
     const books = new Map<Id<"books">, Doc<"books"> | null>();
     const bookTitle = async (id: Id<"books"> | null) => {
@@ -121,6 +136,15 @@ export const exportData = query({
       following: await Promise.all(following.map((row) => username(row.followingId))),
       followers: await Promise.all(followers.map((row) => username(row.followerId))),
       blocked: await Promise.all(blocks.map((row) => username(row.blockedId))),
+      notifications: await Promise.all(
+        notifications.map(async (row) => ({
+          kind: row.kind,
+          from: await username(row.actorId),
+          postId: row.postId,
+          at: date(row.createdAt),
+          readAt: date(row.readAt),
+        })),
+      ),
       legalAcceptances: consents.map((row) => ({
         document: row.document,
         version: row.version,
@@ -256,6 +280,17 @@ const steps: Step[] = [
     deleteAll(
       ctx,
       ctx.db.query("activities").withIndex("by_actor_created", (q) => q.eq("actorId", userId)),
+    ),
+  // Notifications to the reader, and those the reader caused to others.
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("notifications").withIndex("by_user_created", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("notifications").withIndex("by_actor_post", (q) => q.eq("actorId", userId)),
     ),
   async (ctx, userId) =>
     deleteAll(
