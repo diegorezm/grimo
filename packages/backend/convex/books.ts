@@ -1,4 +1,10 @@
-import { bookInputSchema, bookSearchQuerySchema } from "@grimo/core";
+import {
+  bookInputSchema,
+  bookSearchQuerySchema,
+  manualBookSchema,
+  newManualBookId,
+  type ShelfStatus,
+} from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -7,6 +13,7 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  mutation,
   type QueryCtx,
   query,
 } from "./_generated/server";
@@ -16,10 +23,10 @@ import { parse, unauthenticated } from "./model/errors";
 import { friendsWantingBook } from "./model/friends";
 import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
 import { enforceRateLimit } from "./model/rateLimit";
-import { authorOf, getViewer } from "./model/readers";
-import { blockedIds, isHidden } from "./model/safety";
-import { entryView } from "./model/shelves";
-import { bookInput, workDetails } from "./schema";
+import { authorOf, getViewer, requireVerifiedViewer } from "./model/readers";
+import { blockedIds, isBookVisible, isHidden } from "./model/safety";
+import { addToShelf, bookByOpenLibraryId, bookView, entryView } from "./model/shelves";
+import { bookInput, shelfStatus, workDetails } from "./schema";
 
 /** The signed-in reader's auth id: Open Library lookups are for readers only. */
 async function requireIdentity(ctx: {
@@ -46,11 +53,39 @@ export const search = action({
     const reader = await requireIdentity(ctx);
     const query = parse(bookSearchQuerySchema, args).q.toLowerCase();
     await enforceRateLimit(ctx, "bookSearch", reader);
-    const cached = await ctx.runQuery(internal.books.cachedSearch, { query });
-    if (cached && Date.now() - cached.fetchedAt < SEARCH_TTL) return { items: cached.items };
+    // Hand-added books moderation approved come first: Open Library doesn't have them.
+    const [cached, local] = await Promise.all([
+      ctx.runQuery(internal.books.cachedSearch, { query }),
+      ctx.runQuery(internal.books.searchApproved, { query }),
+    ]);
+    if (cached && Date.now() - cached.fetchedAt < SEARCH_TTL) {
+      return { items: [...local, ...cached.items] };
+    }
     const items = await searchOpenLibrary(query);
     await ctx.runMutation(internal.books.saveSearch, { query, items });
-    return { items };
+    return { items: [...local, ...items] };
+  },
+});
+
+/** Approved hand-added books whose title matches, as search results. */
+export const searchApproved = internalQuery({
+  args: { query: v.string() },
+  handler: async (ctx, { query }) => {
+    const rows = await ctx.db
+      .query("books")
+      .withSearchIndex("search_title", (q) =>
+        q.search("title", query).eq("reviewStatus", "approved"),
+      )
+      .take(5);
+    return rows.map((book) => ({
+      openLibraryId: book.openLibraryId,
+      title: book.title,
+      authors: book.authors,
+      coverUrl: book.coverUrl,
+      pageCount: book.pageCount,
+      publishedYear: book.publishedYear,
+      genres: book.genres,
+    }));
   },
 });
 
@@ -164,6 +199,8 @@ export const detail = query({
         .unique(),
       getViewer(ctx),
     ]);
+    // A hand-added book in review (or rejected) is only there for whoever added it.
+    if (row && !isBookVisible(row, viewer?._id ?? null)) return { detail: null, needsWork: false };
     const work = cached?.details ?? null;
     // Freshness is checked by `loadWork`; here only "never fetched" matters.
     const needsWork = !cached && /^OL\d+W$/.test(openLibraryId);
@@ -179,6 +216,8 @@ export const detail = query({
       publishedYear: row?.publishedYear ?? work?.publishedYear ?? null,
       genres: row?.genres.length ? row.genres : (work?.genres ?? []),
       description: work?.description ?? null,
+      /** Hand-added: "pending" (only you see it), "approved" or "rejected". Null for Open Library's. */
+      reviewStatus: row?.reviewStatus ?? null,
     };
     if (!row) {
       return {
@@ -229,6 +268,46 @@ export const detail = query({
       },
       needsWork,
     };
+  },
+});
+
+/**
+ * "Cadastrar livro": a book Open Library doesn't have, added by hand and put on your shelf. It
+ * waits for moderation (`moderation.reviewBook`): until approved only you see it.
+ */
+export const addManual = mutation({
+  args: {
+    title: v.string(),
+    authors: v.array(v.string()),
+    pageCount: v.union(v.number(), v.null()),
+    publishedYear: v.union(v.number(), v.null()),
+    status: shelfStatus,
+  },
+  handler: async (ctx, { status, ...args }) => {
+    const viewer = await requireVerifiedViewer(ctx);
+    const input = parse(manualBookSchema, args);
+    await enforceRateLimit(ctx, "addBook", viewer._id);
+    const random = () => crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32;
+    let openLibraryId = newManualBookId(random);
+    while (await bookByOpenLibraryId(ctx, openLibraryId)) openLibraryId = newManualBookId(random);
+    await ctx.db.insert("books", {
+      openLibraryId,
+      title: input.title,
+      authors: input.authors,
+      coverUrl: null,
+      pageCount: input.pageCount,
+      publishedYear: input.publishedYear,
+      genres: [],
+      readerCount: 0,
+      ratingSum: 0,
+      ratingCount: 0,
+      createdBy: viewer._id,
+      reviewStatus: "pending",
+    });
+    const book = (await bookByOpenLibraryId(ctx, openLibraryId))!;
+    const { id: _id, ...bookInputFields } = bookView(book);
+    await addToShelf(ctx, viewer._id, { book: bookInputFields, status: status as ShelfStatus });
+    return { openLibraryId };
   },
 });
 

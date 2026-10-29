@@ -1,5 +1,6 @@
 import {
   type BookDetail,
+  bookInputOf,
   useAddToShelf,
   useCreatePost,
   useRemoveFromShelf,
@@ -31,7 +32,7 @@ import { StartGroup } from "./start-group";
 /** Header, your reading, synopsis and reviews of a book. */
 export function BookDetailBody({ detail }: { detail: BookDetail }) {
   const { book, entry, community } = detail;
-  const { id: _id, description: _description, ...bookInput } = book;
+  const bookInput = bookInputOf(book);
 
   return (
     <div className="flex flex-col gap-10">
@@ -63,6 +64,19 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             </p>
           )}
           <FriendsWant friends={detail.friendsWant} />
+          {book.reviewStatus === "pending" && (
+            <p className="text-sm text-text-muted">
+              <span className="mr-2 rounded-full border border-border px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-wider">
+                Em revisão
+              </span>
+              Você cadastrou este livro. Só você o vê até a revisão.
+            </p>
+          )}
+          {book.reviewStatus === "rejected" && (
+            <p className="text-sm text-text-muted">
+              Este cadastro não foi aprovado: o livro continua só na sua estante.
+            </p>
+          )}
         </div>
       </header>
 
@@ -90,7 +104,9 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
         </section>
       )}
 
-      <StartGroup book={bookInput} />
+      {(book.reviewStatus === null || book.reviewStatus === "approved") && (
+        <StartGroup book={bookInput} />
+      )}
 
       {book.description && <Synopsis text={book.description} />}
 
@@ -246,7 +262,7 @@ export function BookShelfActions({ detail }: { detail: BookDetail }) {
   const add = useAddToShelf();
   const update = useUpdateShelfEntry();
   const current = detail.entry?.status;
-  const { id: _id, description: _description, ...book } = detail.book;
+  const book = bookInputOf(detail.book);
 
   function choose(status: ShelfStatus) {
     if (status === current) return;

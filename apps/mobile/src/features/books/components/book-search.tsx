@@ -2,11 +2,12 @@ import { useBookSearch, useShelf } from "@grimo/client";
 import { SHELF_LABELS } from "@grimo/core";
 import { useDeferredValue, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, TextInput, View } from "react-native";
-import { Glass, Text } from "@/components/ui";
+import { Button, Glass, Text } from "@/components/ui";
 import { fontSize, radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookTile } from "./book-tile";
+import { ManualBookForm } from "./manual-book-form";
 
 /** Search as you type; results open the book page, where you pick a shelf. */
 export function BookSearch() {
@@ -20,6 +21,8 @@ export function BookSearch() {
     [shelf.data],
   );
   const items = search.data?.items ?? [];
+  const [adding, setAdding] = useState(false);
+  const searched = query.trim().length >= 2 && !search.isFetching;
 
   return (
     <View style={styles.root}>
@@ -40,7 +43,7 @@ export function BookSearch() {
         {search.isFetching && <ActivityIndicator color={theme.accent} />}
       </Glass>
 
-      {query.trim().length >= 2 && !search.isFetching && items.length === 0 && (
+      {searched && items.length === 0 && (
         <Text color="textMuted">Nenhum livro encontrado. Tente o autor ou o ISBN.</Text>
       )}
       {query.trim().length < 2 && (
@@ -67,6 +70,17 @@ export function BookSearch() {
           );
         })}
       </View>
+
+      {searched &&
+        (adding ? (
+          <ManualBookForm initialTitle={query.trim()} onCancel={() => setAdding(false)} />
+        ) : (
+          <Button
+            variant="ghost"
+            title="Não achou? Cadastre o livro"
+            onPress={() => setAdding(true)}
+          />
+        ))}
     </View>
   );
 }

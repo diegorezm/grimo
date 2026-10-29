@@ -11,6 +11,7 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { recordBookCounters } from "./bookStats";
 import { recordActivity } from "./content";
 import { notFound } from "./errors";
+import { isBookVisible } from "./safety";
 
 /** Shelf entry as clients see it. */
 export const entryView = (entry: Doc<"shelfEntries">) => ({
@@ -40,13 +41,19 @@ export const bookView = (book: Doc<"books">) => ({
 
 /**
  * `{ entry, book }` rows for these entries (entries whose book is gone are dropped). The book's
- * `pageCount` is the reader's edition, so progress is right wherever the row is shown.
+ * `pageCount` is the reader's edition, so progress is right wherever the row is shown. With
+ * `viewerId` (someone else's shelf), books that viewer can't see are left out.
  */
-export async function withBooks(ctx: QueryCtx | MutationCtx, entries: Doc<"shelfEntries">[]) {
+export async function withBooks(
+  ctx: QueryCtx | MutationCtx,
+  entries: Doc<"shelfEntries">[],
+  viewerId?: Id<"users"> | null,
+) {
   const rows = await Promise.all(
     entries.map(async (entry) => {
       const book = await ctx.db.get(entry.bookId);
       if (!book) return null;
+      if (viewerId !== undefined && !isBookVisible(book, viewerId)) return null;
       const pageCount = editionPages(entry.pageCount, book.pageCount);
       return { entry: entryView(entry), book: { ...bookView(book), pageCount } };
     }),

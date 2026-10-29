@@ -1,4 +1,10 @@
-import { useAddToShelf, useBook, useRemoveFromShelf, useUpdateShelfEntry } from "@grimo/client";
+import {
+  bookInputOf,
+  useAddToShelf,
+  useBook,
+  useRemoveFromShelf,
+  useUpdateShelfEntry,
+} from "@grimo/client";
 import {
   editionPages,
   readingPercent,
@@ -52,7 +58,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
 
   const { book, entry, community, reviews, friendsWant } = data;
   const pages = editionPages(entry?.pageCount, book.pageCount);
-  const { id: _id, description: _description, ...bookInput } = book;
+  const bookInput = bookInputOf(book);
   const percent = entry ? readingPercent(entry.currentPage, pages) : null;
 
   return (
@@ -75,6 +81,16 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
               .join(" · ")}
           </Text>
           <FriendsWant friends={friendsWant} />
+          {book.reviewStatus === "pending" && (
+            <Text variant="small" color="textMuted" style={styles.center}>
+              Em revisão: você cadastrou este livro, só você o vê até a revisão.
+            </Text>
+          )}
+          {book.reviewStatus === "rejected" && (
+            <Text variant="small" color="textMuted" style={styles.center}>
+              Este cadastro não foi aprovado: o livro continua só na sua estante.
+            </Text>
+          )}
         </View>
 
         <ShelfPicker book={book} entry={entry} />
@@ -101,7 +117,9 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
 
         {entry?.status === "read" && <RatingCard entryId={entry.id} rating={entry.rating} />}
 
-        <StartGroup book={bookInput} />
+        {(book.reviewStatus === null || book.reviewStatus === "approved") && (
+          <StartGroup book={bookInput} />
+        )}
 
         {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}
 
@@ -166,7 +184,7 @@ function ShelfPicker({ book, entry }: { book: Detail["book"]; entry: Detail["ent
 
   function pick(status: ShelfStatus) {
     if (entry) return update.mutate({ id: entry.id, status });
-    const { id: _id, description: _description, ...input } = book;
+    const input = bookInputOf(book);
     addToShelf.mutate({ book: input, status });
   }
 

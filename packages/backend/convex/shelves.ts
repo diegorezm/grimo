@@ -1,12 +1,13 @@
-import { addToShelfSchema, updateShelfEntrySchema } from "@grimo/core";
+import { addToShelfSchema, isManualBookId, updateShelfEntrySchema } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
-import { parse } from "./model/errors";
+import { notFound, parse } from "./model/errors";
 import { booksFriendsWant } from "./model/friends";
 import { listLimit } from "./model/limits";
 import { enforceRateLimit } from "./model/rateLimit";
 import { requireViewer } from "./model/readers";
+import { isBookVisible } from "./model/safety";
 import {
   addToShelf,
   bookByOpenLibraryId,
@@ -55,7 +56,12 @@ export const add = mutation({
     const input = parse(addToShelfSchema, args);
     await enforceRateLimit(ctx, "addToShelf", viewer._id);
     const { openLibraryId } = input.book;
-    const isNew = !(await bookByOpenLibraryId(ctx, openLibraryId));
+    const existing = await bookByOpenLibraryId(ctx, openLibraryId);
+    // Hand-added books come from `books.addManual`, never from what a client sends here.
+    if (isManualBookId(openLibraryId) && (!existing || !isBookVisible(existing, viewer._id))) {
+      throw notFound("Livro");
+    }
+    const isNew = !existing;
     const entry = await addToShelf(ctx, viewer._id, input);
     // The client said what this book is; Open Library has the last word (`books.refreshBook`).
     if (isNew) await ctx.scheduler.runAfter(0, internal.books.refreshBook, { openLibraryId });

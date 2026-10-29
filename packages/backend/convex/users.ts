@@ -177,7 +177,7 @@ export const removeAvatar = mutation({
 });
 
 /** The books shown on a profile: reading now, favorites (best rated reads) and the total. */
-async function profileBooks(ctx: QueryCtx, user: Doc<"users">) {
+async function profileBooks(ctx: QueryCtx, user: Doc<"users">, viewerId: Id<"users"> | null) {
   const entries = await ctx.db
     .query("shelfEntries")
     .withIndex("by_user_updated", (q) => q.eq("userId", user._id))
@@ -186,6 +186,7 @@ async function profileBooks(ctx: QueryCtx, user: Doc<"users">) {
   const rows = await withBooks(
     ctx,
     entries.filter((entry) => entry.status === "reading" || entry.status === "read"),
+    viewerId,
   );
   const reading = rows.filter(({ entry }) => entry.status === "reading");
   const favorites = rows
@@ -206,7 +207,7 @@ export const byUsername = query({
     const [profile, stats, books, following, followsYou, blockedByMe] = await Promise.all([
       profileOf(ctx, reader),
       yearOverview(ctx, reader, year),
-      profileBooks(ctx, reader),
+      profileBooks(ctx, reader, viewer?._id ?? null),
       viewer ? isFollowing(ctx, viewer._id, reader._id) : false,
       viewer ? isFollowing(ctx, reader._id, viewer._id) : false,
       viewer ? hasBlocked(ctx, viewer._id, reader._id) : false,

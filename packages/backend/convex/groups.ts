@@ -4,6 +4,7 @@ import {
   createGroupSchema,
   groupMessageSchema,
   groupPercent,
+  isManualBookId,
   parseInviteCode,
   updateGroupSchema,
 } from "@grimo/core";
@@ -157,6 +158,13 @@ export const create = mutation({
     const now = Date.now();
 
     let book = await bookByOpenLibraryId(ctx, input.openLibraryId);
+    // Its invite is public: a hand-added book has to be approved first.
+    if (isManualBookId(input.openLibraryId) && book?.reviewStatus !== "approved") {
+      throw appError(
+        "INVALID",
+        "Esse livro ainda está em revisão. Dá para ler junto depois que for aprovado.",
+      );
+    }
     if (!book) {
       await addToShelf(ctx, viewer._id, { book: input, status: "reading" }, now);
       book = (await bookByOpenLibraryId(ctx, input.openLibraryId))!;

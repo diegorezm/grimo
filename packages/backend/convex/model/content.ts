@@ -1,7 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { authorOf } from "./readers";
-import { blockedIds, isHidden } from "./safety";
+import { blockedIds, isBookVisible, isHidden } from "./safety";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -49,6 +49,8 @@ export async function activityView(
   ]);
   if (!actor || isHidden(actor)) return null;
   if (target && isHidden(target)) return null;
+  // A hand-added book still in review shows only to whoever added it.
+  if (book && !isBookVisible(book, viewerId)) return null;
   if (activity.postId && !post) return null;
   return {
     id: activity._id,

@@ -1,5 +1,6 @@
 import {
   ACTIVITY_KINDS,
+  BOOK_REVIEW_STATUSES,
   LEGAL_DOCUMENTS,
   NOTIFICATION_KINDS,
   POST_KINDS,
@@ -16,6 +17,7 @@ const literals = <T extends string>(values: readonly T[]) =>
   v.union(...values.map((value) => v.literal(value)));
 
 export const shelfStatus = literals(SHELF_STATUSES);
+export const bookReviewStatus = literals(BOOK_REVIEW_STATUSES);
 export const postKind = literals(POST_KINDS);
 export const activityKind = literals(ACTIVITY_KINDS);
 export const legalDocument = literals(LEGAL_DOCUMENTS);
@@ -130,7 +132,17 @@ export default defineSchema({
     readerCount: v.optional(v.number()),
     ratingSum: v.optional(v.number()),
     ratingCount: v.optional(v.number()),
-  }).index("by_openLibraryId", ["openLibraryId"]),
+    /**
+     * Hand-added books (`GR…` ids, `books.addManual`): who added it and the moderation review.
+     * Until approved only that reader sees it. Absent on Open Library books.
+     */
+    createdBy: v.optional(v.id("users")),
+    reviewStatus: v.optional(bookReviewStatus),
+  })
+    .index("by_openLibraryId", ["openLibraryId"])
+    .index("by_createdBy", ["createdBy"])
+    .index("by_reviewStatus", ["reviewStatus"])
+    .searchIndex("search_title", { searchField: "title", filterFields: ["reviewStatus"] }),
 
   /** A book on a reader's shelf. One per (user, book). */
   shelfEntries: defineTable({

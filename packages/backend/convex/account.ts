@@ -31,6 +31,7 @@ export const exportData = query({
       memberships,
       groupMessages,
       imports,
+      booksAdded,
     ] = await Promise.all([
       ctx.db
         .query("readingGoals")
@@ -87,6 +88,10 @@ export const exportData = query({
       ctx.db
         .query("imports")
         .withIndex("by_user_created", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("books")
+        .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
         .collect(),
     ]);
 
@@ -179,6 +184,11 @@ export const exportData = query({
           at: date(row.createdAt),
         })),
       ),
+      booksAdded: booksAdded.map((book) => ({
+        title: book.title,
+        authors: book.authors,
+        review: book.reviewStatus ?? null,
+      })),
       imports: imports.map((row) => ({
         source: row.source,
         at: date(row.createdAt),
@@ -384,6 +394,18 @@ const steps: Step[] = [
       await recordBookCounters(ctx, entry.bookId, entry, null);
     }
     return entries.length === BATCH;
+  },
+  // Hand-added books: the ones nobody else can see go; approved ones stay, without the author.
+  async (ctx, userId) => {
+    const books = await ctx.db
+      .query("books")
+      .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
+      .take(BATCH);
+    for (const book of books) {
+      if (book.reviewStatus === "approved") await ctx.db.patch(book._id, { createdBy: undefined });
+      else await ctx.db.delete(book._id);
+    }
+    return books.length === BATCH;
   },
   async (ctx, userId) =>
     deleteAll(

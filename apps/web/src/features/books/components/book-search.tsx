@@ -4,6 +4,7 @@ import { useDeferredValue, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { SearchIcon } from "@/components/ui/icons";
 import { BookCard } from "./book-card";
+import { ManualBookForm } from "./manual-book-form";
 
 const SUGGESTIONS = [
   "Duna",
@@ -25,6 +26,8 @@ export function BookSearch({ initialQuery = "" }: { initialQuery?: string }) {
     (useShelf().data?.items ?? []).map(({ entry, book }) => [book.openLibraryId, entry.status]),
   );
   const results = search.data?.items ?? [];
+  const [adding, setAdding] = useState(false);
+  const searched = !search.isFetching && deferred.trim().length >= 2;
 
   return (
     <div className="flex flex-col gap-8">
@@ -61,8 +64,8 @@ export function BookSearch({ initialQuery = "" }: { initialQuery?: string }) {
       </div>
 
       {search.isFetching && results.length === 0 && <Spinner label="Buscando…" />}
-      {!search.isFetching && deferred.trim().length >= 2 && results.length === 0 && (
-        <p className="py-10 text-center text-text-muted">Nada encontrado para “{deferred}”.</p>
+      {searched && results.length === 0 && (
+        <p className="pt-10 text-center text-text-muted">Nada encontrado para “{deferred}”.</p>
       )}
 
       <ul className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] sm:gap-x-8">
@@ -100,6 +103,22 @@ export function BookSearch({ initialQuery = "" }: { initialQuery?: string }) {
           );
         })}
       </ul>
+
+      {searched &&
+        (adding ? (
+          <ManualBookForm initialTitle={deferred.trim()} onCancel={() => setAdding(false)} />
+        ) : (
+          <p className="text-center text-sm text-text-muted">
+            Não achou o livro?{" "}
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="font-semibold text-accent underline-offset-4 hover:underline"
+            >
+              Cadastre ele
+            </button>
+          </p>
+        ))}
     </div>
   );
 }

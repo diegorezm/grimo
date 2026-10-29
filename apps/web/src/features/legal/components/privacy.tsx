@@ -57,6 +57,9 @@ export function PrivacyPage() {
             <strong>Juntos:</strong> os grupos de leitura em que você está, quando entrou e as
             mensagens que você escreve neles (com o ponto do livro em que você estava).
             <br />
+            <strong>Livros que você cadastra:</strong> título, autores, páginas e ano, e que foi
+            você quem cadastrou. Até a revisão só você vê o livro.
+            <br />
             <strong>Importação:</strong> se você importar do Goodreads, o arquivo é lido no seu
             navegador e enviamos só os livros (título, autores, ISBN, estante, nota, data de leitura
             e páginas). Eles vão para a sua estante; do resto guardamos um resumo e os títulos que
