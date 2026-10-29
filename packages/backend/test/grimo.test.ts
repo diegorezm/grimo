@@ -565,6 +565,67 @@ describe("moderation", () => {
     expect(detail.comments).toHaveLength(0);
   });
 
+  describe("verified email", () => {
+    beforeEach(() => {
+      vi.stubEnv("RESEND_API_KEY", "re_test");
+      vi.stubEnv("EMAIL_FROM", "Grimo <ola@example.test>");
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    it("locks the social features until the email is verified", async () => {
+      const t = newTest();
+      const rafa = await reader(t, "rafa");
+      const bia = await reader(t, "bia");
+      await t.run((ctx) => ctx.db.patch(bia.id, { emailVerified: true }));
+      const { post } = await bia.as.mutation(api.posts.create, { kind: "note", body: "Oi" });
+
+      expect((await rafa.as.query(api.users.me, {})).needsEmailVerification).toBe(true);
+      const locked = /Confirme seu email/;
+      await expect(
+        rafa.as.mutation(api.posts.create, { kind: "note", body: "Oi" }),
+      ).rejects.toThrow(locked);
+      await expect(
+        rafa.as.mutation(api.posts.comment, { postId: post.id, body: "Oi" }),
+      ).rejects.toThrow(locked);
+      await expect(
+        rafa.as.mutation(api.posts.setLiked, { postId: post.id, like: true }),
+      ).rejects.toThrow(locked);
+      await expect(
+        rafa.as.mutation(api.users.setFollowing, { userId: bia.id, follow: true }),
+      ).rejects.toThrow(locked);
+      // Juntos: starting a group and writing in it are locked; joining by invite is not.
+      await expect(rafa.as.mutation(api.groups.create, { book, finishBy: null })).rejects.toThrow(
+        locked,
+      );
+      const group = await bia.as.mutation(api.groups.create, { book, finishBy: null });
+      const { inviteCode } = await bia.as.query(api.groups.detail, { id: group.id });
+      await rafa.as.mutation(api.groups.join, { code: inviteCode });
+      await expect(rafa.as.mutation(api.groups.send, { id: group.id, body: "Oi" })).rejects.toThrow(
+        locked,
+      );
+      // Unfollowing, reporting and the reader's own shelf stay open.
+      await rafa.as.mutation(api.users.setFollowing, { userId: bia.id, follow: false });
+      await rafa.as.mutation(api.moderation.report, {
+        target: "post",
+        targetId: post.id,
+        reason: "spam",
+      });
+
+      await t.run((ctx) => ctx.db.patch(rafa.id, { emailVerified: true }));
+      expect((await rafa.as.query(api.users.me, {})).needsEmailVerification).toBe(false);
+      await rafa.as.mutation(api.posts.comment, { postId: post.id, body: "Oi" });
+      await rafa.as.mutation(api.users.setFollowing, { userId: bia.id, follow: true });
+    });
+
+    it("doesn't lock anything while the deployment can't send email", async () => {
+      vi.unstubAllEnvs();
+      const t = newTest();
+      const rafa = await reader(t, "rafa");
+      expect((await rafa.as.query(api.users.me, {})).needsEmailVerification).toBe(false);
+      await rafa.as.mutation(api.posts.create, { kind: "note", body: "Oi" });
+    });
+  });
+
   it("suspended readers are hidden and can't use the app", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");

@@ -153,6 +153,8 @@ em memória ele não vale entre execuções do Convex.
 
 ### S3 · Sem recuperação de senha e sem verificação de email — Alta
 
+> **Backend feito, falta o provedor e as telas:** `model/email.ts` + `email.send` (Resend por `fetch`; sem chave só loga o link), `sendResetPassword` e `emailVerification` no Better Auth, `users.emailVerified` (trigger + `migrations:backfillEmailVerified`) e `requireVerifiedViewer` bloqueando post, comentário, curtida e seguir (só quando o email está configurado). Reenvios limitados a 5/h por endereço. Os apps mostram o aviso "Confirme seu email" com reenvio. **Falta:** criar a conta no Resend e definir as variáveis, as telas "Esqueci minha senha" e `/redefinir-senha` (web e mobile) e citar o Resend na Política. Sobre o sequestro de conta pelo login com Google, ainda não testei.
+
 `requireEmailVerification: false` ([auth.ts:113](../packages/backend/convex/auth.ts)) e não há fluxo
 de "esqueci a senha" (nenhum envio de email configurado).
 

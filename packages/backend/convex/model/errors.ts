@@ -5,7 +5,13 @@ import type { z } from "zod";
  * Every expected failure is a `ConvexError` with `{ code, message }` (message in pt-BR, shown in
  * the UI). Clients check the code with `isAppError` from @grimo/client.
  */
-export type ErrorCode = "UNAUTHENTICATED" | "NOT_FOUND" | "INVALID" | "FORBIDDEN" | "RATE_LIMITED";
+export type ErrorCode =
+  | "UNAUTHENTICATED"
+  | "NOT_FOUND"
+  | "INVALID"
+  | "FORBIDDEN"
+  | "RATE_LIMITED"
+  | "EMAIL_UNVERIFIED";
 
 export const appError = (code: ErrorCode, message: string) => new ConvexError({ code, message });
 

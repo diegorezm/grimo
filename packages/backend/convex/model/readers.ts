@@ -1,6 +1,7 @@
 import { DEFAULT_TIME_ZONE, USERNAME_REGEX, usernameFromName, yearOf } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { emailEnabled } from "./env";
 import { appError, notFound, unauthenticated } from "./errors";
 import { isHidden } from "./safety";
 
@@ -34,6 +35,26 @@ export async function requireViewer(ctx: Ctx): Promise<Doc<"users">> {
   if (!viewer || viewer.deletedAt) throw unauthenticated();
   return viewer;
 }
+
+/**
+ * Like `requireViewer`, for the social features (comment, post, like, follow): the email must be
+ * verified. Not enforced while the deployment can't send email (`emailEnabled`), since nobody
+ * could verify. Reporting, blocking and everything about your own shelf don't need it.
+ */
+export async function requireVerifiedViewer(ctx: Ctx): Promise<Doc<"users">> {
+  const viewer = await requireViewer(ctx);
+  if (needsEmailVerification(viewer)) {
+    throw appError(
+      "EMAIL_UNVERIFIED",
+      "Confirme seu email para comentar, curtir e seguir leitores.",
+    );
+  }
+  return viewer;
+}
+
+/** True when this reader must verify their email before using the social features. */
+export const needsEmailVerification = (viewer: Doc<"users">) =>
+  emailEnabled() && viewer.emailVerified !== true;
 
 /** A reader others can see (deleted, suspended and under-16 accounts are "not found"). */
 export async function readerByUsername(ctx: Ctx, username: string) {

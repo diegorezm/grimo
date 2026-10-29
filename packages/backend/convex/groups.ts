@@ -24,7 +24,7 @@ import {
 } from "./model/groups";
 import { listLimit } from "./model/limits";
 import { enforceRateLimit } from "./model/rateLimit";
-import { authorOf, getViewer, requireViewer } from "./model/readers";
+import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
 import { blockedIds, isHidden } from "./model/safety";
 import { addToShelf, bookByOpenLibraryId, bookView, entryView } from "./model/shelves";
 import { bookInput } from "./schema";
@@ -148,7 +148,9 @@ export const byCode = query({
 export const create = mutation({
   args: { book: bookInput, finishBy: v.union(v.number(), v.null()) },
   handler: async (ctx, args) => {
-    const viewer = await requireViewer(ctx);
+    // Like posting: a group (and its invite link) needs a verified email. Joining doesn't, so a
+    // new account that came from an invite lands in the group during the onboarding.
+    const viewer = await requireVerifiedViewer(ctx);
     const { book: input } = parse(addToShelfSchema, { book: args.book, status: "reading" });
     const { finishBy } = parse(createGroupSchema, { finishBy: args.finishBy });
     await enforceRateLimit(ctx, "createGroup", viewer._id);
@@ -280,7 +282,7 @@ export const messages = query({
 export const send = mutation({
   args: { id: v.id("groups"), body: v.string() },
   handler: async (ctx, args) => {
-    const viewer = await requireViewer(ctx);
+    const viewer = await requireVerifiedViewer(ctx);
     const group = await requireMember(ctx, args.id, viewer._id);
     const { body } = parse(groupMessageSchema, { body: args.body });
     await enforceRateLimit(ctx, "groupMessage", viewer._id);

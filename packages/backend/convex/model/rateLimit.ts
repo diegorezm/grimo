@@ -25,6 +25,8 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   signIn: { kind: "fixed window", rate: 10, period: 15 * MINUTE },
   signUp: { kind: "fixed window", rate: 5, period: HOUR },
   signUpAll: { kind: "fixed window", rate: 300, period: HOUR },
+  // Verification and reset emails (key: the address): stops using us to flood someone's inbox.
+  emailOut: { kind: "fixed window", rate: 5, period: HOUR },
 });
 
 type Name =
@@ -37,7 +39,7 @@ type Name =
   | "bookSearch"
   | "loadWork";
 
-type AuthName = "signIn" | "signUp" | "signUpAll";
+type AuthName = "signIn" | "signUp" | "signUpAll" | "emailOut";
 
 /** Spends one use of an auth limit: null when allowed, else the milliseconds to wait. */
 export async function spendAuthLimit(

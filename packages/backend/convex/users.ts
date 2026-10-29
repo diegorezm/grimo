@@ -22,9 +22,11 @@ import { notify, unnotify } from "./model/notifications";
 import {
   getViewer,
   isFollowing,
+  needsEmailVerification,
   profileOf,
   readerByUsername,
   readerCard,
+  requireVerifiedViewer,
   requireViewer,
   timeZoneOf,
   userByUsername,
@@ -44,6 +46,8 @@ export const me = query({
       ...(await profileOf(ctx, viewer)),
       timeZone: timeZoneOf(viewer),
       needsSetup: viewer.setupDone === false,
+      /** Social features are locked until the email is verified (see `requireVerifiedViewer`). */
+      needsEmailVerification: needsEmailVerification(viewer),
       legal: await legalStatus(ctx, viewer),
     };
   },
@@ -418,7 +422,13 @@ export async function setFollow(
 export const setFollowing = mutation({
   args: { userId: v.id("users"), follow: v.boolean() },
   handler: async (ctx, { userId, follow }) =>
-    setFollow(ctx, await requireViewer(ctx), userId, follow),
+    // Following needs a verified email; unfollowing never does.
+    setFollow(
+      ctx,
+      follow ? await requireVerifiedViewer(ctx) : await requireViewer(ctx),
+      userId,
+      follow,
+    ),
 });
 
 /**

@@ -8,6 +8,7 @@ import type { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { onAccountDeleted } from "./account";
 import authConfig from "./auth.config";
+import { resetPasswordEmail, sendEmail, verifyEmail, withCallback } from "./model/email";
 import { env } from "./model/env";
 import { spendAuthLimit } from "./model/rateLimit";
 import { freeUsername } from "./model/readers";
@@ -64,6 +65,7 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           bookCount: 0,
           searchText: `${name} ${handle}`,
           setupDone: false,
+          emailVerified: authUser.emailVerified,
         });
       },
       onUpdate: async (ctx, authUser) => {
@@ -71,9 +73,13 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           .query("users")
           .withIndex("by_authId", (q) => q.eq("authId", authUser._id))
           .unique();
+        if (!user) return;
+        if (user.emailVerified !== authUser.emailVerified) {
+          await ctx.db.patch(user._id, { emailVerified: authUser.emailVerified });
+        }
         // Name and @ belong to the reader (users.completeSetup / updateMe); auth only owns the
         // image, and only until the reader uploads a photo of their own (users.setAvatar).
-        if (!user || user.avatarStorageId) return;
+        if (user.avatarStorageId) return;
         await ctx.db.patch(user._id, { image: authUser.image ?? null });
       },
       // Account deleted (`/delete-user`): hide the reader now, erase their data in batches.
@@ -119,7 +125,7 @@ async function limitAuthAttempts(
   hookCtx: { path?: string; body?: unknown; headers?: Headers },
 ) {
   if (!("runMutation" in ctx)) return;
-  const wait = async (name: "signIn" | "signUp" | "signUpAll", key: string) => {
+  const wait = async (name: "signIn" | "signUp" | "signUpAll" | "emailOut", key: string) => {
     const retryAfter = await spendAuthLimit(ctx, name, key);
     if (retryAfter === null) return;
     const minutes = Math.max(1, Math.ceil(retryAfter / 60_000));
@@ -130,6 +136,12 @@ async function limitAuthAttempts(
   if (hookCtx.path === "/sign-in/email") {
     const email = (hookCtx.body as { email?: unknown } | undefined)?.email;
     if (typeof email === "string") await wait("signIn", email.trim().toLowerCase());
+  } else if (
+    hookCtx.path === "/send-verification-email" ||
+    hookCtx.path === "/request-password-reset"
+  ) {
+    const email = (hookCtx.body as { email?: unknown } | undefined)?.email;
+    if (typeof email === "string") await wait("emailOut", email.trim().toLowerCase());
   } else if (hookCtx.path === "/sign-up/email") {
     const ip = hookCtx.headers?.get("x-forwarded-for")?.split(",")[0]?.trim();
     if (ip) await wait("signUp", ip);
@@ -147,7 +159,25 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
       ...(apple ? ["https://appleid.apple.com"] : []),
     ],
     database: authComponent.adapter(ctx),
-    emailAndPassword: { enabled: true, requireEmailVerification: false },
+    // Signing in doesn't need a verified email (nobody is locked out by a lost message); the
+    // social features do (`requireVerifiedViewer`).
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: false,
+      resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: ({ user, url }) =>
+        sendEmail(ctx, {
+          to: user.email,
+          ...resetPasswordEmail(withCallback(url, siteUrl, "/redefinir-senha")),
+        }),
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: ({ user, url }) =>
+        sendEmail(ctx, { to: user.email, ...verifyEmail(withCallback(url, siteUrl, "/")) }),
+    },
     // Better Auth's own limiter is off: it keys by IP, and where the runtime gives it no client
     // IP it falls back to ONE bucket for everybody. Sign-in and sign-up are limited below.
     rateLimit: { enabled: false },
