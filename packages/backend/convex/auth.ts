@@ -25,15 +25,21 @@ const EXPO_GO_ORIGIN = /^exp:\/\/[\w.-]+(:\d+)?$/;
 
 /**
  * Origins allowed to call auth (and CORS). In local dev (SITE_URL on localhost) any localhost
- * port is accepted too, so the web app works whichever port Vite picks, and so is Expo Go.
+ * port is accepted too, so the web app works whichever port Vite picks, and so is Expo Go. A link
+ * opened from an email (password reset, verification) carries no Origin: in dev its localhost
+ * `callbackURL` is accepted the same way.
  */
 function trustedOrigins(request?: Request) {
   const origins = [siteUrl, MOBILE_SCHEME];
-  const origin = request?.headers.get("origin") ?? request?.headers.get("expo-origin");
   const dev = LOCAL_ORIGIN.test(siteUrl);
-  if (dev && origin && (LOCAL_ORIGIN.test(origin) || EXPO_GO_ORIGIN.test(origin))) {
-    origins.push(origin);
-  }
+  if (!dev || !request) return origins;
+  const origin = request.headers.get("origin") ?? request.headers.get("expo-origin");
+  if (origin && (LOCAL_ORIGIN.test(origin) || EXPO_GO_ORIGIN.test(origin))) origins.push(origin);
+  const callback = URL.canParse(request.url)
+    ? new URL(request.url).searchParams.get("callbackURL")
+    : null;
+  const callbackOrigin = callback && URL.canParse(callback) ? new URL(callback).origin : null;
+  if (callbackOrigin && LOCAL_ORIGIN.test(callbackOrigin)) origins.push(callbackOrigin);
   return origins;
 }
 

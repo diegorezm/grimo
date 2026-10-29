@@ -90,6 +90,12 @@ export function AuthForm({ redirectTo = "/" }: { redirectTo?: string }) {
             {pending ? "Um instante…" : "Continuar"}
           </Button>
         )}
+        <Link
+          to="/esqueci-senha"
+          className="text-center text-sm text-text-muted underline-offset-4 hover:text-text hover:underline"
+        >
+          Esqueci minha senha
+        </Link>
         <p className="text-center font-mono text-[11px] text-text-muted">
           É de graça. Seu email nunca aparece no perfil.
         </p>
