@@ -39,6 +39,15 @@ export function GroupView({ id }: { id: string }) {
         <Header group={data} />
         <Members group={data} />
         <InviteBox code={data.inviteCode} title={data.book.title} />
+        <Link
+          to="/juntos/$id/card"
+          params={{ id: data.id }}
+          className="w-fit rounded-full border border-border px-5 py-2.5 font-mono text-xs uppercase tracking-wider text-text-muted transition hover:border-accent/50 hover:text-accent"
+        >
+          {data.members.length >= 2 && data.members.every((member) => member.percent >= 100)
+            ? "Card “Terminamos juntos”"
+            : "Card do grupo para os Stories"}
+        </Link>
         <LeaveGroup id={data.id} />
       </div>
       <GroupChat id={data.id} />

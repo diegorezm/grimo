@@ -48,6 +48,15 @@ export function GroupScreen({ id }: { id: string }) {
           <Header group={data} />
           <Members group={data} />
           <Invite code={data.inviteCode} title={data.book.title} />
+          <Button
+            variant="secondary"
+            title={
+              data.members.length >= 2 && data.members.every((member) => member.percent >= 100)
+                ? "Card “Terminamos juntos”"
+                : "Card do grupo para os Stories"
+            }
+            onPress={() => router.push({ pathname: "/group-card/[id]", params: { id: data.id } })}
+          />
           <Chat id={data.id} />
           <Leave id={data.id} />
         </>

@@ -102,7 +102,7 @@ convite**, e o convite é um link que traz gente nova.
 | 1 | Conversa por trecho, **liberada conforme o seu progresso** (sem spoiler) | Fable | ✓ | — |
 | 1 | Ritmo do grupo: data para terminar → meta de páginas por dia calculada | Bookclubs | ✓ | — |
 | 1 | Botão **"Ler com alguém"** na página do livro e nos livros de "Quero ler" | — | ✓ | — |
-| 1 | Card do grupo e card de "terminamos juntos" | Spotify Wrapped | — | Próximo (o que falta da etapa 1) |
+| 1 | Card do grupo e card de "terminamos juntos" | Spotify Wrapped | ✓ | — |
 | 2 | **Clubes**: grupo fixo que lê um livro depois do outro, enquete para o próximo | Bookclubs/Fable | — | Depois |
 | 2 | Encontros do clube com data (lembrete, link da chamada ou local) | Bookclubs | — | Depois |
 | 3 | **Leituras abertas**: grupos públicos por livro, qualquer um entra (resolve a aba vazia de quem não tem amigos no app) | Maratona | — | Depois |

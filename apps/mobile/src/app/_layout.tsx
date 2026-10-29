@@ -70,6 +70,7 @@ function RootNavigator() {
         <Stack.Screen name="card" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="group/[id]" />
+        <Stack.Screen name="group-card/[id]" />
         <Stack.Screen
           name="report"
           options={{

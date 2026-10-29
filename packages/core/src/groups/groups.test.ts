@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildGroupCard,
   canSeeMessage,
   createGroupSchema,
   groupMessageSchema,
@@ -76,5 +77,54 @@ describe("labels and schemas", () => {
     expect(createGroupSchema.safeParse({ finishBy: Date.now() - 1000 }).success).toBe(false);
     expect(createGroupSchema.safeParse({ finishBy: null }).success).toBe(true);
     expect(groupMessageSchema.safeParse({ body: "   " }).success).toBe(false);
+  });
+});
+
+describe("buildGroupCard", () => {
+  const book = { title: "Duna", authors: ["Frank Herbert"], coverUrl: null };
+  const now = new Date("2026-11-20T12:00:00Z");
+  const createdAt = new Date("2026-10-29T12:00:00Z").getTime();
+
+  it("shows where each one is while reading", () => {
+    const card = buildGroupCard(
+      {
+        book,
+        members: [
+          { name: "Bia Lima", percent: 60 },
+          { name: "Rafa Moreira", percent: 30 },
+        ],
+        groupPercent: 45,
+        createdAt,
+      },
+      "rafa",
+      now,
+    );
+    expect(card).toMatchObject({
+      finished: false,
+      headline: "Lendo juntos",
+      summary: "2 leitores · grupo em 45%",
+      members: [{ name: "Bia", initial: "B", percent: 60 }, { name: "Rafa" }],
+      more: 0,
+    });
+  });
+
+  it("is 'terminamos juntos' when everyone finished, and counts the rest", () => {
+    const members = Array.from({ length: 8 }, (_, i) => ({ name: `Leitor ${i}`, percent: 100 }));
+    const card = buildGroupCard({ book, members, groupPercent: 100, createdAt }, null, now);
+    expect(card).toMatchObject({
+      finished: true,
+      headline: "Terminamos juntos",
+      summary: "8 leitores em 22 dias",
+      more: 2,
+    });
+    expect(card.members).toHaveLength(6);
+    // Alone it's not "juntos".
+    expect(
+      buildGroupCard(
+        { book, members: members.slice(0, 1), groupPercent: 100, createdAt },
+        null,
+        now,
+      ).finished,
+    ).toBe(false);
   });
 });
