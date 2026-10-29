@@ -5,6 +5,7 @@ import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAppCache, useAuthClient } from "@/providers/app-providers";
+import { ForgotPasswordForm } from "./forgot-password-form";
 import { GoogleButton } from "./google-button";
 
 /**
@@ -21,6 +22,7 @@ export function SignInForm() {
   const [pending, setPending] = useState(false);
   /** Nothing matched: waiting for the reader to confirm that this email gets a new account. */
   const [newAccountEmail, setNewAccountEmail] = useState<string | null>(null);
+  const [forgot, setForgot] = useState(false);
   // Editing a field cancels the confirmation: it was about the email on screen when it appeared.
   const set = (key: keyof typeof form) => (value: string) => {
     setNewAccountEmail(null);
@@ -40,6 +42,8 @@ export function SignInForm() {
     // New session: start from an empty cache so nothing from a previous account shows up.
     await appCache.clearForSignIn();
   }
+
+  if (forgot) return <ForgotPasswordForm onBack={() => setForgot(false)} />;
 
   return (
     <Card>
@@ -100,6 +104,7 @@ export function SignInForm() {
           disabled={pending}
         />
       )}
+      <Button variant="ghost" title="Esqueci minha senha" onPress={() => setForgot(true)} />
       <Text variant="small" color="textMuted" style={styles.divider}>
         É de graça. Seu email nunca aparece no perfil.
       </Text>

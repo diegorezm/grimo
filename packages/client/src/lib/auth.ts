@@ -4,7 +4,13 @@
  * site URL (`CONVEX_SITE_URL`, where convex/http.ts serves /api/auth).
  */
 import { convexClient } from "@convex-dev/better-auth/client/plugins";
-import { emailCredentialsSchema, firstIssue, newPasswordSchema } from "@grimo/core";
+import {
+  emailCredentialsSchema,
+  firstIssue,
+  forgotPasswordSchema,
+  newPasswordSchema,
+  resetPasswordSchema,
+} from "@grimo/core";
 
 /** Plugins every client must register so types/endpoints match the server (convex/auth.ts). */
 export const sharedAuthClientPlugins = () => [convexClient()];
@@ -94,6 +100,53 @@ export async function continueWithEmail(
     return fail("Senha incorreta para esse email.");
   }
   return fail(authErrorMessage(signUp.error));
+}
+
+/** The part of a Better Auth client that password reset needs. */
+export interface PasswordResetClient {
+  requestPasswordReset: (input: { email: string; redirectTo: string }) => AuthResult;
+  resetPassword: (input: { newPassword: string; token: string }) => AuthResult;
+}
+
+export type PasswordResetOutcome =
+  | { status: "sent" | "reset" }
+  | { status: "error"; message: string };
+
+/**
+ * "Esqueci minha senha": emails a link to `redirectTo` (the web page that sets the new
+ * password). Says "sent" whether or not the email has an account: nobody learns who is a reader.
+ */
+export async function requestPasswordReset(
+  client: PasswordResetClient,
+  input: { email: string },
+  redirectTo: string,
+): Promise<PasswordResetOutcome> {
+  const parsed = forgotPasswordSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: firstIssue(parsed.error) };
+  const { error } = await client.requestPasswordReset({ email: parsed.data.email, redirectTo });
+  if (error?.code === "TOO_MANY_REQUESTS" || error?.message?.startsWith("Muitas")) {
+    return { status: "error", message: error.message ?? "Muitas tentativas. Tente mais tarde." };
+  }
+  return { status: "sent" };
+}
+
+/** Sets the new password with the token from the email link (its other sessions end). */
+export async function resetPassword(
+  client: PasswordResetClient,
+  input: { password: string; confirm: string },
+  token: string,
+): Promise<PasswordResetOutcome> {
+  const parsed = resetPasswordSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: firstIssue(parsed.error) };
+  const { error } = await client.resetPassword({ newPassword: parsed.data.password, token });
+  if (!error) return { status: "reset" };
+  if (error.code === "INVALID_TOKEN") {
+    return {
+      status: "error",
+      message: "Esse link expirou ou já foi usado. Peça um novo em “Esqueci minha senha”.",
+    };
+  }
+  return { status: "error", message: authErrorMessage(error) };
 }
 
 /** The part of a Better Auth client that account deletion needs. */

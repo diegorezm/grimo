@@ -15,6 +15,19 @@ export const newPasswordSchema = z
   .string()
   .min(MIN_PASSWORD_LENGTH, `A senha precisa de pelo menos ${MIN_PASSWORD_LENGTH} caracteres`);
 
+/** "Esqueci minha senha": where to send the link. */
+export const forgotPasswordSchema = z.object({
+  email: emailCredentialsSchema.shape.email,
+});
+
+/** "Redefinir senha": the new password, typed twice. */
+export const resetPasswordSchema = z
+  .object({ password: newPasswordSchema, confirm: z.string() })
+  .refine((input) => input.password === input.confirm, {
+    message: "As senhas não são iguais",
+    path: ["confirm"],
+  });
+
 /** The first problem of a failed parse, ready to show (pt-BR). */
 export function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Dados inválidos";
