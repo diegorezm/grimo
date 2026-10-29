@@ -72,7 +72,7 @@ Ao decidir se algo entra, pergunte:
 | Motivo ao abandonar ("não me prendeu", "pausa")                          | StoryGraph        |   —    | Depois  |
 | Notas privadas por livro (só você vê)                                    | Skoob             |   —    | Depois  |
 | **Citações** com página: post tipo `quote`, card no estúdio, e dá para citar dentro da conversa do Juntos (F11) | Skoob/Kindle | — | Próximo |
-| Número de páginas **da sua edição** (`pageCount` por entrada): progresso e meta certos (F13) | StoryGraph | — | Próximo (base para o Juntos) |
+| Número de páginas **da sua edição** (`pageCount` por entrada): progresso e meta certos (F13) | StoryGraph | ✓ | — |
 | Meta mensal e meta por páginas (F9)                                      | Goodreads         |   —    | Depois  |
 | Escanear o código de barras (ISBN) para adicionar (F14)                  | Skoob/Goodreads   |   —    | Próximo |
 | Cadastrar livro que o Open Library não tem: começa visível só para quem cadastrou, vira público depois de revisado (F13) | Skoob | — | Próximo (nacionais e independentes faltam muito) |
@@ -145,7 +145,7 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Busca e página do livro com resenhas da comunidade                       | todos             |   ✓    | —       |
 | **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas e seguíveis | Letterboxd | — | Próximo |
 | Em alta entre quem você segue (F10)                                      | Letterboxd        |   —    | Próximo |
-| Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   —    | Próximo (porta de entrada do Juntos) |
+| Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   ◐    | Agora ("Amigos querem ler" no Início e no livro; falta o botão "ler juntos?", que vem com o Juntos) |
 | Livros parecidos na página do livro                                      | StoryGraph        |   —    | Depois  |
 | Explorar por gênero / humor                                              | StoryGraph        |   —    | Depois  |
 | Lançamentos de editoras parceiras                                        | Skoob             |   —    | Talvez  |

@@ -13,6 +13,7 @@ import { RetrospectiveBanner } from "@/features/stats";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { FirstSteps } from "./first-steps";
+import { FriendsWantRow } from "./friends-want-row";
 
 /** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
 export function Dashboard() {
@@ -102,6 +103,8 @@ export function Dashboard() {
           <Text variant="heading">Estantes</Text>
           <ShelfTiles onSelect={() => router.navigate("/shelves")} />
         </View>
+
+        <FriendsWantRow />
 
         {activity.length > 0 && (
           <View style={styles.section}>

@@ -191,6 +191,8 @@ interface ShelfSeed {
   book: BookKey;
   status: Status;
   page?: number;
+  /** Pages of this reader's edition, when it isn't the book's. */
+  pages?: number;
   rating?: number;
   /** "MM-DD" in the current year. */
   finished?: string;
@@ -223,7 +225,7 @@ export const readers: ReaderSeed[] = [
     genres: ["science_fiction", "fantasy", "literary_fiction"],
     goal: 24,
     shelves: [
-      { book: "duna", status: "reading", page: 312 },
+      { book: "duna", status: "reading", page: 312, pages: 720 },
       { book: "maoEsquerda", status: "reading", page: 118 },
       { book: "nomeDoVento", status: "reading", page: 540 },
       { book: "hobbit", status: "read", rating: 5, finished: "01-19" },
@@ -284,6 +286,8 @@ export const readers: ReaderSeed[] = [
       { book: "expressoOriente", status: "read", rating: 5, finished: "06-10" },
       { book: "meiaNoite", status: "reading", page: 190 },
       { book: "cemAnos", status: "want_to_read" },
+      { book: "pequenoPrincipe", status: "want_to_read" },
+      { book: "garotaExemplar", status: "want_to_read" },
       { book: "domCasmurro", status: "read", rating: 4, finished: "09-15" },
     ],
     posts: [
@@ -311,6 +315,8 @@ export const readers: ReaderSeed[] = [
       { book: "neuromancer", status: "read", rating: 4, finished: "08-01" },
       { book: "tresCorpos", status: "abandoned", page: 90 },
       { book: "persepolis", status: "want_to_read" },
+      { book: "cemAnos", status: "want_to_read" },
+      { book: "pequenoPrincipe", status: "want_to_read" },
     ],
     posts: [
       {
@@ -357,6 +363,7 @@ export const readers: ReaderSeed[] = [
       { book: "hobbit", status: "read", rating: 5, finished: "04-04" },
       { book: "mistborn", status: "read", rating: 4, finished: "09-09" },
       { book: "sapiens", status: "want_to_read" },
+      { book: "pequenoPrincipe", status: "want_to_read" },
       { book: "nomeDoVento", status: "read", rating: 5, finished: "06-23" },
     ],
     posts: [

@@ -104,6 +104,7 @@ export const exportData = query({
           book: await bookTitle(entry.bookId),
           status: entry.status,
           currentPage: entry.currentPage,
+          editionPages: entry.pageCount ?? null,
           rating: entry.rating,
           startedAt: date(entry.startedAt),
           finishedAt: date(entry.finishedAt),

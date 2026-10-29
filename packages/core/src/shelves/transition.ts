@@ -21,10 +21,15 @@ export interface ShelfTransition {
   activity: ActivityKind | null;
 }
 
+/** Pages of the reader's edition when they set one, else the book's. */
+export const editionPages = (entryPages: number | null | undefined, bookPages: number | null) =>
+  entryPages ?? bookPages;
+
 /**
  * Business rules for moving a book between shelves / updating progress.
  * Pure so it can run on the API and in clients (optimistic updates).
- * `prev.status === null` means the book is being added for the first time.
+ * `prev.status === null` means the book is being added for the first time. `pageCount` is the
+ * reader's edition after the patch (`editionPages`).
  */
 export function planShelfTransition(
   prev: ShelfEntryState,
@@ -35,6 +40,9 @@ export function planShelfTransition(
   const set: UpdateShelfEntryInput = { ...patch };
   if (set.currentPage !== undefined) {
     set.currentPage = Math.min(set.currentPage, pageCount ?? MAX_CURRENT_PAGE);
+  } else if (patch.pageCount !== undefined && pageCount && prev.currentPage > pageCount) {
+    // A shorter edition: the bookmark moves to its last page.
+    set.currentPage = pageCount;
   }
   const status = patch.status ?? prev.status;
   const statusChanged = patch.status !== undefined && patch.status !== prev.status;

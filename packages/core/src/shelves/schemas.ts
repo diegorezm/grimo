@@ -20,6 +20,14 @@ export const updateShelfEntrySchema = z.object({
   rating: ratingSchema.nullable().optional(),
   startedAt: z.coerce.date().nullable().optional(),
   finishedAt: z.coerce.date().nullable().optional(),
+  /** Pages in your edition; null goes back to the book's. */
+  pageCount: z
+    .number({ error: "Número de páginas inválido" })
+    .int("Número de páginas inválido")
+    .positive("Número de páginas inválido")
+    .max(MAX_CURRENT_PAGE, `No máximo ${MAX_CURRENT_PAGE} páginas`)
+    .nullable()
+    .optional(),
 });
 export type UpdateShelfEntryInput = z.infer<typeof updateShelfEntrySchema>;
 

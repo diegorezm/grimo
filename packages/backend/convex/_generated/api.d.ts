@@ -20,6 +20,7 @@ import type * as model_bookStats from "../model/bookStats.js";
 import type * as model_content from "../model/content.js";
 import type * as model_env from "../model/env.js";
 import type * as model_errors from "../model/errors.js";
+import type * as model_friends from "../model/friends.js";
 import type * as model_legal from "../model/legal.js";
 import type * as model_limits from "../model/limits.js";
 import type * as model_notifications from "../model/notifications.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   "model/content": typeof model_content;
   "model/env": typeof model_env;
   "model/errors": typeof model_errors;
+  "model/friends": typeof model_friends;
   "model/legal": typeof model_legal;
   "model/limits": typeof model_limits;
   "model/notifications": typeof model_notifications;
