@@ -162,6 +162,7 @@ const ME: Me = {
   timeZone: "America/Sao_Paulo",
   needsEmailVerification: false,
   needsSetup: false,
+  isAdmin: false,
   legal: { needsAcceptance: false, needsAge: false, underage: false },
 };
 

@@ -4,13 +4,8 @@ import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
-import {
-  deleteCommentNotifications,
-  deletePostNotifications,
-  notify,
-  notifyMentions,
-  unnotify,
-} from "./model/notifications";
+import { deleteComment, deletePost } from "./model/moderation";
+import { notify, notifyMentions, unnotify } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
 import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
@@ -160,23 +155,7 @@ export const remove = mutation({
     const viewer = await requireViewer(ctx);
     const post = await ctx.db.get(id);
     if (!post || post.authorId !== viewer._id) return null;
-    const related = await Promise.all([
-      ctx.db
-        .query("postLikes")
-        .withIndex("by_post_user", (q) => q.eq("postId", id))
-        .collect(),
-      ctx.db
-        .query("postComments")
-        .withIndex("by_post", (q) => q.eq("postId", id))
-        .collect(),
-      ctx.db
-        .query("activities")
-        .withIndex("by_post", (q) => q.eq("postId", id))
-        .collect(),
-    ]);
-    for (const doc of related.flat()) await ctx.db.delete(doc._id);
-    await deletePostNotifications(ctx, id);
-    await ctx.db.delete(id);
+    await deletePost(ctx, post);
     return null;
   },
 });
@@ -211,9 +190,7 @@ export const removeComment = mutation({
     if (comment.authorId !== viewer._id && post?.authorId !== viewer._id) {
       throw appError("FORBIDDEN", "Você não pode apagar esse comentário.");
     }
-    await ctx.db.delete(id);
-    await deleteCommentNotifications(ctx, id);
-    if (post) await ctx.db.patch(post._id, { commentCount: Math.max(0, post.commentCount - 1) });
+    await deleteComment(ctx, comment);
     return null;
   },
 });

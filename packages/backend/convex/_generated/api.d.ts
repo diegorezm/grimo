@@ -28,6 +28,7 @@ import type * as model_friends from "../model/friends.js";
 import type * as model_groups from "../model/groups.js";
 import type * as model_legal from "../model/legal.js";
 import type * as model_limits from "../model/limits.js";
+import type * as model_moderation from "../model/moderation.js";
 import type * as model_notifications from "../model/notifications.js";
 import type * as model_openLibrary from "../model/openLibrary.js";
 import type * as model_rateLimit from "../model/rateLimit.js";
@@ -71,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   "model/groups": typeof model_groups;
   "model/legal": typeof model_legal;
   "model/limits": typeof model_limits;
+  "model/moderation": typeof model_moderation;
   "model/notifications": typeof model_notifications;
   "model/openLibrary": typeof model_openLibrary;
   "model/rateLimit": typeof model_rateLimit;

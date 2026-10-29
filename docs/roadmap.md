@@ -75,7 +75,7 @@ Ao decidir se algo entra, pergunte:
 | Número de páginas **da sua edição** (`pageCount` por entrada): progresso e meta certos (F13) | StoryGraph | ✓ | — |
 | Meta mensal e meta por páginas (F9)                                      | Goodreads         |   —    | Depois  |
 | Escanear o código de barras (ISBN) para adicionar (F14)                  | Skoob/Goodreads   |   —    | Próximo |
-| Cadastrar livro que o Open Library não tem: começa visível só para quem cadastrou, vira público depois de revisado (F13) | Skoob | — | Próximo (nacionais e independentes faltam muito) |
+| Cadastrar livro que o Open Library não tem: começa visível só para quem cadastrou, vira público depois de revisado (F13) | Skoob | ✓ | — |
 
 ## 3. Juntos: a 5ª aba (o diferencial social, F12)
 
@@ -179,11 +179,11 @@ Exigem logística, endereço ou parceiros: só fazem sentido com uma base grande
 | Recurso                                                                  | Inspiração        | Status | Quando  |
 | ------------------------------------------------------------------------ | ----------------- | :----: | ------- |
 | Email/senha, Google, termos, 16+, exportar e excluir conta               | —                 |   ✓    | —       |
-| **Recuperar senha e verificar email** (S3)                               | —                 |   —    | Próximo (trava o lançamento) |
+| **Recuperar senha e verificar email** (S3)                               | —                 |   ✓    | Falta configurar o Resend (domínio e chaves) |
 | **Botão "Entrar com Apple"** no mobile (exigido pela App Store)          | —                 |   ◐    | Próximo (trava a App Store) |
-| **Importar do Skoob e do Goodreads** (F7)                                | —                 |   —    | Próximo |
+| **Importar do Skoob e do Goodreads** (F7)                                | —                 |   ◐    | Goodreads feito; o Skoob não tem exportação oficial |
 | Exportar em CSV (além do JSON)                                           | Goodreads         |   —    | Depois  |
-| Painel de moderação `/admin` (F15)                                       | —                 |   —    | Próximo (antes de abrir para o público) |
+| Painel de moderação `/admin` (F15)                                       | —                 |   ✓    | Falta avisar quem denunciou do resultado |
 | Filtro automático de conteúdo (F16)                                      | —                 |   —    | Depois  |
 | Preferências de notificação por tipo                                     | —                 |   —    | Junto com as notificações |
 
@@ -206,8 +206,8 @@ Exigem logística, endereço ou parceiros: só fazem sentido com uma base grande
 3. **Notificações com push** (F6) e **menções**: o que traz o leitor de volta (e o Juntos precisa).
 4. **Juntos, etapa 1**: leitura conjunta com convite por link, progresso em %, conversa sem
    spoiler, ritmo e cards. Antes: páginas da sua edição (F13) e "amigos querem ler" (F10).
-5. **Antes de abrir ao público:** recuperar senha (S3), Entrar com Apple, painel de moderação
-   (F15), importar do Skoob/Goodreads (F7), cadastro manual de livro (F13).
+5. **Antes de abrir ao público:** ~~recuperar senha (S3), painel de moderação (F15), importar do
+   Goodreads (F7), cadastro manual de livro (F13)~~ (feito). Falta Entrar com Apple (pede build).
 6. **Hábito:** sessão de leitura com cronômetro, ofensiva, citações (F11), Live Activity e widget
    (pede build EAS).
 7. **Juntos, etapas 2 e 3:** clubes, leituras abertas, maratonas do mês.
