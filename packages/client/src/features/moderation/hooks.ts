@@ -81,8 +81,8 @@ export type ModerationCounts = FunctionReturnType<typeof api.moderation.counts>;
 export type ModerationLog = FunctionReturnType<typeof api.moderation.log>;
 export type ModerationLogItem = ModerationLog["items"][number];
 
-/** Items per page in the panel: its cards are tall, so pages are shorter than the app's 20. */
-export const PANEL_PAGE_SIZE = 10;
+/** Items per page in the panel: its cards are tall, so pages are shorter than the app's 20 (12 fills rows of 2 and 3 cards). */
+export const PANEL_PAGE_SIZE = 12;
 
 /** What the report list can be narrowed and ordered by (all optional). */
 export interface ReportFilters {

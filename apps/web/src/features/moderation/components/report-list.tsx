@@ -13,6 +13,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { cn } from "@/utils/cn";
+import { Card, CardBanner, CardGrid } from "./card-grid";
 import { SearchField, SelectField } from "./filters";
 import { Pager } from "./pager";
 import { ago, CHIP, LABEL, peekSearch, TARGET_LABELS } from "./shared";
@@ -124,11 +125,11 @@ export function ReportList() {
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-3">
+          <CardGrid>
             {data.items.map((report) => (
               <ReportCard key={report.id} report={report} selected={report.id === open} />
             ))}
-          </ul>
+          </CardGrid>
           <Pager
             page={data.page}
             pages={data.pages}
@@ -142,66 +143,79 @@ export function ReportList() {
   );
 }
 
-/** The basics of a report; the whole card opens it in the side peek. */
+/** The basics of a report as a small profile card; the whole card opens it in the side peek. */
 function ReportCard({ report, selected }: { report: QueuedReport; selected: boolean }) {
   const user = report.targetUser;
   return (
-    <li>
-      <Link
-        to="."
-        search={peekSearch({ report: report.id })}
-        resetScroll={false}
-        aria-current={selected ? "true" : undefined}
-        className={cn(
-          "page flex flex-col gap-3 rounded-lg p-4 transition hover:bg-surface-muted/40",
-          selected && "ring-2 ring-accent",
-        )}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card selected={selected}>
+      <CardBanner
+        left={TARGET_LABELS[report.target]}
+        right={report.reportCount > 1 ? `${report.reportCount} denúncias` : undefined}
+      />
+      <div className="flex flex-1 flex-col gap-3 px-5 pb-5">
+        <Avatar
+          src={user?.image ?? null}
+          name={user?.name ?? "?"}
+          size="size-14"
+          className="relative -mt-7 bg-accent-gradient text-accent-foreground shadow-md ring-4 ring-surface"
+        />
+        <div className="min-w-0">
           {user ? (
-            <div className="flex min-w-0 items-center gap-3">
-              <Avatar src={user.image} name={user.name} size="size-10" />
-              <div className="min-w-0">
-                <p className="truncate font-serif text-lg font-medium italic leading-tight">
-                  {user.name}
-                </p>
-                <p className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-text-muted">
-                  @{user.username}
-                  <StaffBadge role={user.role} />
-                  {user.suspended && <span className="text-danger">suspenso</span>}
-                </p>
-              </div>
-            </div>
+            <Link
+              to="."
+              search={peekSearch({ report: report.id })}
+              resetScroll={false}
+              aria-current={selected ? "true" : undefined}
+              className="block truncate font-serif text-xl font-medium italic leading-tight after:absolute after:inset-0 after:rounded-lg group-hover:underline"
+            >
+              {user.name}
+            </Link>
           ) : (
-            <p className="font-serif text-lg italic text-text-muted">Conta excluída</p>
+            <Link
+              to="."
+              search={peekSearch({ report: report.id })}
+              resetScroll={false}
+              className="block font-serif text-xl italic leading-tight text-text-muted after:absolute after:inset-0 after:rounded-lg"
+            >
+              Conta excluída
+            </Link>
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={cn(CHIP, "border-border text-text-muted")}>
-              {TARGET_LABELS[report.target]}
-            </span>
-            {report.reasons.slice(0, 2).map((reason) => (
-              <span key={reason} className={cn(CHIP, "border-danger/40 text-danger")}>
-                {REPORT_REASON_LABELS[reason]}
-              </span>
-            ))}
-            {report.reasons.length > 2 && (
-              <span className={cn(CHIP, "border-danger/40 text-danger")}>
-                +{report.reasons.length - 2}
-              </span>
-            )}
-            {report.reportCount > 1 && (
-              <span className={cn(CHIP, "border-accent text-accent")}>
-                {report.reportCount} denúncias
-              </span>
-            )}
-          </div>
+          {user && (
+            <p className="flex items-center gap-2 truncate font-mono text-[11px] text-text-muted">
+              @{user.username}
+              <StaffBadge role={user.role} />
+              {user.suspended && <span className="text-danger">suspenso</span>}
+            </p>
+          )}
         </div>
-        {report.snippet && <p className="line-clamp-2 text-sm text-text-muted">{report.snippet}</p>}
-        <p className={cn(LABEL, "flex items-center justify-between")}>
+
+        <p className="line-clamp-3 min-h-[3.75rem] text-sm leading-snug text-text-muted">
+          {report.snippet ?? "Sem texto."}
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          {report.reasons.slice(0, 2).map((reason) => (
+            <span key={reason} className={cn(CHIP, "border-danger/40 text-danger")}>
+              {REPORT_REASON_LABELS[reason]}
+            </span>
+          ))}
+          {report.reasons.length > 2 && (
+            <span className={cn(CHIP, "border-danger/40 text-danger")}>
+              +{report.reasons.length - 2}
+            </span>
+          )}
+        </div>
+
+        <p
+          className={cn(
+            LABEL,
+            "mt-auto flex items-center justify-between border-t border-border pt-4",
+          )}
+        >
           <span>{ago(report.createdAt)}</span>
           <span className="text-accent">Investigar →</span>
         </p>
-      </Link>
-    </li>
+      </div>
+    </Card>
   );
 }
