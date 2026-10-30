@@ -1,6 +1,6 @@
 import { api, type Id } from "@grimo/backend";
 import type { ReportReason, ReportTarget, SuspensionDuration } from "@grimo/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
 import { usePatchQueries } from "../../lib/mutation";
@@ -71,59 +71,134 @@ export function useSetBlocked() {
   });
 }
 
-export type ModerationQueue = FunctionReturnType<typeof api.moderation.queue>;
-export type QueuedReport = ModerationQueue["reports"][number];
-export type QueuedBook = ModerationQueue["books"][number];
-
-/** The moderation panel: open reports and hand-added books to review (admins only). */
-export function moderationQueueQuery() {
-  return convexQuery(api.moderation.queue, {}, "required");
-}
-
-export function useModerationQueue(options: { enabled?: boolean } = {}) {
-  return useQuery({ ...moderationQueueQuery(), ...options });
-}
-
-const queue = [convexQueryPrefix(api.moderation.queue)];
-
+export type ModerationReports = FunctionReturnType<typeof api.moderation.reports>;
+export type QueuedReport = ModerationReports["items"][number];
+export type ReportDetail = NonNullable<FunctionReturnType<typeof api.moderation.reportDetail>>;
+export type BookReviewDetail = NonNullable<FunctionReturnType<typeof api.moderation.bookReview>>;
+export type ModerationBooks = FunctionReturnType<typeof api.moderation.books>;
+export type QueuedBook = ModerationBooks["items"][number];
+export type ModerationCounts = FunctionReturnType<typeof api.moderation.counts>;
 export type ModerationLog = FunctionReturnType<typeof api.moderation.log>;
 export type ModerationLogItem = ModerationLog["items"][number];
 
-/** The moderation history (admins only). */
-export function moderationLogQuery() {
-  return convexQuery(api.moderation.log, {}, "required");
+/** Items per page in the panel: its cards are tall, so pages are shorter than the app's 20. */
+export const PANEL_PAGE_SIZE = 10;
+
+/** What the report list can be narrowed and ordered by (all optional). */
+export interface ReportFilters {
+  reason?: ReportReason;
+  target?: ReportTarget;
+  sort?: "oldest" | "newest" | "most";
+  search?: string;
 }
 
-export function useModerationLog(options: { enabled?: boolean } = {}) {
-  return useQuery({ ...moderationLogQuery(), ...options });
+/** Drops empty filters so they don't change the query. */
+const compact = <T extends object>(filters: T) =>
+  Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== undefined && value !== ""),
+  ) as T;
+
+/** How many reports and books wait, for the panel's tabs (capped at `cap`). */
+export function moderationCountsQuery() {
+  return convexQuery(api.moderation.counts, {}, "required");
+}
+
+export function useModerationCounts() {
+  return useQuery(moderationCountsQuery());
 }
 
 /**
+ * One page of open reports (one entry per reported thing). Live. The previous page stays on
+ * screen while the next one loads.
+ */
+export function useModerationReports(page: number, filters: ReportFilters = {}) {
+  return useQuery({
+    ...convexQuery(
+      api.moderation.reports,
+      { page, pageSize: PANEL_PAGE_SIZE, ...compact(filters) },
+      "required",
+    ),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** One page of hand-added books waiting for review; `search` matches title, author or adder. */
+export function useModerationBooks(page: number, search = "") {
+  return useQuery({
+    ...convexQuery(
+      api.moderation.books,
+      { page, pageSize: PANEL_PAGE_SIZE, ...compact({ search }) },
+      "required",
+    ),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export type LogAction = ModerationLogItem["action"];
+
+/** One page of the moderation history, newest first (admins only); `action` filters it. */
+export function useModerationLog(page: number, action?: LogAction) {
+  return useQuery({
+    ...convexQuery(
+      api.moderation.log,
+      { page, pageSize: PANEL_PAGE_SIZE, ...compact({ action }) },
+      "required",
+    ),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** The full view of one report (the side peek); null once it was dealt with. */
+export function useModerationReport(reportId: string) {
+  return useQuery(
+    convexQuery(api.moderation.reportDetail, { reportId: reportId as Id<"reports"> }, "required"),
+  );
+}
+
+/** A hand-added book under review with its adder's record (the side peek). */
+export function useBookReview(openLibraryId: string) {
+  return useQuery(convexQuery(api.moderation.bookReview, { openLibraryId }, "required"));
+}
+
+const reportsLists = [convexQueryPrefix(api.moderation.reports)];
+const booksLists = [convexQueryPrefix(api.moderation.books)];
+const counts = [convexQueryPrefix(api.moderation.counts)];
+
+/**
  * Dismiss, remove the content, or suspend its author (with `duration` and `reason`); the report
- * (and its twins) leave at once.
+ * (and its twins) leave every cached page at once.
  */
 export function useActOnReport() {
   const { convex } = useConvexCache();
   const patchQueries = usePatchQueries();
   return useMutation({
     mutationFn: ({
-      report,
+      reportId,
       action,
       duration,
       reason,
     }: {
-      report: QueuedReport;
+      reportId: Id<"reports">;
       action: "dismiss" | "remove" | "suspend";
       duration?: SuspensionDuration;
       reason?: string;
-    }) => convex.mutation(api.moderation.act, { reportId: report.id, action, duration, reason }),
-    onMutate: ({ report }) =>
-      patchQueries<ModerationQueue>(queue, (data) => ({
+    }) => convex.mutation(api.moderation.act, { reportId, action, duration, reason }),
+    onMutate: async ({ reportId }) => {
+      const rollbackList = await patchQueries<ModerationReports>(reportsLists, (data) => {
+        const items = data.items.filter((item) => item.id !== reportId);
+        return items.length === data.items.length
+          ? data
+          : { ...data, items, total: Math.max(0, data.total - 1) };
+      });
+      const rollbackCounts = await patchQueries<ModerationCounts>(counts, (data) => ({
         ...data,
-        reports: data.reports.filter(
-          (item) => !(item.target === report.target && item.targetId === report.targetId),
-        ),
-      })),
+        reports: Math.max(0, data.reports - 1),
+      }));
+      return () => {
+        rollbackList();
+        rollbackCounts();
+      };
+    },
     onError: (_error, _input, rollback) => rollback?.(),
   });
 }
@@ -135,11 +210,22 @@ export function useDecideBook() {
   return useMutation({
     mutationFn: (input: { openLibraryId: string; approve: boolean }) =>
       convex.mutation(api.moderation.decideBook, input),
-    onMutate: ({ openLibraryId }) =>
-      patchQueries<ModerationQueue>(queue, (data) => ({
+    onMutate: async ({ openLibraryId }) => {
+      const rollbackList = await patchQueries<ModerationBooks>(booksLists, (data) => {
+        const items = data.items.filter((book) => book.openLibraryId !== openLibraryId);
+        return items.length === data.items.length
+          ? data
+          : { ...data, items, total: Math.max(0, data.total - 1) };
+      });
+      const rollbackCounts = await patchQueries<ModerationCounts>(counts, (data) => ({
         ...data,
-        books: data.books.filter((book) => book.openLibraryId !== openLibraryId),
-      })),
+        books: Math.max(0, data.books - 1),
+      }));
+      return () => {
+        rollbackList();
+        rollbackCounts();
+      };
+    },
     onError: (_error, _input, rollback) => rollback?.(),
   });
 }

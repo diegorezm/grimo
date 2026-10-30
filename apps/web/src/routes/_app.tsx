@@ -15,7 +15,7 @@ import { SidePeek } from "@/components/layout/side-peek";
 import { VerifyEmailBanner } from "@/features/account";
 import { BookPeek } from "@/features/books";
 import { LegalGate } from "@/features/legal";
-import { ModeratorInviteBanner } from "@/features/moderation";
+import { BookReviewPeek, ModeratorInviteBanner, ReportPeek } from "@/features/moderation";
 import { NotificationBell } from "@/features/notifications";
 import { PostPeek } from "@/features/posts";
 import { ProfilePeek } from "@/features/profile";
@@ -27,17 +27,19 @@ const isPublicPath = (pathname: string) => pathname.startsWith("/u/") || pathnam
 
 /**
  * Layout for every app page. Search params open a side peek next to any screen:
- * `?book=<openLibraryId>` (book page), `?post=<id>` (post and comments) or `?panel=profile`
- * (edit profile).
+ * `?book=<openLibraryId>` (book page), `?post=<id>` (post and comments), `?panel=profile`
+ * (edit profile) or, for the moderation team, `?report=<id>` and `?review=<openLibraryId>`.
  * Signed out, only public pages render (in `PublicShell`); everything else goes to /login.
  */
 export const Route = createFileRoute("/_app")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { book?: string; post?: string; panel?: "profile" } => ({
+  ): { book?: string; post?: string; panel?: "profile"; report?: string; review?: string } => ({
     book: typeof search.book === "string" && search.book ? search.book : undefined,
     post: typeof search.post === "string" && search.post ? search.post : undefined,
     panel: search.panel === "profile" ? "profile" : undefined,
+    report: typeof search.report === "string" && search.report ? search.report : undefined,
+    review: typeof search.review === "string" && search.review ? search.review : undefined,
   }),
   beforeLoad: async ({ context, location }) => {
     const data = await context.queryClient.ensureQueryData(sessionQuery);
@@ -55,7 +57,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const { session } = Route.useRouteContext();
-  const { book, post, panel } = Route.useSearch();
+  const { book, post, panel, report, review } = Route.useSearch();
 
   if (!session) {
     return (
@@ -65,17 +67,21 @@ function AppLayout() {
     );
   }
 
-  return <SignedInLayout book={book} post={post} panel={panel} />;
+  return <SignedInLayout book={book} post={post} panel={panel} report={report} review={review} />;
 }
 
 function SignedInLayout({
   book,
   post,
   panel,
+  report,
+  review,
 }: {
   book?: string;
   post?: string;
   panel?: "profile";
+  report?: string;
+  review?: string;
 }) {
   useSessionGuard();
   useSetupGuard();
@@ -84,6 +90,10 @@ function SignedInLayout({
     <BookPeek key={book} openLibraryId={book} />
   ) : post ? (
     <PostPeek key={post} postId={post} />
+  ) : report ? (
+    <ReportPeek key={report} reportId={report} />
+  ) : review ? (
+    <BookReviewPeek key={review} openLibraryId={review} />
   ) : panel === "profile" ? (
     <ProfilePeek />
   ) : undefined;

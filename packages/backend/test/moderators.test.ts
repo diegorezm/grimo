@@ -51,17 +51,17 @@ describe("moderator invites", () => {
     await expect(
       rafa.as.mutation(api.moderators.respond, { inviteId: invite.id, accept: true }),
     ).rejects.toThrow(/não encontrad/i);
-    await expect(ana.as.query(api.moderation.queue, {})).rejects.toThrow(/moderação/);
+    await expect(ana.as.query(api.moderation.counts, {})).rejects.toThrow(/moderação/);
 
     await ana.as.mutation(api.moderators.respond, { inviteId: invite.id, accept: true });
     expect(await ana.as.query(api.users.me, {})).toMatchObject({ isStaff: true, isAdmin: false });
-    expect(await ana.as.query(api.moderation.queue, {})).toEqual({ reports: [], books: [] });
+    expect(await ana.as.query(api.moderation.counts, {})).toMatchObject({ reports: 0, books: 0 });
     expect(await ana.as.query(api.moderators.myInvite, {})).toBeNull();
     await expect(
       ana.as.mutation(api.moderators.respond, { inviteId: invite.id, accept: true }),
     ).rejects.toThrow(/não vale mais/);
 
-    const { items } = await admin.as.query(api.moderation.log, {});
+    const { items } = await admin.as.query(api.moderation.log, { page: 1, pageSize: 20 });
     expect(items[0]).toMatchObject({
       action: "role_grant",
       actor: { username: "admin" },
@@ -85,7 +85,7 @@ describe("moderator invites", () => {
     await expect(
       ana.as.mutation(api.moderators.respond, { inviteId: invite.id, accept: true }),
     ).rejects.toThrow(/não vale mais/);
-    await expect(ana.as.query(api.moderation.queue, {})).rejects.toThrow(/moderação/);
+    await expect(ana.as.query(api.moderation.counts, {})).rejects.toThrow(/moderação/);
 
     await admin.as.mutation(api.moderators.invite, { username: "ana" });
     expect(await ana.as.query(api.moderators.myInvite, {})).not.toBeNull();

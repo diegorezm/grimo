@@ -26,6 +26,17 @@ export const reportTarget = literals(REPORT_TARGETS);
 export const reportReason = literals(REPORT_REASONS);
 export const reportStatus = literals(REPORT_STATUSES);
 
+export const moderationLogAction = v.union(
+  v.literal("dismiss"),
+  v.literal("remove"),
+  v.literal("suspend"),
+  v.literal("unsuspend"),
+  v.literal("book_approve"),
+  v.literal("book_reject"),
+  v.literal("role_grant"),
+  v.literal("role_revoke"),
+);
+
 /** A book as returned by search: enough to save it locally. */
 export const bookInput = v.object({
   openLibraryId: v.string(),
@@ -367,7 +378,9 @@ export default defineSchema({
     resolvedAt: v.union(v.number(), v.null()),
   })
     .index("by_status_created", ["status", "createdAt"])
-    .index("by_reporter_target", ["reporterId", "target", "targetId"]),
+    .index("by_reporter_target", ["reporterId", "target", "targetId"])
+    .index("by_target_user", ["targetUserId", "createdAt"])
+    .index("by_target", ["target", "targetId"]),
 
   /**
    * An admin's invite for one specific reader to become a moderator. Valid for 24 h
@@ -398,16 +411,7 @@ export default defineSchema({
    */
   moderationLog: defineTable({
     actorId: v.union(v.id("users"), v.null()),
-    action: v.union(
-      v.literal("dismiss"),
-      v.literal("remove"),
-      v.literal("suspend"),
-      v.literal("unsuspend"),
-      v.literal("book_approve"),
-      v.literal("book_reject"),
-      v.literal("role_grant"),
-      v.literal("role_revoke"),
-    ),
+    action: moderationLogAction,
     targetUserId: v.union(v.id("users"), v.null()),
     /** Reported thing or book id, when the action had one. */
     targetId: v.union(v.string(), v.null()),

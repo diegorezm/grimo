@@ -229,3 +229,329 @@ export const populate = internalMutation({
     return `Pronto! Entre como ${emailOf(main.reader.username)} (senha: ${DEFAULT_PASSWORD} ou a que você passou).`;
   },
 });
+
+const MODERATION_DEMO_MARKER = "GR-demo-modera";
+
+/**
+ * Moderation panel demo: enough open reports, hand-added books and history rows to page through
+ * (`pnpm --filter @grimo/backend exec convex run seed:moderation`). Run `seed:run` first.
+ * Safe to re-run: it stops when the demo books exist.
+ */
+export const moderation = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const marker = await ctx.db
+      .query("books")
+      .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", `${MODERATION_DEMO_MARKER}-1`))
+      .unique();
+    if (marker) return "Moderação já semeada. Nada a fazer.";
+
+    const byName = async (username: string) =>
+      ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", username))
+        .unique();
+    const [rafa, bia, caio, lu, theo] = await Promise.all(
+      ["rafa", "bia.lima", "caio", "lu.prado", "theo"].map(byName),
+    );
+    if (!rafa || !bia || !caio || !lu || !theo) return "Rode seed:run antes: faltam os leitores.";
+
+    const now = Date.now();
+    const authors = [caio, lu, theo];
+    const reporters = [bia, lu, caio, theo];
+    const reasons = ["spam", "spoiler", "other", "harassment", "copyright"] as const;
+    const texts = [
+      "Compre seguidores baratos, chama no privado!",
+      "O final de Duna é que ele vira o Kwisatz Haderach e ninguém percebe.",
+      "Esse livro é uma porcaria e quem gostou não entende nada de leitura.",
+      "Vendo PDF de todos os livros do semestre, link na bio.",
+      "Resenha copiada de outro site, palavra por palavra.",
+      "Ninguém merece ler isso, só gente sem cérebro gosta.",
+      "Promoção imperdível de e-readers, acesse já.",
+      "Spoiler: o mordomo é o assassino, e ainda morre no último capítulo.",
+    ];
+
+    // Open reports: posts by caio, lu and theo, filed by someone else, oldest first.
+    for (let i = 0; i < 24; i++) {
+      const author = authors[i % authors.length]!;
+      const others = reporters.filter((user) => user._id !== author._id);
+      const reporter = others[i % others.length]!;
+      const body = texts[i % texts.length]!;
+      const postId = await ctx.db.insert("posts", {
+        authorId: author._id,
+        bookId: null,
+        kind: "note",
+        rating: null,
+        body: `${body} (#${i + 1})`,
+        hasSpoilers: false,
+        likeCount: 0,
+        commentCount: 0,
+      });
+      await ctx.db.insert("reports", {
+        reporterId: reporter._id,
+        target: "post",
+        targetId: postId,
+        targetUserId: author._id,
+        reason: reasons[i % reasons.length]!,
+        details: i % 4 === 0 ? "Já é a segunda vez que vejo isso hoje." : null,
+        snapshot: `${body} (#${i + 1})`,
+        status: "open",
+        createdAt: now - (30 - i) * 60 * 60 * 1000,
+        resolvedAt: null,
+      });
+    }
+    // A reader report, and one about an admin (moderators don't see this one).
+    await ctx.db.insert("reports", {
+      reporterId: bia._id,
+      target: "user",
+      targetId: theo._id,
+      targetUserId: theo._id,
+      reason: "harassment",
+      details: "Manda mensagens insistentes nos comentários.",
+      snapshot: `${theo.name} (@${theo.username}): ${theo.bio ?? ""}`,
+      status: "open",
+      createdAt: now - 40 * 60 * 60 * 1000,
+      resolvedAt: null,
+    });
+    await ctx.db.insert("reports", {
+      reporterId: caio._id,
+      target: "user",
+      targetId: rafa._id,
+      targetUserId: rafa._id,
+      reason: "other",
+      details: "Teste: denúncia sobre alguém da equipe.",
+      snapshot: `${rafa.name} (@${rafa.username}): ${rafa.bio ?? ""}`,
+      status: "open",
+      createdAt: now - 39 * 60 * 60 * 1000,
+      resolvedAt: null,
+    });
+
+    // Hand-added books waiting for review.
+    const titles = [
+      ["Contos da Vila", "Fulana de Tal"],
+      ["O Sertão em Cartas", "Beltrano Souza"],
+      ["Mapas de Sal", "Marina Duarte"],
+      ["A Casa dos Ventos", "João Pereira"],
+      ["Diário de uma Biblioteca", "Clara Menezes"],
+      ["Rios Invisíveis", "Paulo Andrade"],
+      ["Noites de Inverno em Curitiba", "Helena Braga"],
+      ["Os Cadernos de Ana", "Ana Lúcia Reis"],
+      ["Poeira e Estrelas", "Tiago Moreira"],
+      ["A Última Estação", "Renata Lopes"],
+    ] as const;
+    for (let i = 0; i < 22; i++) {
+      const [title, author] = titles[i % titles.length]!;
+      await ctx.db.insert("books", {
+        openLibraryId: `${MODERATION_DEMO_MARKER}-${i + 1}`,
+        title: i < titles.length ? title : `${title} (vol. ${Math.floor(i / titles.length) + 1})`,
+        authors: [author],
+        coverUrl: null,
+        pageCount: i % 3 === 0 ? null : 120 + i * 11,
+        publishedYear: i % 2 === 0 ? 2015 + (i % 10) : null,
+        genres: [],
+        createdBy: authors[i % authors.length]!._id,
+        reviewStatus: "pending",
+      });
+    }
+
+    // History: a mix of everything the panel records, newest last in the loop.
+    const actions = [
+      ["dismiss", caio, "post"],
+      ["remove", lu, "post"],
+      ["suspend", theo, "7 d: spam repetido"],
+      ["unsuspend", theo, null],
+      ["book_approve", null, null],
+      ["book_reject", null, null],
+    ] as const;
+    for (let i = 0; i < 26; i++) {
+      const [action, target, details] = actions[i % actions.length]!;
+      await ctx.db.insert("moderationLog", {
+        actorId: rafa._id,
+        action,
+        targetUserId: target?._id ?? null,
+        targetId: target ? null : `${MODERATION_DEMO_MARKER}-${i + 1}`,
+        details,
+        createdAt: now - (60 - i) * 60 * 60 * 1000,
+      });
+    }
+    return "Moderação semeada: 26 denúncias, 22 livros e 26 ações no histórico.";
+  },
+});
+
+/**
+ * More moderation demo data, to try the report cards: the same post reported by several readers,
+ * reported comments and Juntos messages, posts with a book and a rating, and past reports that
+ * were already dealt with (so accounts and reporters have a record).
+ * `pnpm --filter @grimo/backend exec convex run seed:moderationExtras` (after `seed:moderation`).
+ */
+export const moderationExtras = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const done = await ctx.db
+      .query("reports")
+      .withIndex("by_status_created", (q) => q.eq("status", "dismissed"))
+      .first();
+    if (done) return "Extras de moderação já semeados. Nada a fazer.";
+
+    const byName = async (username: string) =>
+      ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", username))
+        .unique();
+    const [rafa, bia, caio, lu, theo] = await Promise.all(
+      ["rafa", "bia.lima", "caio", "lu.prado", "theo"].map(byName),
+    );
+    if (!rafa || !bia || !caio || !lu || !theo) return "Rode seed:run antes: faltam os leitores.";
+    const now = Date.now();
+    const HOURS = 60 * 60 * 1000;
+    const others = (user: Doc<"users">) =>
+      [bia, caio, lu, theo, rafa].filter((candidate) => candidate._id !== user._id);
+
+    // Past reports, already decided: the accounts below now have a record.
+    const past = [
+      [caio, bia, "spam", "actioned", "Perfil usado para divulgar links."],
+      [caio, lu, "harassment", "dismissed", null],
+      [theo, bia, "spoiler", "dismissed", null],
+      [theo, caio, "spam", "actioned", "Postou o mesmo anúncio em três resenhas."],
+      [theo, lu, "other", "dismissed", "Achei estranho, mas parece normal."],
+      [lu, theo, "hate", "dismissed", null],
+    ] as const;
+    for (const [target, reporter, reason, status, details] of past) {
+      await ctx.db.insert("reports", {
+        reporterId: reporter._id,
+        target: "user",
+        targetId: target._id,
+        targetUserId: target._id,
+        reason,
+        details,
+        snapshot: `${target.name} (@${target.username}): ${target.bio ?? ""}`,
+        status,
+        createdAt: now - 200 * HOURS,
+        resolvedAt: now - 190 * HOURS,
+      });
+    }
+    await ctx.db.insert("moderationLog", {
+      actorId: rafa._id,
+      action: "suspend",
+      targetUserId: caio._id,
+      targetId: null,
+      details: "7 d: divulgação de links",
+      createdAt: now - 190 * HOURS,
+    });
+    await ctx.db.insert("moderationLog", {
+      actorId: rafa._id,
+      action: "remove",
+      targetUserId: theo._id,
+      targetId: null,
+      details: "post",
+      createdAt: now - 189 * HOURS,
+    });
+
+    // Some of the open posts become reviews of a real book, so cards show book and rating.
+    const book = await ctx.db.query("books").first();
+    const openReports = await ctx.db
+      .query("reports")
+      .withIndex("by_status_created", (q) => q.eq("status", "open"))
+      .take(40);
+    const postReports = openReports.filter((report) => report.target === "post");
+    for (const [index, report] of postReports.slice(0, 8).entries()) {
+      const postId = ctx.db.normalizeId("posts", report.targetId);
+      if (postId && book && index % 2 === 0) {
+        await ctx.db.patch(postId, {
+          bookId: book._id,
+          kind: "review",
+          rating: 1 + (index % 5),
+          likeCount: index,
+          commentCount: index % 3,
+        });
+      }
+    }
+
+    // The same posts reported again by other readers, with other reasons.
+    const reasons = ["harassment", "spam", "other", "hate", "spoiler"] as const;
+    for (const [index, report] of postReports.slice(0, 10).entries()) {
+      const author = report.targetUserId ? await ctx.db.get(report.targetUserId) : null;
+      if (!author) continue;
+      const pool = others(author).filter((user) => user._id !== report.reporterId);
+      const extra = 1 + (index % 3);
+      for (let i = 0; i < extra; i++) {
+        const reporter = pool[i % pool.length]!;
+        const reason = reasons[(index + i) % reasons.length]!;
+        await ctx.db.insert("reports", {
+          reporterId: reporter._id,
+          target: "post",
+          targetId: report.targetId,
+          targetUserId: report.targetUserId,
+          reason,
+          details: reason === "other" ? "Não é o tipo de conteúdo que devia estar aqui." : null,
+          snapshot: report.snapshot,
+          status: "open",
+          createdAt: report.createdAt + (i + 1) * HOURS,
+          resolvedAt: null,
+        });
+      }
+    }
+
+    // Reported comments, on the first post of the list.
+    const first = postReports[0] ? ctx.db.normalizeId("posts", postReports[0].targetId) : null;
+    if (first) {
+      const comments = [
+        [theo, "Quem escreveu isso claramente não leu o livro, que vergonha."],
+        [caio, "Ótimo texto! Só falta o link do meu canal, entra lá."],
+        [lu, "Concordo com tudo, principalmente no final."],
+      ] as const;
+      for (const [index, [author, body]] of comments.entries()) {
+        const commentId = await ctx.db.insert("postComments", {
+          postId: first,
+          authorId: author._id,
+          body,
+        });
+        const reporter = others(author)[index % 4]!;
+        await ctx.db.insert("reports", {
+          reporterId: reporter._id,
+          target: "comment",
+          targetId: commentId,
+          targetUserId: author._id,
+          reason: index === 1 ? "spam" : "harassment",
+          details: null,
+          snapshot: body,
+          status: "open",
+          createdAt: now - (12 - index) * HOURS,
+          resolvedAt: null,
+        });
+      }
+    }
+
+    // Reported Juntos messages, if a group exists.
+    const group = await ctx.db.query("groups").first();
+    if (group) {
+      const messages = [
+        [theo, 34, "Spoiler: o personagem principal morre no capítulo 20."],
+        [caio, 12, "Alguém tem o PDF desse livro para me mandar?"],
+      ] as const;
+      for (const [index, [author, percent, body]] of messages.entries()) {
+        const messageId = await ctx.db.insert("groupMessages", {
+          groupId: group._id,
+          authorId: author._id,
+          body,
+          percent,
+          createdAt: now - (6 - index) * HOURS,
+        });
+        const reporter = others(author)[index % 4]!;
+        await ctx.db.insert("reports", {
+          reporterId: reporter._id,
+          target: "message",
+          targetId: messageId,
+          targetUserId: author._id,
+          reason: index === 0 ? "spoiler" : "copyright",
+          details: null,
+          snapshot: body,
+          status: "open",
+          createdAt: now - (5 - index) * HOURS,
+          resolvedAt: null,
+        });
+      }
+    }
+    return "Extras de moderação semeados: duplicadas, comentários, mensagens e histórico.";
+  },
+});
