@@ -1,4 +1,5 @@
 import { SearchIcon } from "@/components/ui/icons";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { cn } from "@/utils/cn";
 
 /** Search box in the same pill style as the readers directory. */
@@ -32,7 +33,7 @@ export function SearchField({
   );
 }
 
-/** A pill-shaped select; `placeholder` is the "no filter" option. */
+/** A select for a filter; `placeholder` becomes the "no filter" option (value `""`). */
 export function SelectField<T extends string>({
   value,
   onChange,
@@ -46,19 +47,15 @@ export function SelectField<T extends string>({
   placeholder?: string;
   label: string;
 }) {
+  const all: readonly SelectOption<T | "">[] =
+    placeholder === undefined ? options : [{ value: "", label: placeholder }, ...options];
   return (
-    <select
+    <Select<T | "">
       value={value}
-      aria-label={label}
-      onChange={(event) => onChange(event.target.value as T | "")}
-      className="rounded-full bg-surface-muted px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/40"
-    >
-      {placeholder !== undefined && <option value="">{placeholder}</option>}
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+      onChange={onChange}
+      options={all}
+      label={label}
+      placeholder={placeholder}
+    />
   );
 }

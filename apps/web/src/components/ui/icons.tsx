@@ -157,3 +157,9 @@ export const ShieldIcon = (p: IconProps) => (
     <path d="m9.2 12 2.1 2.1 3.6-4" />
   </Icon>
 );
+
+export const ChevronDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m6 9.5 6 6 6-6" />
+  </Icon>
+);
