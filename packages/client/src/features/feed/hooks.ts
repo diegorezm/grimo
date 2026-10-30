@@ -105,6 +105,7 @@ export function useToggleUpdateLike() {
             body: "",
             rating: null,
             hasSpoilers: false,
+            page: null,
             createdAt: item.createdAt,
             likeCount: 0,
             commentCount: 0,

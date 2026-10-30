@@ -30,6 +30,7 @@ export async function postView(ctx: Ctx, post: Doc<"posts">, viewerId: Id<"users
     body: post.body,
     rating: post.rating,
     hasSpoilers: post.hasSpoilers,
+    page: post.page ?? null,
     createdAt: post._creationTime,
     likeCount: post.likeCount,
     commentCount: post.commentCount,

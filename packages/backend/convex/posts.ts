@@ -11,16 +11,17 @@ import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./mod
 import { blockedIds, isBlockedBetween, isBookVisible, isHidden } from "./model/safety";
 import { postKind } from "./schema";
 
-/** Creates a review or note (and its feed activity). Used by the seed too. */
+/** Creates a review, note or quote (and its feed activity). Used by the seed too. */
 export async function createPost(
   ctx: MutationCtx,
   authorId: Id<"users">,
   input: {
-    kind: "review" | "note";
+    kind: "review" | "note" | "quote";
     bookId: Id<"books"> | null;
     rating: number | null;
     body: string;
     hasSpoilers: boolean;
+    page?: number | null;
   },
   now = Date.now(),
 ) {
@@ -35,6 +36,8 @@ export async function createPost(
     kind: "posted",
     postId,
     bookId: input.bookId,
+    // The feed says "guardou uma citação" for quotes.
+    data: { postKind: input.kind },
     createdAt: now,
   });
   await notifyMentions(ctx, { actorId: authorId, text: input.body, postId }, now);
@@ -96,6 +99,7 @@ export const create = mutation({
     rating: v.optional(v.union(v.number(), v.null())),
     body: v.string(),
     hasSpoilers: v.optional(v.boolean()),
+    page: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     const viewer = await requireVerifiedViewer(ctx);

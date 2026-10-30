@@ -226,13 +226,20 @@ export const detail = query({
           entry: null,
           community: { readers: 0, ratings: 0, averageRating: null },
           reviews: [],
+          quotes: [],
           friendsWant: [],
         },
         needsWork,
       };
     }
 
-    const [entry, counted, reviewPosts, blocked, friendsWant] = await Promise.all([
+    const postsOf = (kind: "review" | "quote") =>
+      ctx.db
+        .query("posts")
+        .withIndex("by_book_kind", (q) => q.eq("bookId", row._id).eq("kind", kind))
+        .order("desc")
+        .take(20);
+    const [entry, counted, reviewPosts, quotePosts, blocked, friendsWant] = await Promise.all([
       viewer
         ? ctx.db
             .query("shelfEntries")
@@ -240,29 +247,35 @@ export const detail = query({
             .unique()
         : null,
       communityOf(ctx, row),
-      ctx.db
-        .query("posts")
-        .withIndex("by_book_kind", (q) => q.eq("bookId", row._id).eq("kind", "review"))
-        .order("desc")
-        .take(20),
+      postsOf("review"),
+      postsOf("quote"),
       blockedIds(ctx, viewer?._id ?? null),
       viewer ? friendsWantingBook(ctx, viewer._id, row._id) : [],
     ]);
-    const reviews = await Promise.all(
-      reviewPosts.map(async (post) => {
-        const author = await ctx.db.get(post.authorId);
-        // Like everywhere else: nothing from hidden readers, or between blocked readers.
-        return author && !isHidden(author) && !blocked.has(author._id)
-          ? { ...(await postView(ctx, post, viewer?._id ?? null)), author: authorOf(author) }
-          : null;
-      }),
-    );
+    const withAuthors = async (posts: Doc<"posts">[]) => {
+      const views = await Promise.all(
+        posts.map(async (post) => {
+          const author = await ctx.db.get(post.authorId);
+          // Like everywhere else: nothing from hidden readers, or between blocked readers.
+          return author && !isHidden(author) && !blocked.has(author._id)
+            ? { ...(await postView(ctx, post, viewer?._id ?? null)), author: authorOf(author) }
+            : null;
+        }),
+      );
+      return views.filter((view) => view !== null);
+    };
+    const [reviews, quotes] = await Promise.all([
+      withAuthors(reviewPosts),
+      withAuthors(quotePosts),
+    ]);
     return {
       detail: {
         book,
         entry: entry ? entryView(entry) : null,
         community: counted,
-        reviews: reviews.filter((review) => review !== null),
+        reviews,
+        /** Passages readers saved, with their pages. */
+        quotes,
         /** People you follow with the book on "Quero ler". */
         friendsWant,
       },

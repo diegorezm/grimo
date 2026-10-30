@@ -25,6 +25,7 @@ import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
 import { cn } from "@/utils/cn";
 import { Book3D } from "./book-3d";
+import { BookQuotes } from "./book-quotes";
 import { EditionPages } from "./edition-pages";
 import { FriendsWant } from "./friends-want";
 import { PageLogger } from "./page-logger";
@@ -112,6 +113,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
       {book.description && <Synopsis text={book.description} />}
 
       <Reviews detail={detail} />
+      <BookQuotes detail={detail} />
     </div>
   );
 }

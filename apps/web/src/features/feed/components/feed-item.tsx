@@ -20,7 +20,7 @@ import { MentionText } from "@/components/ui/mention-text";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
-import { BookCover, BookPeekLink } from "@/features/books";
+import { BookCover, BookPeekLink, QuoteText } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
 import { PostPeekLink } from "@/features/posts";
 import { cn } from "@/utils/cn";
@@ -137,7 +137,11 @@ export function FeedItem({
         )
       )}
 
-      {post?.body && <PostBody body={post.body} hasSpoilers={post.hasSpoilers} />}
+      {post?.kind === "quote" ? (
+        <QuoteText body={post.body} page={post.page} />
+      ) : (
+        post?.body && <PostBody body={post.body} hasSpoilers={post.hasSpoilers} />
+      )}
       {REACTABLE.has(item.kind) && (
         <Reactions item={item} interactive={interactive} canReport={Boolean(me.data && !mine)} />
       )}

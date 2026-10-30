@@ -161,6 +161,7 @@ export const exportData = query({
           rating: post.rating,
           body: post.body,
           hasSpoilers: post.hasSpoilers,
+          page: post.page ?? null,
           createdAt: date(post._creationTime),
         })),
       ),
