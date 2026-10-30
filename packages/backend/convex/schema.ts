@@ -197,6 +197,23 @@ export default defineSchema({
     .index("by_user_created", ["userId", "createdAt"])
     .index("by_entry", ["shelfEntryId"]),
 
+  /**
+   * Timed reading ("sessão de leitura"): open while `endedAt` is null (one per reader). The
+   * timer lives here, so it survives closing the app and shows on every device.
+   */
+  readingSessions: defineTable({
+    userId: v.id("users"),
+    shelfEntryId: v.id("shelfEntries"),
+    bookId: v.id("books"),
+    startedAt: v.number(),
+    endedAt: v.union(v.number(), v.null()),
+    startPage: v.number(),
+    endPage: v.union(v.number(), v.null()),
+  })
+    .index("by_user_ended", ["userId", "endedAt"])
+    .index("by_user_started", ["userId", "startedAt"])
+    .index("by_entry", ["shelfEntryId"]),
+
   follows: defineTable({
     followerId: v.id("users"),
     followingId: v.id("users"),

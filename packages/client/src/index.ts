@@ -9,6 +9,7 @@ export * from "./features/notifications";
 export * from "./features/onboarding";
 export * from "./features/posts";
 export * from "./features/profiles";
+export * from "./features/sessions";
 export * from "./features/shelves";
 export * from "./features/stats";
 export * from "./lib/auth";

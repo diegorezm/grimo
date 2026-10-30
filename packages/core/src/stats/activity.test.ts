@@ -92,6 +92,9 @@ describe("feed cards", () => {
 
   it("doesn't repeat the page in the headline", () => {
     expect(feedHeadline("progress", { page: 120 }, 1)).toBe("está lendo");
+    expect(feedHeadline("progress", { page: 120, minutes: 35, pagesRead: 40 }, 1)).toBe(
+      "leu 40 páginas em 35 min",
+    );
     expect(feedHeadline("finished", null, 3)).toBe("terminou de ler 3 livros");
     expect(feedHeadline("shelved", { status: "abandoned" }, 1)).toBe("abandonou");
     expect(feedHeadline("posted", { postKind: "quote" }, 1)).toBe("guardou uma citação");

@@ -65,9 +65,9 @@ Ao decidir se algo entra, pergunte:
 | Quatro estantes, progresso por página, nota, datas                       | Skoob             |   ✓    | —       |
 | Remover livro da estante (F2)                                            | —                 |   ◐    | Agora (falta no mobile) |
 | Paginômetro / páginas lidas no ano                                       | Skoob             |   ✓    | —       |
-| **Sessão de leitura com cronômetro** (tempo + páginas por sessão)        | StoryGraph/Maratona | —    | Próximo |
+| **Sessão de leitura com cronômetro** (tempo + páginas por sessão, no feed) | StoryGraph/Maratona | ✓  | —       |
 | **Live Activity / Dynamic Island** durante a sessão de leitura           | —                 |   —    | Próximo (precisa de build EAS) |
-| **Ofensiva**: dias seguidos lendo, com lembrete gentil                   | Duolingo/Maratona |   —    | Próximo |
+| **Ofensiva**: dias seguidos lendo (feito); lembrete gentil por push      | Duolingo/Maratona |   ◐    | Junto com o push |
 | Formato do exemplar (físico, ebook, audiobook) e progresso em % ou minutos | StoryGraph      |   —    | Depois  |
 | Releituras com histórico de cada leitura (F8)                            | Goodreads         |   —    | Depois  |
 | Estantes personalizadas / tags ("favoritos", "emprestei", "2026")        | Skoob/Goodreads   |   —    | Depois  |
