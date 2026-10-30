@@ -9,6 +9,7 @@ import {
   query,
 } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
+import { deleteList } from "./model/lists";
 import {
   deleteComment,
   deletePost,
@@ -48,6 +49,12 @@ async function reportedContent(ctx: MutationCtx, target: string, targetId: strin
     const message = id ? await ctx.db.get(id) : null;
     if (!message) throw notFound("Mensagem");
     return { userId: message.authorId, snapshot: message.body };
+  }
+  if (target === "list") {
+    const id = ctx.db.normalizeId("lists", targetId);
+    const list = id ? await ctx.db.get(id) : null;
+    if (!list) throw notFound("Lista");
+    return { userId: list.ownerId, snapshot: `${list.title}\n${list.description}`.trim() };
   }
   const id = ctx.db.normalizeId("users", targetId);
   const user = id ? await ctx.db.get(id) : null;
@@ -293,6 +300,10 @@ async function removeReported(ctx: MutationCtx, target: ReportTarget, targetId: 
   } else if (target === "message") {
     const id = ctx.db.normalizeId("groupMessages", targetId);
     if (id && (await ctx.db.get(id))) await ctx.db.delete(id);
+  } else if (target === "list") {
+    const id = ctx.db.normalizeId("lists", targetId);
+    const list = id ? await ctx.db.get(id) : null;
+    if (list) await deleteList(ctx, list);
   }
 }
 
@@ -708,6 +719,22 @@ async function reportContent(ctx: QueryCtx, report: Doc<"reports">) {
       createdAt: message.createdAt,
       bookTitle: book?.title ?? null,
       members: group?.memberCount ?? null,
+    };
+  }
+  if (report.target === "list") {
+    const id = ctx.db.normalizeId("lists", report.targetId);
+    const list = id ? await ctx.db.get(id) : null;
+    if (!list) return null;
+    return {
+      kind: "list" as const,
+      postId: null,
+      groupId: null,
+      listId: list._id,
+      // Same shape as the snapshot, so an edited list shows as edited.
+      body: `${list.title}
+${list.description}`.trim(),
+      items: list.itemCount,
+      createdAt: list.createdAt,
     };
   }
   const id = ctx.db.normalizeId("users", report.targetId);

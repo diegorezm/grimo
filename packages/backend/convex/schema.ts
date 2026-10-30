@@ -214,6 +214,26 @@ export default defineSchema({
     .index("by_user_started", ["userId", "startedAt"])
     .index("by_entry", ["shelfEntryId"]),
 
+  /** Lists curated by readers ("terror para começar"), public like the profile. */
+  lists: defineTable({
+    ownerId: v.id("users"),
+    title: v.string(),
+    description: v.string(),
+    itemCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_owner_updated", ["ownerId", "updatedAt"]),
+
+  listItems: defineTable({
+    listId: v.id("lists"),
+    bookId: v.id("books"),
+    /** Why the book is on the list, in a line. */
+    note: v.union(v.string(), v.null()),
+    addedAt: v.number(),
+  })
+    .index("by_list_added", ["listId", "addedAt"])
+    .index("by_list_book", ["listId", "bookId"]),
+
   follows: defineTable({
     followerId: v.id("users"),
     followingId: v.id("users"),

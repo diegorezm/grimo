@@ -252,6 +252,8 @@ function ReportedContent({ report }: { report: ReportDetail }) {
       ago(content.createdAt),
       ...(content.members ? [plural(content.members, "membro", "membros")] : []),
     );
+  } else if (content.kind === "list") {
+    facts.push("Lista", plural(content.items, "livro", "livros"), ago(content.createdAt));
   } else {
     facts.push("Perfil", `criado ${ago(content.createdAt)}`);
   }

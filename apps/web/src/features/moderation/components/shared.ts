@@ -5,6 +5,7 @@ export const TARGET_LABELS: Record<ReportTarget, string> = {
   comment: "Comentário",
   user: "Perfil",
   message: "Mensagem no Juntos",
+  list: "Lista",
 };
 
 /** Pill for a report's type, reason and count. */

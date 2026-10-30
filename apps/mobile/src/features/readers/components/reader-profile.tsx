@@ -5,6 +5,7 @@ import { Button, Screen, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { BookTile } from "@/features/books";
 import { FeedItem } from "@/features/feed";
+import { ReaderLists } from "@/features/lists";
 import { showReaderActions } from "@/features/moderation";
 import { ProfileHeader } from "@/features/profile";
 import { YearStats } from "@/features/stats";
@@ -101,6 +102,7 @@ function Page({ page, username }: { page: ReaderPage; username: string }) {
               ))}
             </Shelf>
           )}
+          <ReaderLists username={username} isMe={false} />
           <Activity username={username} />
         </>
       )}
