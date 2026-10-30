@@ -213,6 +213,8 @@ export default defineSchema({
     rating: v.union(v.number(), v.null()),
     body: v.string(),
     hasSpoilers: v.boolean(),
+    /** Where a quote is in the book. */
+    page: v.optional(v.union(v.number(), v.null())),
     likeCount: v.number(),
     commentCount: v.number(),
   })

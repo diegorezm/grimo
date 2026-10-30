@@ -231,7 +231,9 @@ function ReportedContent({ report }: { report: ReportDetail }) {
         ? "Resenha"
         : content.postKind === "update"
           ? "Comentário de leitura"
-          : "Nota",
+          : content.postKind === "quote"
+            ? "Citação"
+            : "Nota",
     );
     if (content.book) facts.push(content.book.title);
     if (content.rating) facts.push(`${content.rating} de 5`);

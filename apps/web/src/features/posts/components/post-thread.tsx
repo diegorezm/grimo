@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { MentionText } from "@/components/ui/mention-text";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
-import { BookCover, BookPeekLink } from "@/features/books";
+import { BookCover, BookPeekLink, QuoteText } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
 
 /** A post with its comments, a box to comment and, when it is yours, a way to delete it. */
@@ -68,7 +68,11 @@ export function PostThread({
           </BookPeekLink>
         )}
         {post.rating && <Stars rating={post.rating} />}
-        {post.body && <MentionText text={post.body} className="leading-relaxed" />}
+        {post.kind === "quote" ? (
+          <QuoteText body={post.body} page={post.page} />
+        ) : (
+          post.body && <MentionText text={post.body} className="leading-relaxed" />
+        )}
 
         <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
           {signedIn ? (

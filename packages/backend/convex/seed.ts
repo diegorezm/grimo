@@ -169,6 +169,7 @@ export const populate = internalMutation({
               rating: post.rating ?? null,
               body: post.body,
               hasSpoilers: post.spoilers ?? false,
+              page: post.page ?? null,
             },
             tick(),
           ),

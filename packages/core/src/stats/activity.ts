@@ -117,6 +117,7 @@ export function feedHeadline(
   count: number,
 ): string {
   if (kind === "progress") return "está lendo";
+  if (kind === "posted" && data?.postKind === "quote") return "guardou uma citação";
   const status = data?.status as ShelfStatus | undefined;
   if (kind === "shelved" && count === 1 && status && status in SHELVED_HEADLINES) {
     return SHELVED_HEADLINES[status];

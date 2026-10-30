@@ -55,7 +55,9 @@ export function describeNotification(
       ? "sua resenha"
       : context.postKind === "update"
         ? "sua atualização"
-        : "sua nota";
+        : context.postKind === "quote"
+          ? "sua citação"
+          : "sua nota";
   switch (kind) {
     case "follow":
       return "começou a seguir você";

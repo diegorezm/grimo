@@ -198,6 +198,7 @@ const post = (key: string, body: string, likes: number, comments: number, likedB
   body,
   rating: 5,
   hasSpoilers: false,
+  page: null,
   createdAt: NOW - 2 * 60 * 60 * 1000,
   likeCount: likes,
   commentCount: comments,

@@ -73,7 +73,7 @@ Ao decidir se algo entra, pergunte:
 | Estantes personalizadas / tags ("favoritos", "emprestei", "2026")        | Skoob/Goodreads   |   —    | Depois  |
 | Motivo ao abandonar ("não me prendeu", "pausa")                          | StoryGraph        |   —    | Depois  |
 | Notas privadas por livro (só você vê)                                    | Skoob             |   —    | Depois  |
-| **Citações** com página: post tipo `quote`, card no estúdio, e dá para citar dentro da conversa do Juntos (F11) | Skoob/Kindle | — | Próximo |
+| **Citações** com página: post tipo `quote` no feed e na página do livro (feito); card no estúdio e citar dentro da conversa do Juntos (F11) | Skoob/Kindle | ◐ | Próximo |
 | Número de páginas **da sua edição** (`pageCount` por entrada): progresso e meta certos (F13) | StoryGraph | ✓ | — |
 | Meta mensal e meta por páginas (F9)                                      | Goodreads         |   —    | Depois  |
 | Escanear o código de barras (ISBN) para adicionar (F14)                  | Skoob/Goodreads   |   —    | Próximo |

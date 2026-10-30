@@ -18,7 +18,7 @@ import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar, Card, MentionText, ProgressBar, Stars, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
-import { BookCover } from "@/features/books";
+import { BookCover, QuoteText } from "@/features/books";
 import { showPostActions } from "@/features/moderation";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -136,7 +136,9 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
         )
       )}
 
-      {post?.body ? (
+      {post?.kind === "quote" ? (
+        <QuoteText body={post.body} page={post.page} />
+      ) : post?.body ? (
         <MentionText
           style={styles.quote}
           numberOfLines={6}

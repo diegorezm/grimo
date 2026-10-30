@@ -14,7 +14,7 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
 import { Avatar, Button, Card, Input, MentionText, Screen, Stars, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
-import { BookCover } from "@/features/books";
+import { BookCover, QuoteText } from "@/features/books";
 import { openReport } from "@/features/moderation";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -89,7 +89,11 @@ function Thread({ detail }: { detail: PostDetail }) {
             </View>
           </Pressable>
         )}
-        {post.body ? <MentionText text={post.body} /> : null}
+        {post.kind === "quote" ? (
+          <QuoteText body={post.body} page={post.page} />
+        ) : post.body ? (
+          <MentionText text={post.body} />
+        ) : null}
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"

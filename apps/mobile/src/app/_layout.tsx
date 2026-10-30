@@ -97,6 +97,14 @@ function RootNavigator() {
             sheetGrabberVisible: true,
           }}
         />
+        <Stack.Screen
+          name="quote/[id]"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.7],
+            sheetGrabberVisible: true,
+          }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" />

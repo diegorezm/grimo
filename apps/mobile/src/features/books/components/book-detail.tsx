@@ -32,6 +32,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
 import { FriendsWant } from "./friends-want";
+import { QuoteText } from "./quote-text";
 import { StartGroup } from "./start-group";
 
 /** Book page: cover, shelf picker, progress / rating, synopsis and reviews. */
@@ -56,7 +57,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
     );
   }
 
-  const { book, entry, community, reviews, friendsWant } = data;
+  const { book, entry, community, reviews, quotes, friendsWant } = data;
   const pages = editionPages(entry?.pageCount, book.pageCount);
   const bookInput = bookInputOf(book);
   const percent = entry ? readingPercent(entry.currentPage, pages) : null;
@@ -154,6 +155,30 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           )}
           {reviews.map((review) => (
             <Review key={review.id} review={review} />
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text variant="heading">Citações</Text>
+          {book.id && entry && (
+            <Button
+              variant="secondary"
+              title="Guardar citação"
+              onPress={() =>
+                router.push({ pathname: "/quote/[id]", params: { id: openLibraryId } })
+              }
+            />
+          )}
+          {quotes.length === 0 && (
+            <Text color="textMuted">Ninguém guardou um trecho deste livro ainda.</Text>
+          )}
+          {quotes.map((quote) => (
+            <Card key={quote.id}>
+              <QuoteText body={quote.body} page={quote.page} />
+              <Text variant="small" color="textMuted">
+                {quote.author.name} · {timeAgo(new Date(quote.createdAt))}
+              </Text>
+            </Card>
           ))}
         </View>
       </ScrollView>

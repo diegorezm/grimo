@@ -201,8 +201,10 @@ interface ShelfSeed {
 }
 
 interface PostSeed {
-  kind: "review" | "note";
+  kind: "review" | "note" | "quote";
   book?: BookKey;
+  /** Page of a quote. */
+  page?: number;
   rating?: number;
   body: string;
   spoilers?: boolean;
@@ -309,6 +311,12 @@ export const readers: ReaderSeed[] = [
         book: "expressoOriente",
         rating: 5,
         body: "Poirot nunca decepciona. Achei que tinha descoberto o culpado na metade… não tinha.",
+      },
+      {
+        kind: "quote",
+        book: "domCasmurro",
+        page: 64,
+        body: "Olhos de cigana oblíqua e dissimulada.",
       },
       {
         kind: "note",
