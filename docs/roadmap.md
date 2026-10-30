@@ -146,7 +146,7 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | ------------------------------------------------------------------------ | ----------------- | :----: | ------- |
 | Busca e página do livro com resenhas da comunidade                       | todos             |   ✓    | —       |
 | **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas e seguíveis | Letterboxd | — | Próximo |
-| Em alta entre quem você segue (F10)                                      | Letterboxd        |   —    | Próximo |
+| Em alta entre quem você segue (F10)                                      | Letterboxd        |   ✓    | —       |
 | Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   ✓    | —       |
 | Livros parecidos na página do livro                                      | StoryGraph        |   —    | Depois  |
 | Explorar por gênero / humor                                              | StoryGraph        |   —    | Depois  |
@@ -159,8 +159,8 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Card do mês para Stories (4 modelos) na web                              | Spotify Wrapped   |   ✓    | —       |
 | **Estúdio do card do mês no mobile** com compartilhamento nativo (F3)    | —                 |   ✓    | —       |
 | **Retrospectiva do ano** (dezembro, mesmos modelos) (F9)                 | Skoob/Spotify     |   ✓    | —       |
-| Card de resenha e card de citação                                        | Letterboxd        |   —    | Próximo |
-| Card de "terminei de ler" (capa + nota + frase)                          | —                 |   —    | Próximo |
+| Card de citação (feito) e card de resenha                                | Letterboxd        |   ◐    | Próximo |
+| Card de "terminei de ler" (capa + nota + tempo de leitura)               | —                 |   ✓    | —       |
 | Link do perfil bonito (preview com OG image)                             | Letterboxd        |   —    | Próximo |
 | Widget na tela inicial (livro atual, meta, ofensiva)                     | —                 |   —    | Depois (precisa de build EAS) |
 
@@ -185,7 +185,7 @@ Exigem logística, endereço ou parceiros: só fazem sentido com uma base grande
 | **Botão "Entrar com Apple"** no mobile (exigido pela App Store)          | —                 |   ◐    | Próximo (trava a App Store) |
 | **Importar do Skoob e do Goodreads** (F7)                                | —                 |   ◐    | Goodreads feito; o Skoob não tem exportação oficial |
 | Exportar em CSV (além do JSON)                                           | Goodreads         |   —    | Depois  |
-| Painel de moderação `/admin` (F15)                                       | —                 |   ✓    | Falta avisar quem denunciou do resultado |
+| Painel de moderação `/admin` (F15), com aviso do resultado para quem denunciou | —            |   ✓    | —       |
 | Filtro automático de conteúdo (F16)                                      | —                 |   —    | Depois  |
 | Preferências de notificação por tipo                                     | —                 |   —    | Junto com as notificações |
 

@@ -100,7 +100,16 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
               pageCount={editionPages(entry.pageCount, book.pageCount)}
             />
           ) : (
-            <RatingRow entryId={entry.id} rating={entry.rating} />
+            <>
+              <RatingRow entryId={entry.id} rating={entry.rating} />
+              <Link
+                to="/card/livro/$openLibraryId"
+                params={{ openLibraryId: book.openLibraryId }}
+                className="w-fit font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"
+              >
+                Card de “terminei” para os Stories →
+              </Link>
+            </>
           )}
           <EditionPages entryId={entry.id} pageCount={entry.pageCount} bookPages={book.pageCount} />
         </section>

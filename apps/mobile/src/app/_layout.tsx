@@ -72,6 +72,8 @@ function RootNavigator() {
         <Stack.Screen name="feed" />
         <Stack.Screen name="group/[id]" />
         <Stack.Screen name="group-card/[id]" />
+        <Stack.Screen name="book-card/[id]" />
+        <Stack.Screen name="quote-card/[id]" />
         <Stack.Screen
           name="report"
           options={{

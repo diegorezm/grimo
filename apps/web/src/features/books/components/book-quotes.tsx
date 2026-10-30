@@ -40,11 +40,18 @@ export function BookQuotes({ detail }: { detail: BookDetail }) {
                   <span>{quote.author.name}</span>
                 )}
                 <span className="font-mono text-[10px]">{timeAgo(new Date(quote.createdAt))}</span>
+                <Link
+                  to="/card/citacao/$postId"
+                  params={{ postId: quote.id }}
+                  className="ml-auto font-mono text-[11px] uppercase tracking-wider hover:text-accent"
+                >
+                  Card
+                </Link>
                 <button
                   type="button"
                   aria-pressed={quote.likedByMe}
                   onClick={() => toggleLike.mutate({ postId: quote.id, like: !quote.likedByMe })}
-                  className="ml-auto font-mono text-[11px] hover:text-accent"
+                  className="font-mono text-[11px] hover:text-accent"
                 >
                   {quote.likedByMe ? "♥" : "♡"} {quote.likeCount}
                 </button>
