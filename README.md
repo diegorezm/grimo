@@ -123,7 +123,9 @@ no emulador Android, `http://10.0.2.2:3210`. Um deployment na nuvem funciona igu
 1. Convex: `pnpm --filter @grimo/backend exec convex deploy` (pede login/projeto na primeira vez).
    No deployment de produção, defina `SITE_URL` (origem da web, ex. `https://grimo.app`),
    `BETTER_AUTH_SECRET` e, para o Google, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`.
-2. Web: `VITE_CONVEX_URL=https://<prod>.convex.cloud pnpm --filter @grimo/web build`, depois
+2. Web: `VITE_CONVEX_URL=https://<prod>.convex.cloud VITE_SITE_URL=https://grimo.app pnpm --filter @grimo/web build`
+   (`VITE_SITE_URL` gera canonical, `sitemap.xml`, `og:image` e JSON-LD; depois de publicar, envie
+   o sitemap no Google Search Console), depois
    `pnpm --filter @grimo/web deploy` (Cloudflare static assets, `apps/web/wrangler.jsonc`) ou
    qualquer host estático com fallback de SPA para `index.html`.
 3. Mobile: `EXPO_PUBLIC_CONVEX_URL` do deployment de produção no build do EAS.

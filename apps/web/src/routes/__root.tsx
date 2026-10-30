@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { ErrorScreen } from "@/components/feedback/error-screen";
 import { CookieNotice } from "@/features/legal";
+import { useSeo } from "@/lib/seo";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient; cache: ConvexCache }>()(
   {
@@ -12,6 +13,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient; cach
 );
 
 function Root() {
+  useSeo();
   return (
     <>
       <Outlet />
