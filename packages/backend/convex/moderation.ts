@@ -771,11 +771,35 @@ export const act = mutation({
     for (const other of open) {
       if (other.target === report.target && other.targetId === report.targetId) {
         await ctx.db.patch(other._id, { status, resolvedAt: now });
+        await noticeToReporter(ctx, other, status === "actioned", now);
       }
     }
     return null;
   },
 });
+
+/**
+ * Tells whoever reported that moderation looked at it (the App Store review expects reports to
+ * get an answer). The notice comes from the Grimo: the reporter is its own "actor", and it says neither
+ * who decided nor what happened to the other reader.
+ */
+async function noticeToReporter(
+  ctx: MutationCtx,
+  report: Doc<"reports">,
+  actioned: boolean,
+  now: number,
+) {
+  if (!report.reporterId) return;
+  await ctx.db.insert("notifications", {
+    userId: report.reporterId,
+    actorId: report.reporterId,
+    kind: actioned ? "report_actioned" : "report_dismissed",
+    postId: null,
+    commentId: null,
+    createdAt: now,
+    readAt: null,
+  });
+}
 
 /** Approve or reject a hand-added book from the panel. */
 export const decideBook = mutation({
