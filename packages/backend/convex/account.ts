@@ -4,6 +4,7 @@ import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx, query } from "./_generated/server";
 import { recordBookCounters } from "./model/bookStats";
 import { leaveGroup } from "./model/groups";
+import { deleteList } from "./model/lists";
 import { requireViewer } from "./model/readers";
 
 /**
@@ -21,6 +22,7 @@ export const exportData = query({
       entries,
       logs,
       sessions,
+      lists,
       posts,
       comments,
       likes,
@@ -50,6 +52,10 @@ export const exportData = query({
       ctx.db
         .query("readingSessions")
         .withIndex("by_user_started", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("lists")
+        .withIndex("by_owner_updated", (q) => q.eq("ownerId", userId))
         .collect(),
       ctx.db
         .query("posts")
@@ -159,6 +165,21 @@ export const exportData = query({
           at: date(log.createdAt),
         })),
       ),
+      lists: await Promise.all(
+        lists.map(async (list) => ({
+          title: list.title,
+          description: list.description,
+          createdAt: date(list.createdAt),
+          books: await Promise.all(
+            (
+              await ctx.db
+                .query("listItems")
+                .withIndex("by_list_added", (q) => q.eq("listId", list._id))
+                .collect()
+            ).map(async (item) => ({ book: await bookTitle(item.bookId), note: item.note })),
+          ),
+        })),
+      ),
       readingSessions: await Promise.all(
         sessions.map(async (session) => ({
           book: await bookTitle(session.bookId),
@@ -257,6 +278,8 @@ export async function onAccountDeleted(ctx: MutationCtx, authId: string) {
 
 /** Rows deleted per run: well under the transaction limits, even with the counter updates. */
 const BATCH = 100;
+/** Lists deleted per step: each takes its books (up to `MAX_LIST_ITEMS`) with it. */
+const LIST_BATCH = 10;
 /** Posts per run: each one also deletes its likes, comments and feed lines. */
 const POST_BATCH = 10;
 
@@ -417,6 +440,14 @@ const steps: Step[] = [
       ctx,
       ctx.db.query("readingSessions").withIndex("by_user_started", (q) => q.eq("userId", userId)),
     ),
+  async (ctx, userId) => {
+    const lists = await ctx.db
+      .query("lists")
+      .withIndex("by_owner_updated", (q) => q.eq("ownerId", userId))
+      .take(LIST_BATCH);
+    for (const list of lists) await deleteList(ctx, list);
+    return lists.length === LIST_BATCH;
+  },
   // Shelf entries: the books they were on lose a reader (and a rating).
   async (ctx, userId) => {
     const entries = await ctx.db

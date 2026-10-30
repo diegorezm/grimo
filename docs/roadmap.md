@@ -145,7 +145,7 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Recurso                                                                  | Inspiração        | Status | Quando  |
 | ------------------------------------------------------------------------ | ----------------- | :----: | ------- |
 | Busca e página do livro com resenhas da comunidade                       | todos             |   ✓    | —       |
-| **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas e seguíveis | Letterboxd | — | Próximo |
+| **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas no perfil (seguir listas fica para depois) | Letterboxd | ◐ | — |
 | Em alta entre quem você segue (F10)                                      | Letterboxd        |   ✓    | —       |
 | Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   ✓    | —       |
 | Livros parecidos na página do livro                                      | StoryGraph        |   —    | Depois  |

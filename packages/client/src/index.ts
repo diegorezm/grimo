@@ -4,6 +4,7 @@ export * from "./features/feed";
 export * from "./features/groups";
 export * from "./features/imports";
 export * from "./features/legal";
+export * from "./features/lists";
 export * from "./features/moderation";
 export * from "./features/notifications";
 export * from "./features/onboarding";

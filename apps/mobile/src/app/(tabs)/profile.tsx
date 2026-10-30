@@ -1,6 +1,7 @@
 import { useMe } from "@grimo/client";
 import { router } from "expo-router";
 import { Button, Screen, Text } from "@/components/ui";
+import { ReaderLists } from "@/features/lists";
 import { AppearancePicker, ProfileHeader } from "@/features/profile";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { useAppCache, useAuthClient } from "@/providers/app-providers";
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
         onPress={() => router.push("/profile-edit")}
       />
       <YearStats />
+      {me.data?.username && <ReaderLists username={me.data.username} isMe />}
       <Text variant="heading">Card do mês</Text>
       <MonthlyCard />
       <AppearancePicker />

@@ -5,6 +5,7 @@ export * from "./imports";
 export * from "./legal";
 export * from "./lib/dashboard";
 export * from "./lib/date";
+export * from "./lists";
 export * from "./notifications";
 export * from "./posts";
 export * from "./preferences";
