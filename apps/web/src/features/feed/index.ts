@@ -1,3 +1,3 @@
 export { FeedItem } from "./components/feed-item";
-export { FeedList } from "./components/feed-list";
+export { FeedTimeline } from "./components/feed-list";
 export { FeedPanel } from "./components/feed-panel";

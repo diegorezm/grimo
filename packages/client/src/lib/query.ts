@@ -25,7 +25,7 @@ export const PAGE_SIZE = 20;
 /** Persisted cache older than this is dropped on load. */
 export const CACHE_MAX_AGE = 7 * DAY;
 /** Bump to discard every persisted cache (e.g. when response shapes change). */
-export const CACHE_VERSION = "8-convex";
+export const CACHE_VERSION = "9-convex";
 
 /**
  * The app's QueryClient, wired to Convex: Convex keys use `convex.queryFn` and get live updates.

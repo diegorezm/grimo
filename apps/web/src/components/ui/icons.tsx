@@ -163,3 +163,11 @@ export const ChevronDownIcon = (p: IconProps) => (
     <path d="m6 9.5 6 6 6-6" />
   </Icon>
 );
+
+export const FeedIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="16" height="7" rx="1" />
+    <rect x="4" y="13" width="16" height="7" rx="1" />
+    <path d="M7 7.5h4M7 16.5h4" />
+  </Icon>
+);

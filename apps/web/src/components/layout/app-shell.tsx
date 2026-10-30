@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import {
+  FeedIcon,
   HomeIcon,
   PeopleIcon,
   SearchIcon,
@@ -17,11 +18,13 @@ import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
 
 /**
  * Main sections (also drawn by the landing page demo). The phone bar has room for five:
- * "Leitores" stays in the sidebar (on phones it's reached from search and profiles).
+ * "Feed" and "Leitores" stay in the sidebar (on phones the feed opens from Início, readers from
+ * search and profiles).
  */
 export const APP_NAV = [
   { to: "/", label: "Início", icon: HomeIcon, phone: true },
   { to: "/search", label: "Buscar", icon: SearchIcon, phone: true },
+  { to: "/feed", label: "Feed", icon: FeedIcon, phone: false },
   { to: "/juntos", label: "Juntos", icon: TogetherIcon, phone: true },
   { to: "/shelves", label: "Estantes", icon: ShelvesIcon, phone: true },
   { to: "/people", label: "Leitores", icon: PeopleIcon, phone: false },

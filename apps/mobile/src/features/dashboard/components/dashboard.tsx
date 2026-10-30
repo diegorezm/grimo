@@ -110,7 +110,18 @@ export function Dashboard() {
 
         {activity.length > 0 && (
           <View style={styles.section}>
-            <Text variant="heading">Da sua rede</Text>
+            <View style={styles.sectionHead}>
+              <Text variant="heading">Da sua rede</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/feed")}
+                hitSlop={8}
+              >
+                <Text variant="label" color="accent">
+                  Ver feed →
+                </Text>
+              </Pressable>
+            </View>
             {activity.map((item) => (
               <FeedItem key={item.id} item={item} />
             ))}
@@ -177,6 +188,7 @@ const styles = StyleSheet.create({
   logo: { width: 48, height: 48 },
   flex: { flex: 1 },
   section: { gap: spacing[3] },
+  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   row: { gap: spacing[4], paddingRight: spacing[4] },
   page: {
     borderWidth: 1,

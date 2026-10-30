@@ -98,3 +98,27 @@ export function describeActivityGroup(
   if (count > 1 && kind === "finished") return `terminou de ler ${count} livros`;
   return describeActivity(kind, data);
 }
+
+/**
+ * Headline of a feed card. Progress reads "está lendo": the card shows the page under the book
+ * (see `activityProgress`), so the sentence doesn't repeat it.
+ */
+export function feedHeadline(
+  kind: ActivityKind,
+  data: Record<string, unknown> | null,
+  count: number,
+): string {
+  return kind === "progress" ? "está lendo" : describeActivityGroup(kind, data, count);
+}
+
+/** The progress bar of a feed card: 40% and "p. 120 de 300", or just the page without a total. */
+export function activityProgress(
+  data: Record<string, unknown> | null,
+  pages: number | null,
+): { percent: number | null; label: string } | null {
+  const page = typeof data?.page === "number" ? data.page : null;
+  if (page === null) return null;
+  if (!pages || pages <= 0) return { percent: null, label: `p. ${page}` };
+  const percent = Math.min(100, Math.max(0, Math.round((page / pages) * 100)));
+  return { percent, label: `p. ${page} de ${pages}` };
+}

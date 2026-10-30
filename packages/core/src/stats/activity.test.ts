@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { describeActivityGroup, type GroupableActivity, groupActivities } from "./activity";
+import {
+  activityProgress,
+  describeActivityGroup,
+  feedHeadline,
+  type GroupableActivity,
+  groupActivities,
+} from "./activity";
 
 const HOUR = 60 * 60 * 1000;
 const start = new Date("2026-10-19T20:00:00Z").getTime();
@@ -70,5 +76,22 @@ describe("describeActivityGroup", () => {
     );
     expect(describeActivityGroup("finished", null, 2)).toBe("terminou de ler 2 livros");
     expect(describeActivityGroup("finished", null, 1)).toBe("terminou de ler");
+  });
+});
+
+describe("feed cards", () => {
+  it("shows progress as a bar with the edition's pages", () => {
+    expect(activityProgress({ page: 120 }, 300)).toEqual({
+      percent: 40,
+      label: "p. 120 de 300",
+    });
+    expect(activityProgress({ page: 120 }, null)).toEqual({ percent: null, label: "p. 120" });
+    expect(activityProgress({ page: 999 }, 300)?.percent).toBe(100);
+    expect(activityProgress(null, 300)).toBeNull();
+  });
+
+  it("doesn't repeat the page in the headline", () => {
+    expect(feedHeadline("progress", { page: 120 }, 1)).toBe("está lendo");
+    expect(feedHeadline("finished", null, 3)).toBe("terminou de ler 3 livros");
   });
 });
