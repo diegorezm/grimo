@@ -15,6 +15,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { FirstSteps } from "./first-steps";
 import { FriendsWantRow } from "./friends-want-row";
+import { TrendingRow } from "./trending-row";
 
 /** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
 export function Dashboard() {
@@ -106,6 +107,7 @@ export function Dashboard() {
           <ShelfTiles onSelect={() => router.navigate("/shelves")} />
         </View>
 
+        <TrendingRow />
         <FriendsWantRow />
 
         {activity.length > 0 && (
