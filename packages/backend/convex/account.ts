@@ -32,6 +32,7 @@ export const exportData = query({
       groupMessages,
       imports,
       booksAdded,
+      moderatorInvites,
     ] = await Promise.all([
       ctx.db
         .query("readingGoals")
@@ -93,6 +94,10 @@ export const exportData = query({
         .query("books")
         .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
         .collect(),
+      ctx.db
+        .query("moderatorInvites")
+        .withIndex("by_user_status", (q) => q.eq("userId", userId))
+        .collect(),
     ]);
 
     const books = new Map<Id<"books">, Doc<"books"> | null>();
@@ -119,6 +124,15 @@ export const exportData = query({
         image: viewer.image,
         bio: viewer.bio,
         favoriteGenres: viewer.favoriteGenres,
+      },
+      moderation: {
+        role: viewer.role ?? null,
+        invites: moderatorInvites.map((invite) => ({
+          status: invite.status,
+          invitedAt: date(invite.createdAt),
+          expiresAt: date(invite.expiresAt),
+          respondedAt: date(invite.respondedAt),
+        })),
       },
       readingGoals: goals.map((goal) => ({ year: goal.year, target: goal.target })),
       shelf: await Promise.all(
@@ -434,6 +448,37 @@ const steps: Step[] = [
       .withIndex("by_reporter_target", (q) => q.eq("reporterId", userId))
       .take(BATCH);
     for (const row of rows) await ctx.db.patch(row._id, { reporterId: null });
+    return rows.length === BATCH;
+  },
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("moderatorInvites").withIndex("by_user_status", (q) => q.eq("userId", userId)),
+    ),
+  // Invites the admin sent stay (moderation record), without the admin.
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("moderatorInvites")
+      .withIndex("by_invitedBy", (q) => q.eq("invitedBy", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { invitedBy: null });
+    return rows.length === BATCH;
+  },
+  // Moderation history stays, without the moderator or the reader acted on.
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("moderationLog")
+      .withIndex("by_actor", (q) => q.eq("actorId", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { actorId: null });
+    return rows.length === BATCH;
+  },
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("moderationLog")
+      .withIndex("by_targetUser", (q) => q.eq("targetUserId", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { targetUserId: null });
     return rows.length === BATCH;
   },
 ];

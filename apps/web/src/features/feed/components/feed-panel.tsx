@@ -6,6 +6,7 @@ import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
 import { LoadMore } from "@/components/ui/load-more";
 import { MentionText } from "@/components/ui/mention-text";
+import { StaffBadge } from "@/components/ui/staff-badge";
 import { BookCover, BookPeekLink } from "@/features/books";
 import { cn } from "@/utils/cn";
 
@@ -67,13 +68,22 @@ export function FeedPanel({ className }: { className?: string }) {
   );
 }
 
-function ActorName({ actor }: { actor: { name: string | null; username: string | null } }) {
-  return actor.username ? (
-    <Link to="/u/$username" params={{ username: actor.username }} className="font-semibold">
-      {actor.name}
-    </Link>
-  ) : (
-    <span className="font-semibold">{actor.name}</span>
+function ActorName({
+  actor,
+}: {
+  actor: { name: string | null; username: string | null; role?: "admin" | "moderator" | null };
+}) {
+  return (
+    <>
+      {actor.username ? (
+        <Link to="/u/$username" params={{ username: actor.username }} className="font-semibold">
+          {actor.name}
+        </Link>
+      ) : (
+        <span className="font-semibold">{actor.name}</span>
+      )}
+      <StaffBadge role={actor.role} className="ml-1.5" />
+    </>
   );
 }
 

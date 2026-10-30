@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { BookOpenIcon } from "@/components/ui/icons";
 import { Sparkle } from "@/components/ui/sparkle";
+import { StaffBadge } from "@/components/ui/staff-badge";
 import { BookCover } from "@/features/books";
 import { cn } from "@/utils/cn";
 import { FollowButton } from "./follow-button";
@@ -14,6 +15,7 @@ type Reader = Pick<
   | "name"
   | "username"
   | "image"
+  | "role"
   | "bio"
   | "followers"
   | "bookCount"
@@ -82,7 +84,10 @@ export function ReaderTile({
           >
             {reader.name}
           </Link>
-          <p className="truncate font-mono text-[11px] text-text-muted">@{reader.username}</p>
+          <p className="flex items-center gap-2 truncate font-mono text-[11px] text-text-muted">
+            @{reader.username}
+            <StaffBadge role={reader.role} />
+          </p>
         </div>
 
         <p className="line-clamp-2 min-h-10 text-sm leading-snug text-text-muted">

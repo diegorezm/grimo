@@ -26,6 +26,17 @@ export const reportTarget = literals(REPORT_TARGETS);
 export const reportReason = literals(REPORT_REASONS);
 export const reportStatus = literals(REPORT_STATUSES);
 
+export const moderationLogAction = v.union(
+  v.literal("dismiss"),
+  v.literal("remove"),
+  v.literal("suspend"),
+  v.literal("unsuspend"),
+  v.literal("book_approve"),
+  v.literal("book_reject"),
+  v.literal("role_grant"),
+  v.literal("role_revoke"),
+);
+
 /** A book as returned by search: enough to save it locally. */
 export const bookInput = v.object({
   openLibraryId: v.string(),
@@ -102,14 +113,22 @@ export default defineSchema({
     ageRejectedAt: v.optional(v.number()),
     /** Suspended by moderation (`moderation.suspend`): hidden, and signed-in calls fail. */
     suspendedAt: v.optional(v.number()),
-    /** Moderation team: opens `/admin` (`moderation.queue`). Granted with `moderation:setAdmin`. */
-    role: v.optional(v.literal("admin")),
+    /** When a temporary suspension ends; absent while suspended means permanent. */
+    suspendedUntil: v.optional(v.number()),
+    /** Why, shown to the suspended reader. */
+    suspendReason: v.optional(v.string()),
+    /**
+     * Moderation team: opens `/admin` (`moderation.queue`). Admins are set with
+     * `moderation:setAdmin`; moderators by invite (or `moderation:setModerator`).
+     */
+    role: v.optional(v.union(v.literal("admin"), v.literal("moderator"))),
     /** Account deleted: hidden while `account.purge` erases its data (then the row goes too). */
     deletedAt: v.optional(v.number()),
   })
     .index("by_authId", ["authId"])
     .index("by_username", ["username"])
     .index("by_followers", ["followers"])
+    .index("by_role", ["role"])
     .searchIndex("search", { searchField: "searchText" }),
 
   readingGoals: defineTable({
@@ -359,7 +378,50 @@ export default defineSchema({
     resolvedAt: v.union(v.number(), v.null()),
   })
     .index("by_status_created", ["status", "createdAt"])
-    .index("by_reporter_target", ["reporterId", "target", "targetId"]),
+    .index("by_reporter_target", ["reporterId", "target", "targetId"])
+    .index("by_target_user", ["targetUserId", "createdAt"])
+    .index("by_target", ["target", "targetId"]),
+
+  /**
+   * An admin's invite for one specific reader to become a moderator. Valid for 24 h
+   * (`expiresAt`); a `pending` one past that is expired (checked when read, no cron). Kept as the
+   * record of who was invited by whom; `invitedBy` goes null when the admin's account is deleted.
+   */
+  moderatorInvites: defineTable({
+    userId: v.id("users"),
+    invitedBy: v.union(v.id("users"), v.null()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("revoked"),
+      v.literal("expired"),
+    ),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    respondedAt: v.union(v.number(), v.null()),
+  })
+    .index("by_user_status", ["userId", "status"])
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_invitedBy", ["invitedBy"]),
+
+  /**
+   * Who did what in moderation (admin-only history). `actorId` is null for the CLI and once the
+   * moderator's account is deleted; `targetUserId` likewise for the reader acted on.
+   */
+  moderationLog: defineTable({
+    actorId: v.union(v.id("users"), v.null()),
+    action: moderationLogAction,
+    targetUserId: v.union(v.id("users"), v.null()),
+    /** Reported thing or book id, when the action had one. */
+    targetId: v.union(v.string(), v.null()),
+    /** Suspension length / reason, or the role granted. */
+    details: v.union(v.string(), v.null()),
+    createdAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_actor", ["actorId"])
+    .index("by_targetUser", ["targetUserId"]),
 
   /** Open Library search results, reused for 24 h (see `books.search`). */
   bookSearchCache: defineTable({

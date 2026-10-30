@@ -327,6 +327,8 @@ No mobile, escanear o ISBN (`expo-camera`) e buscar no Open Library por `isbn:`.
 ### Moderação e operação
 
 #### F15 · Painel de moderação
+> **Feito:** `/admin` com fila de denúncias, livros cadastrados, suspensão com prazo e motivo, papéis (admin e moderador, por convite de 24 h), histórico de ações. Falta avisar o denunciante do resultado.
+
 Hoje é pelo dashboard do Convex. Uma rota `/admin` protegida por papel (`users.role`) com a fila de
 denúncias, ações (remover, suspender, dispensar) e histórico. Avisar o denunciante do resultado.
 

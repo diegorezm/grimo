@@ -145,7 +145,13 @@ export function useSendGroupMessage(id: string) {
       return patchQueries<GroupMessagePage>([messagesOf(id)], (data) => {
         const message: GroupMessage = {
           id: `pending-${Date.now()}` as GroupMessage["id"],
-          author: { id: me.id, name: me.name, username: me.username, image: me.image },
+          author: {
+            id: me.id,
+            name: me.name,
+            username: me.username,
+            image: me.image,
+            role: me.role,
+          },
           mine: true,
           percent: data.myPercent,
           body: body.trim(),

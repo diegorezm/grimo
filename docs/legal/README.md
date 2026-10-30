@@ -68,7 +68,13 @@ Status: `[ ]` a fazer · `[x]` feito.
 - [x] [ropa.md](ropa.md), [incidentes.md](incidentes.md), [proporcionalidade.md](proporcionalidade.md).
 - [ ] Conferir o DPA do Convex e as cláusulas de transferência internacional (Res. CD/ANPD 19/2024).
 
-## Moderação (painel do Convex)
+## Moderação
+
+- Painel na web (`/admin`) para admins e moderadores: fila de denúncias, livros cadastrados, suspensão com prazo (1, 7 ou 30 dias; permanente só admin) e motivo obrigatório. Admins veem também a equipe e o histórico (`moderationLog`).
+- Moderador: admin convida uma conta (`/admin` → Equipe), que tem 24 h para aceitar. Sem convite, pela CLI: `npx convex run moderation:setModerator '{"username":"x","moderator":true}'`. Admin: `moderation:setAdmin`.
+- Moderadores não agem sobre a equipe nem sobre si mesmos, e não veem denúncias sobre a equipe.
+
+### Pela CLI / painel do Convex
 
 - Fila: tabela `reports`, filtro `status = "open"` (índice `by_status_created`). `snapshot` guarda o texto denunciado.
 - Remover conteúdo: `moderation:removeContent` `{ "target": "post" | "comment", "targetId": "…" }`.

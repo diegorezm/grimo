@@ -31,7 +31,7 @@ export function AccountSettings({ me }: { me: Me }) {
       >
         <ExportButton username={me.username} />
       </Block>
-      {me.isAdmin && (
+      {me.isStaff && (
         <Block title="Moderação" text="Denúncias abertas e livros cadastrados para revisar.">
           <Link to="/admin" className="w-fit font-semibold text-accent hover:underline">
             Abrir o painel

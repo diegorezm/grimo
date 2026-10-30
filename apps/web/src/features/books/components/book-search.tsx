@@ -3,6 +3,7 @@ import { SHELF_LABELS, SHELF_STATUSES, type ShelfStatus } from "@grimo/core";
 import { useDeferredValue, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { SearchIcon } from "@/components/ui/icons";
+import { Select } from "@/components/ui/select";
 import { BookCard } from "./book-card";
 import { ManualBookForm } from "./manual-book-form";
 
@@ -77,27 +78,15 @@ export function BookSearch({ initialQuery = "" }: { initialQuery?: string }) {
                 {book.publishedYear && (
                   <p className="font-mono text-[11px] text-text-muted">{book.publishedYear}</p>
                 )}
-                <select
+                <Select<ShelfStatus | "">
                   value={status ?? ""}
-                  aria-label={`Adicionar ${book.title} a uma estante`}
-                  onChange={(e) =>
-                    addToShelf.mutate({ book, status: e.target.value as ShelfStatus })
-                  }
-                  className={
-                    status
-                      ? "mt-2.5 w-full rounded-full border border-border bg-surface-muted px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider outline-none"
-                      : "bg-accent-gradient mt-2.5 w-full rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-accent-foreground outline-none"
-                  }
-                >
-                  <option value="" disabled>
-                    + Adicionar
-                  </option>
-                  {SHELF_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {SHELF_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
+                  label={`Adicionar ${book.title} a uma estante`}
+                  placeholder="+ Adicionar"
+                  variant={status ? "compact" : "accent"}
+                  className="mt-2.5"
+                  options={SHELF_STATUSES.map((s) => ({ value: s, label: SHELF_LABELS[s] }))}
+                  onChange={(next) => next && addToShelf.mutate({ book, status: next })}
+                />
               </BookCard>
             </li>
           );

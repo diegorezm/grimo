@@ -8,6 +8,7 @@ import {
   PeopleIcon,
   SearchIcon,
   ShelvesIcon,
+  ShieldIcon,
   TogetherIcon,
   UserIcon,
 } from "@/components/ui/icons";
@@ -69,6 +70,19 @@ export function AppShell({
                 {item.label}
               </Link>
             ))}
+            {me?.isStaff && (
+              <Link
+                to="/admin"
+                className="flex flex-col items-center gap-1.5 py-3.5 text-xs transition"
+                activeProps={{ className: "bg-surface-muted font-semibold text-accent" }}
+                inactiveProps={{
+                  className: "text-text-muted hover:bg-surface-muted/60 hover:text-text",
+                }}
+              >
+                <ShieldIcon className="size-6" />
+                Moderação
+              </Link>
+            )}
           </nav>
           <div className="mt-auto flex flex-col items-center gap-4">
             <ThemeCycleButton />
@@ -153,6 +167,16 @@ function TopBar({ actions }: { actions?: ReactNode }) {
       <div className="flex items-center gap-4">
         <ThemeToggle className="lg:hidden" />
         {actions}
+        {me?.isStaff && (
+          <Link
+            to="/admin"
+            aria-label="Moderação"
+            title="Moderação"
+            className="text-text-muted hover:text-text lg:hidden"
+          >
+            <ShieldIcon className="size-6" />
+          </Link>
+        )}
         {me && (
           <Link to="/me" className="hidden items-center gap-3 lg:flex">
             <span className="text-right text-sm leading-tight">

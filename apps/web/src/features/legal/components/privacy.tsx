@@ -66,6 +66,15 @@ export function PrivacyPage() {
             não encontramos.
           </li>
           <li>
+            <strong>Moderação:</strong> quando uma conta é suspensa, guardamos a data, a duração e o
+            motivo, que a própria pessoa lê ao tentar entrar. Cada ação da equipe de moderação
+            (remover conteúdo, suspender, dispensar uma denúncia) fica num histórico com quem fez e
+            quando. Quem faz parte da equipe (admin ou moderador) tem um selo público no perfil e
+            nas publicações, visível para todos. Moderadores são leitores convidados pelo Grimo e só
+            veem as denúncias, com a cópia do conteúdo denunciado, não o seu email nem o restante do
+            seu perfil.
+          </li>
+          <li>
             <strong>Aceites:</strong> versão e data em que você aceitou os Termos e esta Política, e
             se foi pela web ou pelo app.
           </li>
@@ -196,7 +205,8 @@ export function PrivacyPage() {
           <li>
             Denúncias feitas sobre você ou seu conteúdo são mantidas como registro de moderação pelo
             tempo necessário para cumprir a lei ou defender direitos; as denúncias que você fez
-            continuam existindo, mas sem identificar você.
+            continuam existindo, mas sem identificar você. O histórico de moderação também fica, sem
+            vínculo com a sua conta.
           </li>
         </List>
       </Section>

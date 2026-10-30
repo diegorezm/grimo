@@ -2,6 +2,7 @@ import { type ShelfItem, useShelf, useShelfTabStore, useUpdateShelfEntry } from 
 import { countByShelf, SHELF_LABELS, SHELF_STATUSES } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
+import { Select } from "@/components/ui/select";
 import { Stars } from "@/components/ui/stars";
 import { BookCard, PageLogger } from "@/features/books";
 import { ShelfTiles } from "./shelf-tiles";
@@ -65,23 +66,14 @@ function ShelfBook({ item: { entry, book } }: { item: ShelfItem }) {
           className="mt-1.5"
         />
       )}
-      <select
+      <Select
         value={entry.status}
-        aria-label={`Mover ${book.title} de estante`}
-        onChange={(e) =>
-          update.mutate({
-            id: entry.id,
-            status: e.target.value as (typeof SHELF_STATUSES)[number],
-          })
-        }
-        className="mt-2.5 w-full rounded-full border border-border bg-surface px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted outline-none hover:text-text focus:border-accent"
-      >
-        {SHELF_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {SHELF_LABELS[s]}
-          </option>
-        ))}
-      </select>
+        label={`Mover ${book.title} de estante`}
+        variant="quiet"
+        className="mt-2.5"
+        options={SHELF_STATUSES.map((s) => ({ value: s, label: SHELF_LABELS[s] }))}
+        onChange={(status) => update.mutate({ id: entry.id, status })}
+      />
     </BookCard>
   );
 }
