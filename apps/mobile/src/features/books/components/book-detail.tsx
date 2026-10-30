@@ -33,6 +33,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
 import { FriendsWant } from "./friends-want";
 import { QuoteText } from "./quote-text";
+import { SessionControl } from "./session-control";
 import { StartGroup } from "./start-group";
 
 /** Book page: cover, shelf picker, progress / rating, synopsis and reviews. */
@@ -113,6 +114,13 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
                 router.push({ pathname: "/progress/[id]", params: { id: openLibraryId } })
               }
             />
+            {book.id && (
+              <SessionControl
+                entryId={entry.id}
+                page={entry.currentPage}
+                book={{ ...book, id: book.id }}
+              />
+            )}
           </Card>
         )}
 

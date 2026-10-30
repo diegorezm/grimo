@@ -1,7 +1,15 @@
-import { useBook, useUpdateShelfEntry } from "@grimo/client";
+import {
+  useActiveSession,
+  useBook,
+  useDiscardSession,
+  useElapsed,
+  useFinishSession,
+  useUpdateShelfEntry,
+} from "@grimo/client";
 import {
   editionPages,
   firstIssue,
+  formatTimer,
   readingPercent,
   updateNoteSchema,
   updateShelfEntrySchema,
@@ -16,13 +24,19 @@ import { useTheme } from "@/hooks/use-theme";
 /**
  * "Registrar leitura": a page stepper for the book you are reading, or mark it as finished. The
  * pages of your edition can be set here too (empty: the book's), and a comment that shows in
- * the feed with the page (Skoob's comentário de leitura).
+ * the feed with the page (Skoob's comentário de leitura). With a session running on this book,
+ * "Salvar" ends it: the feed says how long you read.
  */
 export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
   const { data } = useBook(openLibraryId);
   const update = useUpdateShelfEntry();
+  const active = useActiveSession().data;
+  const finishSession = useFinishSession();
+  const discardSession = useDiscardSession();
   const entry = data?.entry;
+  const session = active && active.entryId === entry?.id ? active : null;
+  const elapsed = useElapsed(session?.startedAt);
   const bookPages = data?.book.pageCount ?? null;
   const [page, setPage] = useState<number | null>(null);
   const [edition, setEdition] = useState<string | null>(null);
@@ -69,6 +83,15 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   function save() {
     const note = noteFor(false);
     if (!valid() || note === null) return;
+    if (session) {
+      if (Object.keys(editionPatch).length > 0) update.mutate({ id: entry!.id, ...editionPatch });
+      finishSession.mutate({
+        page: Math.min(current, pageCount ?? current),
+        ...(note && { note }),
+      });
+      router.back();
+      return;
+    }
     update.mutate({
       id: entry!.id,
       currentPage: Math.min(current, pageCount ?? current),
@@ -94,9 +117,10 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text variant="heading">Registrar leitura</Text>
+        <Text variant="heading">{session ? "Terminar sessão" : "Registrar leitura"}</Text>
         <Text color="textMuted" numberOfLines={1}>
           {data.book.title}
+          {session ? ` · ⏱ ${formatTimer(elapsed)}` : ""}
         </Text>
       </View>
 
@@ -186,8 +210,23 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
 
       <View style={styles.actions}>
         <Button variant="secondary" title="Terminei o livro" onPress={finish} style={styles.flex} />
-        <Button title="Salvar" onPress={save} disabled={update.isPending} style={styles.flex} />
+        <Button
+          title={session ? "Terminar sessão" : "Salvar"}
+          onPress={save}
+          disabled={update.isPending || finishSession.isPending}
+          style={styles.flex}
+        />
       </View>
+      {session && (
+        <Button
+          variant="ghost"
+          title="Descartar a sessão"
+          onPress={() => {
+            discardSession.mutate();
+            router.back();
+          }}
+        />
+      )}
     </View>
   );
 }

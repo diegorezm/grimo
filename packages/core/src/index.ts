@@ -9,5 +9,6 @@ export * from "./notifications";
 export * from "./posts";
 export * from "./preferences";
 export * from "./profile";
+export * from "./sessions";
 export * from "./shelves";
 export * from "./stats";

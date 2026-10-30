@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Card, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { VerifyEmailBanner } from "@/features/account";
-import { BookCover, BookTile } from "@/features/books";
+import { BookCover, BookTile, SessionControl } from "@/features/books";
 import { FeedItem } from "@/features/feed";
 import { NotificationBell } from "@/features/notifications";
 import { ShelfTiles } from "@/features/shelves";
@@ -15,6 +15,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { FirstSteps } from "./first-steps";
 import { FriendsWantRow } from "./friends-want-row";
+import { StreakLine } from "./streak-line";
 import { TrendingRow } from "./trending-row";
 
 /** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
@@ -59,6 +60,7 @@ export function Dashboard() {
           <NotificationBell />
         </View>
 
+        <StreakLine />
         <VerifyEmailBanner />
         <FirstSteps />
         <RetrospectiveBanner />
@@ -179,6 +181,7 @@ function CurrentRead({ item }: { item: ReadingItem }) {
           router.push({ pathname: "/progress/[id]", params: { id: book.openLibraryId } })
         }
       />
+      <SessionControl entryId={entry.id} page={entry.currentPage} book={book} />
     </View>
   );
 }

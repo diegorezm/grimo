@@ -47,7 +47,8 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações, datas
-            de início e fim.
+            de início e fim, e as sessões de leitura que você cronometra (quando começou, quando
+            parou e em que página), para a ofensiva e o feed.
           </li>
           <li>
             <strong>Social:</strong> resenhas, notas, comentários, curtidas, quem você segue,

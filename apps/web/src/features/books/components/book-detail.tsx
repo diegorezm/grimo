@@ -29,6 +29,7 @@ import { BookQuotes } from "./book-quotes";
 import { EditionPages } from "./edition-pages";
 import { FriendsWant } from "./friends-want";
 import { PageLogger } from "./page-logger";
+import { ReadingSession } from "./reading-session";
 import { StartGroup } from "./start-group";
 
 /** Header, your reading, synopsis and reviews of a book. */
@@ -94,11 +95,27 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             Sua leitura
           </h2>
           {entry.status === "reading" ? (
-            <PageLogger
-              entryId={entry.id}
-              page={entry.currentPage}
-              pageCount={editionPages(entry.pageCount, book.pageCount)}
-            />
+            <>
+              <PageLogger
+                entryId={entry.id}
+                page={entry.currentPage}
+                pageCount={editionPages(entry.pageCount, book.pageCount)}
+              />
+              {book.id && (
+                <ReadingSession
+                  entryId={entry.id}
+                  page={entry.currentPage}
+                  pageCount={editionPages(entry.pageCount, book.pageCount)}
+                  book={{
+                    id: book.id,
+                    openLibraryId: book.openLibraryId,
+                    title: book.title,
+                    authors: book.authors,
+                    coverUrl: book.coverUrl,
+                  }}
+                />
+              )}
+            </>
           ) : (
             <RatingRow entryId={entry.id} rating={entry.rating} />
           )}

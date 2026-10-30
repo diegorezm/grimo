@@ -1,7 +1,16 @@
+import { formatMinutes } from "../sessions";
 import { SHELF_LABELS, type ShelfStatus } from "../shelves/constants";
 
 export const ACTIVITY_KINDS = ["shelved", "progress", "finished", "posted", "followed"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+/** A timed reading session (`sessions.finish`): "leu 40 páginas em 35 min". */
+function sessionPhrase(data: Record<string, unknown> | null): string | null {
+  const minutes = data?.minutes;
+  const pages = data?.pagesRead;
+  if (typeof minutes !== "number" || typeof pages !== "number" || pages <= 0) return null;
+  return `leu ${pages} ${pages === 1 ? "página" : "páginas"} em ${formatMinutes(minutes)}`;
+}
 
 /** Human sentence for a feed item (shared copy for web + mobile). */
 export function describeActivity(kind: ActivityKind, data: Record<string, unknown> | null): string {
@@ -11,7 +20,7 @@ export function describeActivity(kind: ActivityKind, data: Record<string, unknow
       return status ? `adicionou à estante “${SHELF_LABELS[status]}”` : "adicionou um livro";
     }
     case "progress":
-      return `está na página ${String(data?.page ?? "?")}`;
+      return sessionPhrase(data) ?? `está na página ${String(data?.page ?? "?")}`;
     case "finished":
       return "terminou de ler";
     case "posted":
@@ -116,7 +125,7 @@ export function feedHeadline(
   data: Record<string, unknown> | null,
   count: number,
 ): string {
-  if (kind === "progress") return "está lendo";
+  if (kind === "progress") return sessionPhrase(data) ?? "está lendo";
   if (kind === "posted" && data?.postKind === "quote") return "guardou uma citação";
   const status = data?.status as ShelfStatus | undefined;
   if (kind === "shelved" && count === 1 && status && status in SHELVED_HEADLINES) {

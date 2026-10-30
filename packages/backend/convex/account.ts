@@ -20,6 +20,7 @@ export const exportData = query({
       goals,
       entries,
       logs,
+      sessions,
       posts,
       comments,
       likes,
@@ -45,6 +46,10 @@ export const exportData = query({
       ctx.db
         .query("readingLogs")
         .withIndex("by_user_created", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("readingSessions")
+        .withIndex("by_user_started", (q) => q.eq("userId", userId))
         .collect(),
       ctx.db
         .query("posts")
@@ -152,6 +157,15 @@ export const exportData = query({
           page: log.page,
           pagesRead: log.pagesRead,
           at: date(log.createdAt),
+        })),
+      ),
+      readingSessions: await Promise.all(
+        sessions.map(async (session) => ({
+          book: await bookTitle(session.bookId),
+          startedAt: date(session.startedAt),
+          endedAt: date(session.endedAt),
+          startPage: session.startPage,
+          endPage: session.endPage,
         })),
       ),
       posts: await Promise.all(
@@ -397,6 +411,11 @@ const steps: Step[] = [
     deleteAll(
       ctx,
       ctx.db.query("readingLogs").withIndex("by_user_created", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("readingSessions").withIndex("by_user_started", (q) => q.eq("userId", userId)),
     ),
   // Shelf entries: the books they were on lose a reader (and a rating).
   async (ctx, userId) => {

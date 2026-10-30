@@ -105,6 +105,13 @@ function storedPatch(set: UpdateShelfEntryInput) {
 /** What a reader wrote about the page they marked (or the book they finished). */
 type UpdateNote = { body: string; hasSpoilers: boolean };
 
+/** Extras of a shelf change: the reader's note, and the timed session it closes. */
+export interface UpdateExtras {
+  note?: UpdateNote;
+  /** Minutes of the session; the feed says "leu 40 páginas em 35 min". */
+  sessionMinutes?: number;
+}
+
 /** Reading log + feed activity for a shelf change, with the reader's note on it. */
 async function recordSideEffects(
   ctx: MutationCtx,
@@ -112,7 +119,7 @@ async function recordSideEffects(
   pagesRead: number,
   activity: Doc<"activities">["kind"] | null,
   now: number,
-  note?: UpdateNote,
+  { note, sessionMinutes }: UpdateExtras = {},
 ) {
   if (pagesRead > 0) {
     await ctx.db.insert("readingLogs", {
@@ -128,7 +135,11 @@ async function recordSideEffects(
       actorId: entry.userId,
       kind: activity,
       bookId: entry.bookId,
-      data: { status: entry.status, page: entry.currentPage },
+      data: {
+        status: entry.status,
+        page: entry.currentPage,
+        ...(sessionMinutes !== undefined && { minutes: sessionMinutes, pagesRead }),
+      },
       createdAt: now,
     });
     if (note) await updatePostFor(ctx, (await ctx.db.get(activityId))!, note);
@@ -144,7 +155,7 @@ export async function updateShelfEntry(
   entryId: Id<"shelfEntries">,
   patch: UpdateShelfEntryInput,
   now = Date.now(),
-  note?: UpdateNote,
+  extras: UpdateExtras = {},
 ) {
   const entry = await ctx.db.get(entryId);
   if (!entry || entry.userId !== userId) throw notFound("Livro na estante");
@@ -171,7 +182,7 @@ export async function updateShelfEntry(
   });
   const updated = (await ctx.db.get(entryId))!;
   if (updated.rating !== entry.rating) await recordBookCounters(ctx, entry.bookId, entry, updated);
-  await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now, note);
+  await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now, extras);
   return updated;
 }
 

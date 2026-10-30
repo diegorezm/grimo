@@ -92,7 +92,9 @@ export const update = mutation({
     const input = parse(updateShelfEntrySchema, patch);
     const noteInput = note ? parse(updateNoteSchema, note) : undefined;
     if (noteInput) await enforceRateLimit(ctx, "createPost", viewer._id);
-    const entry = await updateShelfEntry(ctx, viewer._id, id, input, Date.now(), noteInput);
+    const entry = await updateShelfEntry(ctx, viewer._id, id, input, Date.now(), {
+      note: noteInput,
+    });
     return { entry: entryView(entry) };
   },
 });
