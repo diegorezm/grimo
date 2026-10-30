@@ -1,5 +1,10 @@
 import { api, type Id } from "@grimo/backend";
-import type { AddToShelfInput, ShelfStatus, UpdateShelfEntryInput } from "@grimo/core";
+import type {
+  AddToShelfInput,
+  ShelfStatus,
+  UpdateNoteInput,
+  UpdateShelfEntryInput,
+} from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
@@ -49,7 +54,13 @@ export function useUpdateShelfEntry() {
   const { convex } = useConvexCache();
   const patchQueries = usePatchQueries();
   return useMutation({
-    mutationFn: ({ id, startedAt, finishedAt, ...patch }: UpdateShelfEntryInput & { id: string }) =>
+    /** `note`: what the reader wrote about this page or book; it shows in the feed. */
+    mutationFn: ({
+      id,
+      startedAt,
+      finishedAt,
+      ...patch
+    }: UpdateShelfEntryInput & { id: string; note?: UpdateNoteInput }) =>
       convex.mutation(api.shelves.update, {
         id: id as Id<"shelfEntries">,
         ...patch,

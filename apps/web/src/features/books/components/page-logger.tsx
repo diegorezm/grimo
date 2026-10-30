@@ -1,5 +1,5 @@
-import { useUpdateShelfEntry } from "@grimo/client";
-import { readingPercent } from "@grimo/core";
+import { errorMessage, useUpdateShelfEntry } from "@grimo/client";
+import { firstIssue, readingPercent, updateNoteSchema } from "@grimo/core";
 import { type CSSProperties, useEffect, useState } from "react";
 import { Sparkle } from "@/components/ui/sparkle";
 import { cn } from "@/utils/cn";
@@ -9,7 +9,8 @@ const QUICK_STEPS = [5, 10, 25];
 /**
  * Log reading progress: drag the slider, tap a "+N" chip, or click the page number to type it.
  * Saves when you let go (optimistic). At the last page it offers to move the book to "Lidos".
- * `compact` is the small version for shelf cards.
+ * "Comentar" (like Skoob's comentário de leitura) holds the page until you publish it with a
+ * note, which shows in the feed. `compact` is the small version for shelf cards.
  */
 export function PageLogger({
   entryId,
@@ -25,13 +26,31 @@ export function PageLogger({
   const update = useUpdateShelfEntry();
   const [draft, setDraft] = useState(page);
   const [editing, setEditing] = useState(false);
+  /** The note being written; null while the composer is closed. */
+  const [note, setNote] = useState<{ body: string; hasSpoilers: boolean } | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
   useEffect(() => setDraft(page), [page]);
 
   const clamp = (value: number) => Math.max(0, pageCount ? Math.min(pageCount, value) : value) || 0;
   const save = (value: number) => {
     const next = clamp(value);
     setDraft(next);
-    if (next !== page) update.mutate({ id: entryId, currentPage: next });
+    // While writing a note, the page waits to go out with it.
+    if (next !== page && !note) update.mutate({ id: entryId, currentPage: next });
+  };
+  const publish = () => {
+    if (!note) return;
+    const input = updateNoteSchema.safeParse(note);
+    if (!input.success) return setNoteError(firstIssue(input.error));
+    if (draft === page) return setNoteError("Marque a página nova antes de publicar.");
+    setNoteError(null);
+    update.mutate(
+      { id: entryId, currentPage: draft, note: input.data },
+      {
+        onSuccess: () => setNote(null),
+        onError: (error) => setNoteError(errorMessage(error)),
+      },
+    );
   };
   const percent = readingPercent(draft, pageCount);
   const finished = pageCount !== null && draft >= pageCount;
@@ -165,7 +184,66 @@ export function PageLogger({
             Terminei!
           </button>
         )}
+        {!note && (
+          <button
+            type="button"
+            onClick={() => setNote({ body: "", hasSpoilers: false })}
+            className={cn(
+              "rounded-full px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-text-muted transition hover:text-accent",
+              !finished && "ml-auto",
+            )}
+          >
+            Comentar
+          </button>
+        )}
       </div>
+
+      {note && (
+        <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+          <textarea
+            // biome-ignore lint/a11y/noAutofocus: opened by clicking "Comentar"
+            autoFocus
+            value={note.body}
+            onChange={(e) => setNote({ ...note, body: e.target.value })}
+            rows={3}
+            maxLength={2000}
+            placeholder="O que achou até aqui? Aparece no feed junto da página."
+            aria-label="Comentário sobre a leitura"
+            className="w-full resize-y bg-transparent text-sm outline-none placeholder:text-text-muted"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-text-muted">
+              <input
+                type="checkbox"
+                checked={note.hasSpoilers}
+                onChange={(e) => setNote({ ...note, hasSpoilers: e.target.checked })}
+              />
+              Tem spoiler
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setNote(null);
+                setNoteError(null);
+                // The page moved while writing: save it without the note.
+                if (draft !== page) update.mutate({ id: entryId, currentPage: draft });
+              }}
+              className="ml-auto font-mono text-xs uppercase tracking-wider text-text-muted hover:text-text"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={publish}
+              disabled={update.isPending}
+              className="bg-accent-gradient rounded-full px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-accent-foreground disabled:opacity-50"
+            >
+              Publicar na página {draft}
+            </button>
+          </div>
+          {noteError && <p className="text-sm text-danger">{noteError}</p>}
+        </div>
+      )}
     </div>
   );
 }

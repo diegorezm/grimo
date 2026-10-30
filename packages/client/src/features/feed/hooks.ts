@@ -1,4 +1,4 @@
-import { api } from "@grimo/backend";
+import { api, type Id } from "@grimo/backend";
 import type { ShelfStatus } from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
@@ -77,3 +77,54 @@ export function useShelveFromFeed() {
 }
 
 type FeedBook = NonNullable<FeedItem["book"]>;
+
+type ReactionList = { items: FeedItem[] };
+
+/**
+ * Like or unlike any update in the feed (not only posts). The heart changes at once in every
+ * list; the update's post is made by the server on the first like.
+ */
+export function useToggleUpdateLike() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: ({ activityId, like }: { activityId: string; like: boolean }) =>
+      convex.mutation(api.posts.setActivityLiked, {
+        activityId: activityId as Id<"activities">,
+        like,
+      }),
+    onMutate: ({ activityId, like }) =>
+      patchQueries<ReactionList>(feedLists(), (data) => ({
+        ...data,
+        items: data.items.map((item) => {
+          if (item.id !== activityId || Boolean(item.post?.likedByMe) === like) return item;
+          // Until the server answers, an update nobody reacted to gets a stand-in post (no id).
+          const post = item.post ?? {
+            id: "" as Id<"posts">,
+            kind: "update" as const,
+            body: "",
+            rating: null,
+            hasSpoilers: false,
+            createdAt: item.createdAt,
+            likeCount: 0,
+            commentCount: 0,
+            likedByMe: false,
+          };
+          return {
+            ...item,
+            post: { ...post, likedByMe: like, likeCount: post.likeCount + (like ? 1 : -1) },
+          };
+        }),
+      })),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** The post to open for commenting on an update (the server makes it if needed). */
+export function useUpdateThread() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: (activityId: string) =>
+      convex.mutation(api.posts.activityPost, { activityId: activityId as Id<"activities"> }),
+  });
+}

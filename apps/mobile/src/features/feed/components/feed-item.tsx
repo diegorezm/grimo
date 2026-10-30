@@ -3,7 +3,8 @@ import {
   useMe,
   useSetBlocked,
   useShelveFromFeed,
-  useToggleLike,
+  useToggleUpdateLike,
+  useUpdateThread,
 } from "@grimo/client";
 import {
   activityProgress,
@@ -24,13 +25,17 @@ import { useTheme } from "@/hooks/use-theme";
 /** Covers shown for a grouped entry before "+N". */
 const MAX_COVERS = 5;
 
+/** Updates readers can like and comment on (follows can't). */
+const REACTABLE = new Set<FeedItemData["kind"]>(["shelved", "progress", "finished", "posted"]);
+
 /**
  * One activity as a card: who did what, the book with a big cover and what it means for the
  * book (progress bar, stars, shelf), "Quero ler" for books you don't have, and the post. `more`
  * are older activities grouped into this one (see `groupActivities`).
  */
 export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedItemData[] }) {
-  const toggleLike = useToggleLike();
+  const toggleLike = useToggleUpdateLike();
+  const thread = useUpdateThread();
   const setBlocked = useSetBlocked();
   const theme = useTheme();
   const me = useMe().data;
@@ -38,6 +43,7 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
   const mine = me?.id === actor.id;
   const openLibraryId = book?.openLibraryId;
   const openBook = (id: string) => router.push({ pathname: "/book/[id]", params: { id } });
+  const openThread = (id: string) => router.push({ pathname: "/post/[id]", params: { id } });
   // Progress groups show only the latest page; shelf and finished groups list every book.
   const books =
     more.length > 0 && item.kind !== "progress"
@@ -130,57 +136,62 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
         )
       )}
 
-      {post?.id && (
-        <>
-          {post.body && (
-            <MentionText
-              style={styles.quote}
-              numberOfLines={6}
-              text={post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
-            />
-          )}
-          <View style={[styles.actions, { borderTopColor: theme.border }]}>
+      {post?.body ? (
+        <MentionText
+          style={styles.quote}
+          numberOfLines={6}
+          text={post.hasSpoilers ? "Contém spoiler · toque em comentários para ler." : post.body}
+        />
+      ) : null}
+      {REACTABLE.has(item.kind) && (
+        <View style={[styles.actions, { borderTopColor: theme.border }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={post?.likedByMe ? "Descurtir" : "Curtir"}
+            onPress={() => toggleLike.mutate({ activityId: item.id, like: !post?.likedByMe })}
+            hitSlop={8}
+          >
+            <Text variant="label" color={post?.likedByMe ? "accent" : "textMuted"}>
+              {post?.likedByMe ? "♥" : "♡"} {post?.likeCount ?? 0}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ver comentários"
+            disabled={thread.isPending}
+            onPress={() =>
+              post?.id
+                ? openThread(post.id)
+                : thread.mutate(item.id, {
+                    onSuccess: ({ post: created }) => openThread(created.id),
+                  })
+            }
+            hitSlop={8}
+            style={styles.flex}
+          >
+            <Text variant="label" color="textMuted">
+              {post?.id ? commentCountLabel(post.commentCount) : "Comentar"}
+            </Text>
+          </Pressable>
+          {!mine && post?.id && post.body ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={post.likedByMe ? "Descurtir" : "Curtir"}
-              onPress={() => toggleLike.mutate({ postId: post.id!, like: !post.likedByMe })}
-              hitSlop={8}
-            >
-              <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-                {post.likedByMe ? "♥" : "♡"} {post.likeCount}
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Ver comentários"
-              onPress={() => router.push({ pathname: "/post/[id]", params: { id: post.id! } })}
-              hitSlop={8}
-              style={styles.flex}
+              accessibilityLabel="Denunciar ou bloquear"
+              onPress={() =>
+                showPostActions({
+                  postId: post.id!,
+                  author: actor,
+                  block: (userId) => setBlocked.mutate({ userId, block: true }),
+                })
+              }
+              hitSlop={10}
             >
               <Text variant="label" color="textMuted">
-                {commentCountLabel(post.commentCount)}
+                ⋯
               </Text>
             </Pressable>
-            {!mine && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Denunciar ou bloquear"
-                onPress={() =>
-                  showPostActions({
-                    postId: post.id!,
-                    author: actor,
-                    block: (userId) => setBlocked.mutate({ userId, block: true }),
-                  })
-                }
-                hitSlop={10}
-              >
-                <Text variant="label" color="textMuted">
-                  ⋯
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        </>
+          ) : null}
+        </View>
       )}
     </Card>
   );

@@ -8,7 +8,7 @@ import {
   useRemovePost,
   useToggleLike,
 } from "@grimo/client";
-import { commentCountLabel, timeAgo } from "@grimo/core";
+import { activityProgress, commentCountLabel, feedHeadline, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
@@ -42,7 +42,8 @@ export function PostThread({ postId }: { postId: string }) {
 }
 
 function Thread({ detail }: { detail: PostDetail }) {
-  const { post, comments } = detail;
+  const { post, comments, update } = detail;
+  const progress = update?.kind === "progress" ? activityProgress(update.data, update.pages) : null;
   const me = useMe().data;
   const toggleLike = useToggleLike();
   const removePost = useRemovePost();
@@ -65,6 +66,12 @@ function Thread({ detail }: { detail: PostDetail }) {
       <Button variant="ghost" title="Voltar" onPress={() => router.back()} />
       <Card>
         <AuthorLine author={post.author} createdAt={post.createdAt} />
+        {update && (
+          <Text variant="small" color="textMuted">
+            {feedHeadline(update.kind, update.data, 1)}
+            {progress && ` · ${progress.label}`}
+          </Text>
+        )}
         {book && (
           <Pressable
             accessibilityRole="button"
@@ -82,7 +89,7 @@ function Thread({ detail }: { detail: PostDetail }) {
             </View>
           </Pressable>
         )}
-        <MentionText text={post.body} />
+        {post.body ? <MentionText text={post.body} /> : null}
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"

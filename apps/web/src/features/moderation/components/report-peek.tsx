@@ -226,7 +226,13 @@ function ReportedContent({ report }: { report: ReportDetail }) {
 
   const facts: string[] = [];
   if (content.kind === "post") {
-    facts.push(content.postKind === "review" ? "Resenha" : "Nota");
+    facts.push(
+      content.postKind === "review"
+        ? "Resenha"
+        : content.postKind === "update"
+          ? "Comentário de leitura"
+          : "Nota",
+    );
     if (content.book) facts.push(content.book.title);
     if (content.rating) facts.push(`${content.rating} de 5`);
     facts.push(

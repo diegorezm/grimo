@@ -50,7 +50,7 @@ export function FeedPanel({ className }: { className?: string }) {
           </li>
         )}
         {items.map((item) =>
-          item.post?.id ? (
+          item.kind === "posted" && item.post?.id ? (
             <PostBubble key={item.id} item={item} mine={item.actor.username === me?.username} />
           ) : (
             <ActivityLine key={item.id} item={item} />

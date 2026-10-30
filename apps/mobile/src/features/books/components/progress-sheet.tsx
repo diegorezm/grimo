@@ -1,5 +1,11 @@
 import { useBook, useUpdateShelfEntry } from "@grimo/client";
-import { editionPages, firstIssue, readingPercent, updateShelfEntrySchema } from "@grimo/core";
+import {
+  editionPages,
+  firstIssue,
+  readingPercent,
+  updateNoteSchema,
+  updateShelfEntrySchema,
+} from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -9,7 +15,8 @@ import { useTheme } from "@/hooks/use-theme";
 
 /**
  * "Registrar leitura": a page stepper for the book you are reading, or mark it as finished. The
- * pages of your edition can be set here too (empty: the book's).
+ * pages of your edition can be set here too (empty: the book's), and a comment that shows in
+ * the feed with the page (Skoob's comentário de leitura).
  */
 export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
@@ -20,6 +27,8 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   const [page, setPage] = useState<number | null>(null);
   const [edition, setEdition] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
+  const [hasSpoilers, setHasSpoilers] = useState(false);
   if (!data || !entry) return null;
 
   const editionText = edition ?? String(editionPages(entry.pageCount, bookPages) ?? "");
@@ -42,23 +51,42 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
     return false;
   }
 
+  /** The comment to publish with this update, `undefined` without one, or null when invalid. */
+  function noteFor(finishing: boolean) {
+    if (comment.trim() === "") return undefined;
+    const note = updateNoteSchema.safeParse({ body: comment, hasSpoilers });
+    if (!note.success) {
+      setError(firstIssue(note.error));
+      return null;
+    }
+    if (!finishing && current === entry!.currentPage) {
+      setError("Marque a página nova para comentar a leitura.");
+      return null;
+    }
+    return note.data;
+  }
+
   function save() {
-    if (!valid()) return;
+    const note = noteFor(false);
+    if (!valid() || note === null) return;
     update.mutate({
       id: entry!.id,
       currentPage: Math.min(current, pageCount ?? current),
       ...editionPatch,
+      ...(note && { note }),
     });
     router.back();
   }
 
   function finish() {
-    if (!valid()) return;
+    const note = noteFor(true);
+    if (!valid() || note === null) return;
     update.mutate({
       id: entry!.id,
       status: "read",
       ...editionPatch,
       ...(pageCount ? { currentPage: pageCount } : {}),
+      ...(note && { note }),
     });
     router.back();
   }
@@ -119,6 +147,36 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
           accessibilityLabel="Páginas da sua edição"
           style={styles.editionInput}
         />
+      </View>
+      <View style={styles.gap}>
+        <Input
+          value={comment}
+          onChangeText={(text) => {
+            setComment(text);
+            setError(null);
+          }}
+          multiline
+          maxLength={2000}
+          placeholder="Comentar a leitura (opcional): aparece no feed"
+          accessibilityLabel="Comentário sobre a leitura"
+          style={styles.comment}
+        />
+        {comment.trim() !== "" && (
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: hasSpoilers }}
+            onPress={() => setHasSpoilers(!hasSpoilers)}
+            style={[
+              styles.spoiler,
+              { borderColor: hasSpoilers ? theme.accent : theme.border },
+              hasSpoilers && { backgroundColor: theme.surfaceMuted },
+            ]}
+          >
+            <Text variant="label" color={hasSpoilers ? "accent" : "textMuted"}>
+              {hasSpoilers ? "✓ Tem spoiler" : "Tem spoiler?"}
+            </Text>
+          </Pressable>
+        )}
       </View>
       {error && (
         <Text variant="small" color="danger">
@@ -187,5 +245,13 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: spacing[3] },
   edition: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   editionInput: { width: 96, textAlign: "center", paddingVertical: spacing[2] },
+  comment: { minHeight: 72, textAlignVertical: "top" },
+  spoiler: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+  },
   flex: { flex: 1 },
 });
