@@ -1,7 +1,21 @@
 import type { PostKind } from "../posts/schemas";
 
-export const NOTIFICATION_KINDS = ["follow", "like", "comment", "mention"] as const;
+export const NOTIFICATION_KINDS = [
+  "follow",
+  "like",
+  "comment",
+  "mention",
+  "report_actioned",
+  "report_dismissed",
+] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
+/**
+ * From the Grimo itself, not from another reader: what moderation decided about a report you
+ * made. It never says who decided, nor what was done to whom.
+ */
+export const isModerationNotice = (kind: NotificationKind) =>
+  kind === "report_actioned" || kind === "report_dismissed";
 
 /** Readers one post or comment can notify by @: enough for a conversation, not a broadcast. */
 export const MAX_MENTIONS = 10;
@@ -67,6 +81,10 @@ export function describeNotification(
       return `comentou na ${post}`;
     case "mention":
       return context.inComment ? "mencionou você em um comentário" : "mencionou você em um post";
+    case "report_actioned":
+      return "Analisamos sua denúncia e tomamos uma providência. Obrigado por ajudar.";
+    case "report_dismissed":
+      return "Analisamos sua denúncia e não encontramos nada contra as regras da comunidade.";
   }
 }
 
