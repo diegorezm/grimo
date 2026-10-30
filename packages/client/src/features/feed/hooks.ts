@@ -128,3 +128,17 @@ export function useUpdateThread() {
       convex.mutation(api.posts.activityPost, { activityId: activityId as Id<"activities"> }),
   });
 }
+
+/** How many books "Em alta entre quem você segue" shows. */
+const TRENDING_LIMIT = 12;
+
+export type TrendingItem = FunctionReturnType<typeof api.feed.trending>["items"][number];
+
+/** Books the people you follow are reading and finishing this month (route loaders prefetch). */
+export function trendingQuery() {
+  return convexQuery(api.feed.trending, { limit: TRENDING_LIMIT }, "required");
+}
+
+export function useTrending() {
+  return useQuery(trendingQuery());
+}

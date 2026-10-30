@@ -93,3 +93,71 @@ export async function booksFriendsWant(ctx: QueryCtx, viewerId: Id<"users">, lim
   );
   return rows.filter((row) => row !== null);
 }
+
+/** "Em alta": how far back the activity of friends counts. */
+const TRENDING_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+/** Activities read per friend for "em alta". */
+const ACTIVITIES_PER_FRIEND = 40;
+
+/** Activity that means someone is into a book (adding it to "Quero ler" doesn't, yet). */
+function readsBook(activity: Doc<"activities">) {
+  if (!activity.bookId) return false;
+  if (activity.kind === "shelved") return activity.data?.status !== "want_to_read";
+  return activity.kind === "progress" || activity.kind === "finished" || activity.kind === "posted";
+}
+
+/**
+ * "Em alta entre quem você segue": books the most friends started, read, finished or wrote
+ * about in the last 30 days, then the most recent. `viewerStatus` is where it is on your shelves.
+ */
+export async function booksTrendingWithFriends(
+  ctx: QueryCtx,
+  viewerId: Id<"users">,
+  limit: number,
+  now: number,
+) {
+  const friends = await friendsOf(ctx, viewerId);
+  const recent = await Promise.all(
+    friends.map((friend) =>
+      ctx.db
+        .query("activities")
+        .withIndex("by_actor_created", (q) =>
+          q.eq("actorId", friend._id).gte("createdAt", now - TRENDING_WINDOW_MS),
+        )
+        .order("desc")
+        .take(ACTIVITIES_PER_FRIEND),
+    ),
+  );
+  const books = new Map<Id<"books">, { friends: Set<number>; latest: number }>();
+  recent.forEach((activities, i) => {
+    for (const activity of activities) {
+      if (!readsBook(activity)) continue;
+      const row = books.get(activity.bookId!) ?? { friends: new Set<number>(), latest: 0 };
+      row.friends.add(i);
+      row.latest = Math.max(row.latest, activity.createdAt);
+      books.set(activity.bookId!, row);
+    }
+  });
+  const ranked = [...books.entries()]
+    .sort(([, a], [, b]) => b.friends.size - a.friends.size || b.latest - a.latest)
+    .slice(0, limit);
+  const rows = await Promise.all(
+    ranked.map(async ([bookId, row]) => {
+      const [book, mine] = await Promise.all([
+        ctx.db.get(bookId),
+        ctx.db
+          .query("shelfEntries")
+          .withIndex("by_user_book", (q) => q.eq("userId", viewerId).eq("bookId", bookId))
+          .unique(),
+      ]);
+      return book && isBookVisible(book, viewerId)
+        ? {
+            book: bookView(book),
+            friends: [...row.friends].map((i) => authorOf(friends[i]!)),
+            viewerStatus: mine?.status ?? null,
+          }
+        : null;
+    }),
+  );
+  return rows.filter((row) => row !== null);
+}

@@ -9,6 +9,7 @@ import { FriendsWantRow } from "./friends-want-row";
 import { GoalHero } from "./goal-hero";
 import { MonthList } from "./month-list";
 import { ShelfCarousel } from "./shelf-carousel";
+import { TrendingRow } from "./trending-row";
 
 /**
  * Home: shelf tiles pick the carousel of books; goal and month highlights below; the feed
@@ -36,6 +37,7 @@ export function Dashboard() {
           <GoalHero />
           <MonthList />
         </div>
+        <TrendingRow />
         <FriendsWantRow />
       </div>
       <FeedPanel className="h-[36rem] @5xl/main:sticky @5xl/main:top-6 @5xl/main:h-[calc(100dvh-8.5rem)]" />

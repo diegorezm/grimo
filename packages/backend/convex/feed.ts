@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { activityPage, listActivities } from "./model/content";
+import { booksTrendingWithFriends } from "./model/friends";
 import { listLimit } from "./model/limits";
 import { requireViewer } from "./model/readers";
 import { blockedIds } from "./model/safety";
@@ -49,5 +50,16 @@ export const community = query({
       if (picked.length > limit || skipped > COMMUNITY_MAX_SKIPPED) break;
     }
     return activityPage(ctx, picked, viewer._id, limit);
+  },
+});
+
+/** "Em alta entre quem você segue": what friends are reading and finishing this month. */
+export const trending = query({
+  args: { limit: v.number() },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    return {
+      items: await booksTrendingWithFriends(ctx, viewer._id, listLimit(args.limit), Date.now()),
+    };
   },
 });

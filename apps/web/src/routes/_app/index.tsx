@@ -3,6 +3,7 @@ import {
   friendsWantQuery,
   monthlySummaryQuery,
   shelfQuery,
+  trendingQuery,
   yearOverviewQuery,
 } from "@grimo/client";
 import { createFileRoute } from "@tanstack/react-router";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_app/")({
     void queryClient.prefetchQuery(monthlySummaryQuery());
     void queryClient.prefetchQuery(feedQuery());
     void queryClient.prefetchQuery(friendsWantQuery());
+    void queryClient.prefetchQuery(trendingQuery());
   },
   component: Dashboard,
 });
