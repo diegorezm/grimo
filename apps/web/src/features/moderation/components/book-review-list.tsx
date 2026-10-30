@@ -5,6 +5,7 @@ import { Spinner } from "@/components/feedback/spinner";
 import { Avatar } from "@/components/ui/avatar";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { cn } from "@/utils/cn";
+import { Card, CardBanner, CardGrid } from "./card-grid";
 import { SearchField } from "./filters";
 import { Pager } from "./pager";
 import { ago, LABEL, peekSearch } from "./shared";
@@ -49,45 +50,67 @@ export function BookReviewList() {
         </p>
       ) : (
         <>
-          <ul className="flex flex-col gap-3">
+          <CardGrid>
             {data.items.map((book) => (
-              <li key={book.openLibraryId}>
-                <Link
-                  to="."
-                  search={peekSearch({ review: book.openLibraryId })}
-                  resetScroll={false}
-                  aria-current={book.openLibraryId === open ? "true" : undefined}
-                  className={cn(
-                    "page flex flex-wrap items-center gap-4 rounded-lg p-4 transition hover:bg-surface-muted/40",
-                    book.openLibraryId === open && "ring-2 ring-accent",
-                  )}
+              <Card key={book.openLibraryId} selected={book.openLibraryId === open}>
+                <CardBanner
+                  left="Livro cadastrado"
+                  right={book.pageCount ? `${book.pageCount} páginas` : undefined}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-serif text-lg font-medium italic leading-tight">
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-6 -bottom-1 flex items-end gap-0.5 text-accent"
+                  >
+                    <span className="h-9 w-2.5 rounded-t-[2px] bg-current opacity-60" />
+                    <span className="h-12 w-3 rounded-t-[2px] bg-current" />
+                    <span className="h-10 w-2.5 -rotate-6 rounded-t-[2px] bg-current opacity-80" />
+                  </span>
+                </CardBanner>
+                <div className="flex flex-1 flex-col gap-3 px-5 pb-5">
+                  <Avatar
+                    src={book.addedBy?.image ?? null}
+                    name={book.addedBy?.name ?? "?"}
+                    size="size-14"
+                    className="relative -mt-7 bg-accent-gradient text-accent-foreground shadow-md ring-4 ring-surface"
+                  />
+                  <div className="min-w-0">
+                    <Link
+                      to="."
+                      search={peekSearch({ review: book.openLibraryId })}
+                      resetScroll={false}
+                      aria-current={book.openLibraryId === open ? "true" : undefined}
+                      className="block truncate font-serif text-xl font-medium italic leading-tight after:absolute after:inset-0 after:rounded-lg group-hover:underline"
+                    >
                       {book.title}
-                    </p>
+                    </Link>
                     <p className="truncate text-sm text-text-muted">
                       {book.authors.join(", ")}
                       {book.publishedYear && ` · ${book.publishedYear}`}
                     </p>
-                    <p className="mt-2 flex items-center gap-2 font-mono text-[11px] text-text-muted">
-                      {book.addedBy ? (
-                        <>
-                          <Avatar src={book.addedBy.image} name={book.addedBy.name} size="size-7" />
-                          @{book.addedBy.username}
-                          <StaffBadge role={book.addedBy.role} />
-                        </>
-                      ) : (
-                        "conta excluída"
-                      )}
-                      <span>· {ago(book.addedAt)}</span>
-                    </p>
                   </div>
-                  <span className={cn(LABEL, "text-accent")}>Revisar →</span>
-                </Link>
-              </li>
+                  <p className="flex items-center gap-2 truncate font-mono text-[11px] text-text-muted">
+                    {book.addedBy ? (
+                      <>
+                        por @{book.addedBy.username}
+                        <StaffBadge role={book.addedBy.role} />
+                      </>
+                    ) : (
+                      "conta excluída"
+                    )}
+                  </p>
+                  <p
+                    className={cn(
+                      LABEL,
+                      "mt-auto flex items-center justify-between border-t border-border pt-4",
+                    )}
+                  >
+                    <span>{ago(book.addedAt)}</span>
+                    <span className="text-accent">Revisar →</span>
+                  </p>
+                </div>
+              </Card>
             ))}
-          </ul>
+          </CardGrid>
           <Pager
             page={data.page}
             pages={data.pages}
