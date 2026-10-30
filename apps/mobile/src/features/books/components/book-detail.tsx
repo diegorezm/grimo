@@ -116,7 +116,18 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           </Card>
         )}
 
-        {entry?.status === "read" && <RatingCard entryId={entry.id} rating={entry.rating} />}
+        {entry?.status === "read" && (
+          <>
+            <RatingCard entryId={entry.id} rating={entry.rating} />
+            <Button
+              variant="secondary"
+              title="Card de “terminei” para os Stories"
+              onPress={() =>
+                router.push({ pathname: "/book-card/[id]", params: { id: openLibraryId } })
+              }
+            />
+          </>
+        )}
 
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
           <StartGroup book={bookInput} />
@@ -175,9 +186,23 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           {quotes.map((quote) => (
             <Card key={quote.id}>
               <QuoteText body={quote.body} page={quote.page} />
-              <Text variant="small" color="textMuted">
-                {quote.author.name} · {timeAgo(new Date(quote.createdAt))}
-              </Text>
+              <View style={styles.between}>
+                <Text variant="small" color="textMuted" style={styles.grow}>
+                  {quote.author.name} · {timeAgo(new Date(quote.createdAt))}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Card da citação para os Stories"
+                  onPress={() =>
+                    router.push({ pathname: "/quote-card/[id]", params: { id: quote.id } })
+                  }
+                  hitSlop={8}
+                >
+                  <Text variant="label" color="accent">
+                    Card
+                  </Text>
+                </Pressable>
+              </View>
             </Card>
           ))}
         </View>
@@ -327,6 +352,7 @@ const styles = StyleSheet.create({
   },
   hero: { alignItems: "center", gap: spacing[2] },
   between: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  grow: { flex: 1 },
   section: { gap: spacing[3] },
   centerCard: { alignItems: "center" },
   bold: { fontWeight: "700" },
