@@ -246,6 +246,7 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_actor_created", ["actorId", "createdAt"])
+    .index("by_created", ["createdAt"])
     .index("by_post", ["postId"])
     .index("by_actor_target", ["actorId", "targetUserId"]),
 

@@ -45,6 +45,8 @@ Ao decidir se algo entra, pergunte:
 | Seguir, seguidores e seguindo                                            | todos             |   ◐    | Agora (falta no mobile, F3) |
 | Busca e sugestões de leitores                                            | todos             |   ◐    | Agora (falta no mobile, F3) |
 | Feed da rede com agrupamento                                             | todos             |   ✓    | —       |
+| **Feed estilo Skoob**: card com capa grande, barra de progresso, estrelas, "Quero ler" direto do card, abas Seguindo e Comunidade (`/feed`) | Skoob | ✓ | — |
+| Curtir e comentar qualquer atualização (não só posts), comentário junto da página marcada, tipos novos (abandonou, relendo, citação) | Skoob | — | Agora (parte 2 do feed) |
 | Curtidas e comentários em posts                                          | todos             |   ✓    | —       |
 | **Notificações** (seguidor, curtida, comentário) + push no iPhone (F6)   | todos             |   ◐    | Agora (falta o push) |
 | **Menções** com @ em posts e comentários (notifica o mencionado)         | Twitter/Letterboxd |  ✓    | —       |

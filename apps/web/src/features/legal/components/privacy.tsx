@@ -118,7 +118,9 @@ export function PrivacyPage() {
           O Grimo é uma rede social aberta. <strong>Qualquer pessoa, mesmo sem conta</strong>, pode
           ver seu nome, @, foto, bio, gêneros favoritos, livros que você está lendo e já leu,
           avaliações, resenhas, notas, comentários, quem você segue e quem segue você, e suas
-          estatísticas de leitura. Seu email e os dados técnicos nunca são públicos.
+          estatísticas de leitura. O que você faz nas estantes (começar, marcar página, terminar,
+          avaliar) também aparece no feed &ldquo;Comunidade&rdquo;, que mostra a atividade de todos
+          os leitores. Seu email e os dados técnicos nunca são públicos.
         </p>
         <p>
           Num grupo do Juntos, os outros participantes veem seu progresso no livro e suas mensagens.

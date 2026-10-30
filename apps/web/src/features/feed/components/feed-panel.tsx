@@ -29,10 +29,10 @@ export function FeedPanel({ className }: { className?: string }) {
           Atividade
         </h2>
         <Link
-          to="/people"
+          to="/feed"
           className="font-mono text-[10px] uppercase tracking-[0.2em] text-text-muted hover:text-accent"
         >
-          Encontrar leitores →
+          Ver feed →
         </Link>
       </header>
 

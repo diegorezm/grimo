@@ -205,6 +205,12 @@ const post = (key: string, body: string, likes: number, comments: number, likedB
 });
 
 const book = (key: string) => BOOKS.find((item) => item.key === key)!;
+/** The card's progress bar and stars; the visitor has none of these books. */
+const reading = (key: string, rating: number | null = null) => ({
+  pages: book(key).pages,
+  rating,
+  viewerStatus: null,
+});
 const minutes = (value: number) => NOW - value * 60 * 1000;
 
 const FEED_ITEMS: FeedItem[] = [
@@ -216,6 +222,7 @@ const FEED_ITEMS: FeedItem[] = [
     actor: friend("marina", "Marina"),
     target: null,
     book: summary(book("hora")),
+    reading: reading("hora"),
     post: null,
   },
   {
@@ -226,6 +233,7 @@ const FEED_ITEMS: FeedItem[] = [
     actor: friend("bia", "Bia Lima"),
     target: null,
     book: summary(book("meia")),
+    reading: reading("meia"),
     post: post(
       "bia",
       "Li num fim de semana. Fiquei pensando em todas as vidas que eu não vivi.",
@@ -242,6 +250,7 @@ const FEED_ITEMS: FeedItem[] = [
     actor: friend("caio", "Caio"),
     target: null,
     book: summary(book("it")),
+    reading: reading("it"),
     post: null,
   },
   {
@@ -252,6 +261,7 @@ const FEED_ITEMS: FeedItem[] = [
     actor: friend("lu", "Lu Prado"),
     target: null,
     book: summary(book("watch")),
+    reading: reading("watch", 5),
     post: null,
   },
   {
@@ -262,6 +272,7 @@ const FEED_ITEMS: FeedItem[] = [
     actor: friend("theo", "Theo"),
     target: { id: id("user-marina"), name: "Marina", username: "marina" },
     book: null,
+    reading: null,
     post: null,
   },
 ];

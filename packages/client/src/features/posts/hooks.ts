@@ -41,7 +41,11 @@ export function useToggleLike() {
     // The post can be in the feed and on its author's page.
     onMutate: ({ postId, like }) =>
       patchQueries<PostList>(
-        [convexQueryPrefix(api.feed.list), convexQueryPrefix(api.users.activity)],
+        [
+          convexQueryPrefix(api.feed.list),
+          convexQueryPrefix(api.feed.community),
+          convexQueryPrefix(api.users.activity),
+        ],
         (data) => likeInList(data, postId, like),
       ),
     onError: (_error, _input, rollback) => rollback?.(),
@@ -71,6 +75,7 @@ type CountedList = { items: { post: { id: string; commentCount: number } | null 
 /** Lists that show a post's comment count: the feed and a reader's page. */
 const countedLists = () => [
   convexQueryPrefix(api.feed.list),
+  convexQueryPrefix(api.feed.community),
   convexQueryPrefix(api.users.activity),
 ];
 

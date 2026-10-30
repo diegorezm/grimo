@@ -1,2 +1,2 @@
 export { FeedItem } from "./components/feed-item";
-export { FeedList } from "./components/feed-list";
+export { FeedScreen } from "./components/feed-list";

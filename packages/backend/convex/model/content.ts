@@ -1,3 +1,4 @@
+import { editionPages } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { authorOf } from "./readers";
@@ -52,6 +53,10 @@ export async function activityView(
   // A hand-added book still in review shows only to whoever added it.
   if (book && !isBookVisible(book, viewerId)) return null;
   if (activity.postId && !post) return null;
+  const [reading, postData] = await Promise.all([
+    book ? readingOf(ctx, activity, book, viewerId) : null,
+    post ? postView(ctx, post, viewerId) : null,
+  ]);
   return {
     id: activity._id,
     kind: activity.kind,
@@ -60,7 +65,41 @@ export async function activityView(
     actor: authorOf(actor),
     target: target ? { id: target._id, name: target.name, username: target.username } : null,
     book: book ? bookSummary(book) : null,
-    post: post ? await postView(ctx, post, viewerId) : null,
+    reading,
+    post: postData,
+  };
+}
+
+const entryOf = (ctx: Ctx, userId: Id<"users">, bookId: Id<"books">) =>
+  ctx.db
+    .query("shelfEntries")
+    .withIndex("by_user_book", (q) => q.eq("userId", userId).eq("bookId", bookId))
+    .unique();
+
+/**
+ * What the feed card shows under the book: the pages of the reader's edition (progress bar),
+ * their rating once they finished it, and where the book is on the viewer's own shelves
+ * ("Quero ler" button or "Na sua estante").
+ */
+async function readingOf(
+  ctx: Ctx,
+  activity: Doc<"activities">,
+  book: Doc<"books">,
+  viewerId: Id<"users"> | null,
+) {
+  const [entry, mine] = await Promise.all([
+    entryOf(ctx, activity.actorId, book._id),
+    viewerId === null
+      ? null
+      : viewerId === activity.actorId
+        ? undefined
+        : entryOf(ctx, viewerId, book._id),
+  ]);
+  const own = mine === undefined ? entry : mine;
+  return {
+    pages: editionPages(entry?.pageCount, book.pageCount),
+    rating: activity.kind === "finished" ? (entry?.rating ?? null) : null,
+    viewerStatus: own?.status ?? null,
   };
 }
 
@@ -98,6 +137,16 @@ export async function listActivities(
     )
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, limit + 1);
+  return activityPage(ctx, newest, viewerId, limit);
+}
+
+/** Up to `limit + 1` activities (newest first) as a page of feed items. */
+export async function activityPage(
+  ctx: Ctx,
+  newest: Doc<"activities">[],
+  viewerId: Id<"users"> | null,
+  limit: number,
+) {
   const views = await Promise.all(
     newest.slice(0, limit).map((activity) => activityView(ctx, activity, viewerId)),
   );
