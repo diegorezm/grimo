@@ -29,6 +29,7 @@ import { Book3D } from "./book-3d";
 import { BookQuotes } from "./book-quotes";
 import { EditionPages } from "./edition-pages";
 import { FriendsWant } from "./friends-want";
+import { OpenReads } from "./open-reads";
 import { PageLogger } from "./page-logger";
 import { ReadingSession } from "./reading-session";
 import { StartGroup } from "./start-group";
@@ -140,6 +141,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
         {detail.book.id && <AddToList book={bookInput} />}
       </div>
 
+      <OpenReads openLibraryId={book.openLibraryId} />
       {book.description && <Synopsis text={book.description} />}
 
       <Reviews detail={detail} />

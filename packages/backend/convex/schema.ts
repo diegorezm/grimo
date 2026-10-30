@@ -352,7 +352,12 @@ export default defineSchema({
     memberCount: v.number(),
     createdAt: v.number(),
     lastMessageAt: v.union(v.number(), v.null()),
-  }).index("by_inviteCode", ["inviteCode"]),
+    /** A "leitura aberta": listed for everyone, joined without an invite. */
+    isOpen: v.optional(v.boolean()),
+  })
+    .index("by_inviteCode", ["inviteCode"])
+    .index("by_book_open", ["bookId", "isOpen", "createdAt"])
+    .index("by_open_created", ["isOpen", "createdAt"]),
 
   groupMembers: defineTable({
     groupId: v.id("groups"),

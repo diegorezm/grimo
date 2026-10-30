@@ -71,8 +71,16 @@ export function useGroupMessages(id: string) {
 export function useCreateGroup() {
   const { convex } = useConvexCache();
   return useMutation({
-    mutationFn: ({ book, finishBy }: { book: BookSearchResult; finishBy: number | null }) =>
-      convex.mutation(api.groups.create, { book, finishBy }),
+    mutationFn: ({
+      book,
+      finishBy,
+      open = false,
+    }: {
+      book: BookSearchResult;
+      finishBy: number | null;
+      /** A "leitura aberta": anyone can find and join it. */
+      open?: boolean;
+    }) => convex.mutation(api.groups.create, { book, finishBy, open }),
   });
 }
 
@@ -176,5 +184,42 @@ export function useRemoveGroupMessage() {
         items: data.items.filter((item) => item.id !== messageId),
       })),
     onError: (_error, _messageId, rollback) => rollback?.(),
+  });
+}
+
+export type OpenRead = FunctionReturnType<typeof api.groups.openForBook>["items"][number];
+
+/** "Leituras abertas" of a book (public; the book page shows them). */
+export function openReadsQuery(openLibraryId: string) {
+  return convexQuery(api.groups.openForBook, { openLibraryId }, "optional");
+}
+
+export function useOpenReads(openLibraryId: string) {
+  return useQuery(openReadsQuery(openLibraryId));
+}
+
+/** Open reads of any book you can still join, newest first (the Juntos tab). */
+export function openRecentQuery() {
+  return convexQuery(api.groups.openRecent, {}, "required");
+}
+
+export function useOpenRecent() {
+  return useQuery(openRecentQuery());
+}
+
+/** Joins an open read; resolves with the group id. */
+export function useJoinOpenRead() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: (id: string) => convex.mutation(api.groups.joinOpen, { id: groupId(id) }),
+  });
+}
+
+/** Opens the group to everyone or closes it to invites (its creator only). */
+export function useSetGroupOpen() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: ({ id, open }: { id: string; open: boolean }) =>
+      convex.mutation(api.groups.setOpen, { id: groupId(id), open }),
   });
 }

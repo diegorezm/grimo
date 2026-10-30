@@ -2,6 +2,7 @@ import {
   addToShelfSchema,
   canSeeMessage,
   createGroupSchema,
+  GROUP_MAX_MEMBERS,
   groupMessageSchema,
   groupPercent,
   isManualBookId,
@@ -10,7 +11,8 @@ import {
 } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { mutation, type QueryCtx, query } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
 import {
   ensureReading,
@@ -96,6 +98,7 @@ export const detail = query({
       finishBy: group.finishBy,
       createdAt: group.createdAt,
       isOwner: group.ownerId === viewer._id,
+      isOpen: group.isOpen ?? false,
       book: bookView(book),
       members,
       groupPercent: groupPercent(members.map((member) => member.percent)),
@@ -147,13 +150,20 @@ export const byCode = query({
 
 /** Starts reading `book` with others: the book goes to "Lendo" and the group gets an invite. */
 export const create = mutation({
-  args: { book: bookInput, finishBy: v.union(v.number(), v.null()) },
+  args: {
+    book: bookInput,
+    finishBy: v.union(v.number(), v.null()),
+    open: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     // Like posting: a group (and its invite link) needs a verified email. Joining doesn't, so a
     // new account that came from an invite lands in the group during the onboarding.
     const viewer = await requireVerifiedViewer(ctx);
     const { book: input } = parse(addToShelfSchema, { book: args.book, status: "reading" });
-    const { finishBy } = parse(createGroupSchema, { finishBy: args.finishBy });
+    const { finishBy, open } = parse(createGroupSchema, {
+      finishBy: args.finishBy,
+      open: args.open,
+    });
     await enforceRateLimit(ctx, "createGroup", viewer._id);
     const now = Date.now();
 
@@ -184,6 +194,7 @@ export const create = mutation({
       memberCount: 1,
       createdAt: now,
       lastMessageAt: null,
+      isOpen: open,
     });
     await ctx.db.insert("groupMembers", { groupId: id, userId: viewer._id, joinedAt: now });
     return { id };
@@ -322,6 +333,99 @@ export const removeMessage = mutation({
       throw appError("FORBIDDEN", "Você não pode apagar esta mensagem.");
     }
     await ctx.db.delete(id);
+    return null;
+  },
+});
+
+/** Open reads shown per book and in Juntos. */
+const OPEN_LIST = 20;
+
+/** An open read as a row: the book, how many are in, how far the group is, and if you are. */
+async function openView(ctx: QueryCtx, group: Doc<"groups">, viewerId: Id<"users"> | null) {
+  const book = await ctx.db.get(group.bookId);
+  if (!book) return null;
+  const blocked = await blockedIds(ctx, viewerId);
+  const [members, membership] = await Promise.all([
+    memberViews(ctx, group, book, viewerId, blocked),
+    viewerId ? membershipOf(ctx, group._id, viewerId) : null,
+  ]);
+  return {
+    id: group._id,
+    book: bookView(book),
+    finishBy: group.finishBy,
+    memberCount: group.memberCount,
+    full: group.memberCount >= GROUP_MAX_MEMBERS,
+    members: members.slice(0, PREVIEW_MEMBERS).map((member) => ({
+      id: member.id,
+      name: member.name,
+      username: member.username,
+      image: member.image,
+    })),
+    groupPercent: groupPercent(members.map((member) => member.percent)),
+    isMember: membership !== null,
+  };
+}
+
+/** "Leituras abertas" of a book, newest first (public: the book page shows them). */
+export const openForBook = query({
+  args: { openLibraryId: v.string() },
+  handler: async (ctx, { openLibraryId }) => {
+    const viewer = await getViewer(ctx);
+    const book = await bookByOpenLibraryId(ctx, openLibraryId);
+    if (!book) return { items: [] };
+    const groups = await ctx.db
+      .query("groups")
+      .withIndex("by_book_open", (q) => q.eq("bookId", book._id).eq("isOpen", true))
+      .order("desc")
+      .take(OPEN_LIST);
+    const views = await Promise.all(groups.map((g) => openView(ctx, g, viewer?._id ?? null)));
+    return { items: views.filter((view) => view !== null) };
+  },
+});
+
+/** The newest open reads of any book, for the Juntos tab ("entre numa leitura"). */
+export const openRecent = query({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await requireViewer(ctx);
+    const groups = await ctx.db
+      .query("groups")
+      .withIndex("by_open_created", (q) => q.eq("isOpen", true))
+      .order("desc")
+      .take(OPEN_LIST);
+    const views = await Promise.all(groups.map((g) => openView(ctx, g, viewer._id)));
+    return {
+      items: views.filter(
+        (view): view is NonNullable<typeof view> => view !== null && !view.isMember && !view.full,
+      ),
+    };
+  },
+});
+
+/** Joins an open read (no invite needed); the book goes to your "Lendo" shelf. */
+export const joinOpen = mutation({
+  args: { id: v.id("groups") },
+  handler: async (ctx, { id }) => {
+    const viewer = await requireViewer(ctx);
+    const group = await ctx.db.get(id);
+    const book = group ? await ctx.db.get(group.bookId) : null;
+    if (!group?.isOpen || !book) throw appError("NOT_FOUND", "Essa leitura não está aberta.");
+    await joinGroup(ctx, viewer, group);
+    await ensureReading(ctx, viewer._id, book, Date.now());
+    return { id: group._id };
+  },
+});
+
+/** Opens the group to everyone, or closes it back to invites only (its creator decides). */
+export const setOpen = mutation({
+  args: { id: v.id("groups"), open: v.boolean() },
+  handler: async (ctx, { id, open }) => {
+    const viewer = await requireVerifiedViewer(ctx);
+    const group = await requireMember(ctx, id, viewer._id);
+    if (group.ownerId !== viewer._id) {
+      throw appError("FORBIDDEN", "Só quem criou o grupo pode abrir ou fechar a leitura.");
+    }
+    await ctx.db.patch(id, { isOpen: open });
     return null;
   },
 });

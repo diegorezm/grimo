@@ -107,7 +107,7 @@ convite**, e o convite é um link que traz gente nova.
 | 1 | Card do grupo e card de "terminamos juntos" | Spotify Wrapped | ✓ | — |
 | 2 | **Clubes**: grupo fixo que lê um livro depois do outro, enquete para o próximo | Bookclubs/Fable | — | Depois |
 | 2 | Encontros do clube com data (lembrete, link da chamada ou local) | Bookclubs | — | Depois |
-| 3 | **Leituras abertas**: grupos públicos por livro, qualquer um entra (resolve a aba vazia de quem não tem amigos no app) | Maratona | — | Depois |
+| 3 | **Leituras abertas**: grupos públicos por livro, qualquer um entra (resolve a aba vazia de quem não tem amigos no app) | Maratona | ✓ | — |
 | 3 | **Maratonas literárias**: evento com prazo e meta; o Grimo pode lançar uma por mês ("Maratona de Halloween") | Maratona | — | Depois |
 | 3 | Clube público de criador (booktuber, BookTok) com página própria | Fable | — | Talvez |
 
