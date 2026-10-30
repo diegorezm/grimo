@@ -1,10 +1,11 @@
 import { type BookSearchResult, errorMessage, useCreateGroup } from "@grimo/client";
 import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
 import { Button, Card, Text } from "@/components/ui";
 import { FinishPicker, finishByFor } from "@/components/ui/finish-picker";
 import { spacing } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 /**
  * "Ler com alguém" on a book: pick when to finish (optional), create the group, then invite
@@ -14,6 +15,8 @@ export function StartGroup({ book }: { book: BookSearchResult }) {
   const create = useCreateGroup();
   const [open, setOpen] = useState(false);
   const [days, setDays] = useState<number | null>(30);
+  const [openRead, setOpenRead] = useState(false);
+  const theme = useTheme();
 
   if (!open) {
     return <Button variant="secondary" title="Ler com alguém" onPress={() => setOpen(true)} />;
@@ -21,7 +24,7 @@ export function StartGroup({ book }: { book: BookSearchResult }) {
 
   function start() {
     create.mutate(
-      { book, finishBy: finishByFor(days) },
+      { book, finishBy: finishByFor(days), open: openRead },
       { onSuccess: ({ id }) => router.push({ pathname: "/group/[id]", params: { id } }) },
     );
   }
@@ -37,6 +40,20 @@ export function StartGroup({ book }: { book: BookSearchResult }) {
         Terminar em
       </Text>
       <FinishPicker days={days} onChange={setDays} />
+      <View style={styles.switchRow}>
+        <View style={styles.flex}>
+          <Text style={styles.bold}>Leitura aberta</Text>
+          <Text variant="small" color="textMuted">
+            Aparece no livro e no Juntos: qualquer leitor entra, sem convite.
+          </Text>
+        </View>
+        <Switch
+          value={openRead}
+          onValueChange={setOpenRead}
+          trackColor={{ true: theme.accent, false: theme.border }}
+          accessibilityLabel="Leitura aberta"
+        />
+      </View>
       {create.error && <Text color="danger">{errorMessage(create.error)}</Text>}
       <View style={styles.actions}>
         <Button
@@ -57,6 +74,8 @@ export function StartGroup({ book }: { book: BookSearchResult }) {
 }
 
 const styles = StyleSheet.create({
+  switchRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  bold: { fontWeight: "700" },
   actions: { flexDirection: "row", gap: spacing[3] },
   flex: { flex: 1 },
 });

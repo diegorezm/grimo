@@ -1,4 +1,10 @@
-import { errorMessage, useFriendsWant, useGroups, useJoinGroup } from "@grimo/client";
+import {
+  errorMessage,
+  useFriendsWant,
+  useGroups,
+  useJoinGroup,
+  useOpenRecent,
+} from "@grimo/client";
 import { friendsWantLabel, membersLabel, parseInviteCode } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -6,8 +12,23 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "reac
 import { AvatarStack, Button, Card, Input, ProgressBar, Screen, Text } from "@/components/ui";
 import { formatFinishBy } from "@/components/ui/finish-picker";
 import { spacing } from "@/constants/theme";
-import { BookCover, BookTile } from "@/features/books";
+import { BookCover, BookTile, OpenReadRow } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
+
+/** "Entre numa leitura": open reads of any book you can join now. */
+function OpenRecent() {
+  const reads = useOpenRecent().data?.items ?? [];
+  if (reads.length === 0) return null;
+  return (
+    <View style={styles.openSection}>
+      <Text variant="heading">Entre numa leitura</Text>
+      <Text color="textMuted">Leituras abertas: qualquer leitor entra, sem convite.</Text>
+      {reads.map((read) => (
+        <OpenReadRow key={read.id} read={read} showBook />
+      ))}
+    </View>
+  );
+}
 
 /** The Juntos tab: your groups, a field for an invite, and ideas when there are none. */
 export function GroupList() {
@@ -64,6 +85,7 @@ export function GroupList() {
         ))
       )}
       <JoinByCode />
+      <OpenRecent />
       <Ideas />
     </Screen>
   );
@@ -135,6 +157,7 @@ function Ideas() {
 }
 
 const styles = StyleSheet.create({
+  openSection: { gap: spacing[3] },
   group: { flexDirection: "row", gap: spacing[3] },
   flex: { flex: 1, gap: spacing[1] },
   people: { flexDirection: "row", alignItems: "center", gap: spacing[2] },

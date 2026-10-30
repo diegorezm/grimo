@@ -5,6 +5,7 @@ export { BookDetailBody, BookDetailSkeleton, BookShelfActions } from "./componen
 export { BookPeek } from "./components/book-peek";
 export { BookPeekLink } from "./components/book-peek-link";
 export { BookSearch } from "./components/book-search";
+export { OpenReadRow } from "./components/open-reads";
 export { PageLogger } from "./components/page-logger";
 export { QuoteText } from "./components/quote-text";
 export { StartGroup } from "./components/start-group";

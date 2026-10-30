@@ -32,6 +32,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
 import { FriendsWant } from "./friends-want";
+import { OpenReads } from "./open-reads";
 import { QuoteText } from "./quote-text";
 import { SessionControl } from "./session-control";
 import { StartGroup } from "./start-group";
@@ -148,6 +149,9 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
 
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
           <StartGroup book={bookInput} />
+        )}
+        {(book.reviewStatus === null || book.reviewStatus === "approved") && (
+          <OpenReads openLibraryId={openLibraryId} />
         )}
 
         {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}

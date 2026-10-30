@@ -9,6 +9,7 @@ import {
   useRemoveGroupMessage,
   useSendGroupMessage,
   useSetGroupFinishBy,
+  useSetGroupOpen,
 } from "@grimo/client";
 import {
   GROUP_MESSAGE_MAX,
@@ -20,7 +21,7 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Switch, View } from "react-native";
 import { Avatar, Button, Card, Input, ProgressBar, Screen, Text } from "@/components/ui";
 import { FinishPicker, finishByFor, formatFinishBy } from "@/components/ui/finish-picker";
 import { spacing } from "@/constants/theme";
@@ -114,6 +115,7 @@ function Header({ group }: { group: GroupDetail }) {
           ) : (
             <Button variant="ghost" title="Mudar a data" onPress={() => setEditing(true)} />
           ))}
+        {group.isOwner && <OpenSwitch id={group.id} open={group.isOpen} />}
         {group.entry?.status === "reading" && (
           <Button
             title="Registrar leitura"
@@ -353,4 +355,29 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "700" },
   italic: { fontStyle: "italic" },
   composer: { gap: spacing[2] },
+});
+
+/** The creator opens the group to everyone ("leitura aberta") or closes it to invites. */
+function OpenSwitch({ id, open }: { id: string; open: boolean }) {
+  const theme = useTheme();
+  const setOpen = useSetGroupOpen();
+  return (
+    <View style={openStyles.row}>
+      <Text variant="small" color="textMuted" style={openStyles.flex}>
+        Leitura aberta: qualquer leitor encontra e entra, sem convite
+      </Text>
+      <Switch
+        value={open}
+        disabled={setOpen.isPending}
+        onValueChange={(value) => setOpen.mutate({ id, open: value })}
+        trackColor={{ true: theme.accent, false: theme.border }}
+        accessibilityLabel="Leitura aberta"
+      />
+    </View>
+  );
+}
+
+const openStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  flex: { flex: 1 },
 });

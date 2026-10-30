@@ -5,6 +5,7 @@ import {
   useLeaveGroup,
   useRemoveGroupMember,
   useSetGroupFinishBy,
+  useSetGroupOpen,
 } from "@grimo/client";
 import { groupPace, invitePath, paceLabel } from "@grimo/core";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -95,6 +96,7 @@ function Header({ group }: { group: GroupDetail }) {
         </p>
         {pace && <p className="text-sm text-text-muted">{paceLabel(pace)} para você chegar lá.</p>}
         {editing && <FinishEditor id={group.id} onDone={() => setEditing(false)} />}
+        {group.isOwner && <OpenSwitch id={group.id} open={group.isOpen} />}
         {group.entry?.status === "reading" && (
           <div className="mt-3 border-t border-border pt-4">
             <PageLogger
@@ -260,5 +262,21 @@ function LeaveGroup({ id }: { id: string }) {
         </button>
       )}
     </div>
+  );
+}
+
+/** The creator opens the group to everyone ("leitura aberta") or closes it to invites. */
+function OpenSwitch({ id, open }: { id: string; open: boolean }) {
+  const setOpen = useSetGroupOpen();
+  return (
+    <label className="mt-2 flex items-center gap-2 text-sm text-text-muted">
+      <input
+        type="checkbox"
+        checked={open}
+        disabled={setOpen.isPending}
+        onChange={(e) => setOpen.mutate({ id, open: e.target.checked })}
+      />
+      Leitura aberta: qualquer leitor encontra e entra, sem convite
+    </label>
   );
 }
