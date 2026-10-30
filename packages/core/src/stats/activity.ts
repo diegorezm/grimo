@@ -99,6 +99,14 @@ export function describeActivityGroup(
   return describeActivity(kind, data);
 }
 
+/** A single book going to a shelf, said the way readers say it. */
+const SHELVED_HEADLINES: Record<ShelfStatus, string> = {
+  want_to_read: "quer ler",
+  reading: "começou a ler",
+  read: "marcou como lido",
+  abandoned: "abandonou",
+};
+
 /**
  * Headline of a feed card. Progress reads "está lendo": the card shows the page under the book
  * (see `activityProgress`), so the sentence doesn't repeat it.
@@ -108,7 +116,12 @@ export function feedHeadline(
   data: Record<string, unknown> | null,
   count: number,
 ): string {
-  return kind === "progress" ? "está lendo" : describeActivityGroup(kind, data, count);
+  if (kind === "progress") return "está lendo";
+  const status = data?.status as ShelfStatus | undefined;
+  if (kind === "shelved" && count === 1 && status && status in SHELVED_HEADLINES) {
+    return SHELVED_HEADLINES[status];
+  }
+  return describeActivityGroup(kind, data, count);
 }
 
 /** The progress bar of a feed card: 40% and "p. 120 de 300", or just the page without a total. */

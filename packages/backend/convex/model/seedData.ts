@@ -196,6 +196,8 @@ interface ShelfSeed {
   rating?: number;
   /** "MM-DD" in the current year. */
   finished?: string;
+  /** Comment written with the page (shows on the feed card). */
+  note?: string;
 }
 
 interface PostSeed {
@@ -225,7 +227,13 @@ export const readers: ReaderSeed[] = [
     genres: ["science_fiction", "fantasy", "literary_fiction"],
     goal: 24,
     shelves: [
-      { book: "duna", status: "reading", page: 312, pages: 720 },
+      {
+        book: "duna",
+        status: "reading",
+        page: 312,
+        pages: 720,
+        note: "Os Fremen são a melhor parte até aqui. Que mundo!",
+      },
       { book: "maoEsquerda", status: "reading", page: 118 },
       { book: "nomeDoVento", status: "reading", page: 540 },
       { book: "hobbit", status: "read", rating: 5, finished: "01-19" },
@@ -284,7 +292,12 @@ export const readers: ReaderSeed[] = [
     shelves: [
       { book: "orgulho", status: "read", rating: 5, finished: "02-02" },
       { book: "expressoOriente", status: "read", rating: 5, finished: "06-10" },
-      { book: "meiaNoite", status: "reading", page: 190 },
+      {
+        book: "meiaNoite",
+        status: "reading",
+        page: 190,
+        note: "Cada capítulo é uma vida nova. Não consigo parar.",
+      },
       { book: "cemAnos", status: "want_to_read" },
       { book: "pequenoPrincipe", status: "want_to_read" },
       { book: "garotaExemplar", status: "want_to_read" },

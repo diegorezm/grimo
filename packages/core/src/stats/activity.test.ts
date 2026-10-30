@@ -93,5 +93,10 @@ describe("feed cards", () => {
   it("doesn't repeat the page in the headline", () => {
     expect(feedHeadline("progress", { page: 120 }, 1)).toBe("está lendo");
     expect(feedHeadline("finished", null, 3)).toBe("terminou de ler 3 livros");
+    expect(feedHeadline("shelved", { status: "abandoned" }, 1)).toBe("abandonou");
+    expect(feedHeadline("shelved", { status: "reading" }, 1)).toBe("começou a ler");
+    expect(feedHeadline("shelved", { status: "want_to_read" }, 4)).toBe(
+      "adicionou 4 livros à estante “Quero ler”",
+    );
   });
 });

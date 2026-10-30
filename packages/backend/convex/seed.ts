@@ -149,7 +149,8 @@ export const populate = internalMutation({
           ...(finishedAt && { finishedAt: new Date(finishedAt) }),
         };
         if (Object.keys(patch).length > 0) {
-          await updateShelfEntry(ctx, user._id, entry._id, patch, at);
+          const note = shelf.note ? { body: shelf.note, hasSpoilers: false } : undefined;
+          await updateShelfEntry(ctx, user._id, entry._id, patch, at, note);
         }
         if (shelf.status === "abandoned") {
           await updateShelfEntry(ctx, user._id, entry._id, { status: "abandoned" }, tick());

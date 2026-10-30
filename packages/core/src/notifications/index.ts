@@ -50,7 +50,12 @@ export function describeNotification(
   kind: NotificationKind,
   context: { postKind?: PostKind | null; inComment?: boolean } = {},
 ): string {
-  const post = context.postKind === "review" ? "sua resenha" : "sua nota";
+  const post =
+    context.postKind === "review"
+      ? "sua resenha"
+      : context.postKind === "update"
+        ? "sua atualização"
+        : "sua nota";
   switch (kind) {
     case "follow":
       return "começou a seguir você";

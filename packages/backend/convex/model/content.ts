@@ -1,6 +1,7 @@
 import { editionPages } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { notifyMentions } from "./notifications";
 import { authorOf } from "./readers";
 import { blockedIds, isBookVisible, isHidden } from "./safety";
 
@@ -178,4 +179,40 @@ export function recordActivity(
     data: activity.data ?? null,
     createdAt: activity.createdAt ?? Date.now(),
   });
+}
+
+/** Activities about a book on a shelf: the ones readers like and comment on as "updates". */
+const UPDATE_KINDS = new Set<Doc<"activities">["kind"]>(["shelved", "progress", "finished"]);
+
+/**
+ * The post holding a feed update's note, likes and comments (`kind: "update"`, by whoever did
+ * it). Made the first time someone reacts, or with the note written when marking the page.
+ * A "posted" activity already has its post.
+ */
+export async function updatePostFor(
+  ctx: MutationCtx,
+  activity: Doc<"activities">,
+  note?: { body: string; hasSpoilers: boolean },
+) {
+  if (activity.postId) return activity.postId;
+  if (!UPDATE_KINDS.has(activity.kind)) return null;
+  const postId = await ctx.db.insert("posts", {
+    authorId: activity.actorId,
+    bookId: activity.bookId,
+    kind: "update",
+    rating: null,
+    body: note?.body ?? "",
+    hasSpoilers: note?.hasSpoilers ?? false,
+    likeCount: 0,
+    commentCount: 0,
+  });
+  await ctx.db.patch(activity._id, { postId });
+  if (note) {
+    await notifyMentions(
+      ctx,
+      { actorId: activity.actorId, text: note.body, postId },
+      activity.createdAt,
+    );
+  }
+  return postId;
 }

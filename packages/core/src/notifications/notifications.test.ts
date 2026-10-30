@@ -49,6 +49,7 @@ describe("describeNotification", () => {
     expect(describeNotification("follow")).toBe("começou a seguir você");
     expect(describeNotification("like", { postKind: "review" })).toBe("curtiu sua resenha");
     expect(describeNotification("comment", { postKind: "note" })).toBe("comentou na sua nota");
+    expect(describeNotification("like", { postKind: "update" })).toBe("curtiu sua atualização");
     expect(describeNotification("mention", { inComment: true })).toBe(
       "mencionou você em um comentário",
     );
