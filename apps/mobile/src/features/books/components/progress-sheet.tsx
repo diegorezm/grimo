@@ -8,6 +8,7 @@ import {
 } from "@grimo/client";
 import {
   editionPages,
+  type Feeling,
   firstIssue,
   formatTimer,
   readingPercent,
@@ -16,16 +17,17 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { Button, Input, ProgressBar, Text } from "@/components/ui";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Button, FeelingPicker, Input, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
 /**
  * "Registrar leitura": a page stepper for the book you are reading, or mark it as finished. The
  * pages of your edition can be set here too (empty: the book's), and a comment that shows in
- * the feed with the page (Skoob's comentário de leitura). With a session running on this book,
- * "Salvar" ends it: the feed says how long you read.
+ * the feed with the page (Skoob's comentário de leitura), with how you feel there (the reading
+ * diary; finishing the book, they become the rating's feelings). With a session running on this
+ * book, "Salvar" ends it: the feed says how long you read.
  */
 export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
@@ -43,6 +45,7 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [hasSpoilers, setHasSpoilers] = useState(false);
+  const [feelings, setFeelings] = useState<Feeling[]>([]);
   if (!data || !entry) return null;
 
   const editionText = edition ?? String(editionPages(entry.pageCount, bookPages) ?? "");
@@ -83,11 +86,17 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
   function save() {
     const note = noteFor(false);
     if (!valid() || note === null) return;
+    if (feelings.length > 0 && current === entry!.currentPage) {
+      setError("Marque a página nova para dizer como está se sentindo.");
+      return;
+    }
+    const pageFeelings = feelings.length > 0 ? { pageFeelings: feelings } : {};
     if (session) {
       if (Object.keys(editionPatch).length > 0) update.mutate({ id: entry!.id, ...editionPatch });
       finishSession.mutate({
         page: Math.min(current, pageCount ?? current),
         ...(note && { note }),
+        ...pageFeelings,
       });
       router.back();
       return;
@@ -97,6 +106,7 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
       currentPage: Math.min(current, pageCount ?? current),
       ...editionPatch,
       ...(note && { note }),
+      ...pageFeelings,
     });
     router.back();
   }
@@ -110,12 +120,14 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
       ...editionPatch,
       ...(pageCount ? { currentPage: pageCount } : {}),
       ...(note && { note }),
+      // What you feel at the end is how the book made you feel.
+      ...(feelings.length > 0 && { feelings }),
     });
     router.back();
   }
 
   return (
-    <View style={styles.root}>
+    <ScrollView contentContainerStyle={styles.root} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <Text variant="heading">{session ? "Terminar sessão" : "Registrar leitura"}</Text>
         <Text color="textMuted" numberOfLines={1}>
@@ -202,6 +214,14 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
           </Pressable>
         )}
       </View>
+      <FeelingPicker
+        value={feelings}
+        onChange={(next) => {
+          setFeelings(next);
+          setError(null);
+        }}
+        label="Como você está se sentindo agora? (opcional)"
+      />
       {error && (
         <Text variant="small" color="danger">
           {error}
@@ -227,7 +247,7 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
           }}
         />
       )}
-    </View>
+    </ScrollView>
   );
 }
 

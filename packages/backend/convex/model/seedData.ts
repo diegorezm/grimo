@@ -1,8 +1,10 @@
 /**
- * Demo data for `pnpm seed` (convex/seed.ts): readers, books, shelves, progress, ratings,
- * reviews, notes, follows, likes and comments. Titles/authors are ours (pt-BR); Open Library
+ * Demo data for `pnpm seed` (convex/seed.ts): readers, books, shelves, progress, ratings and
+ * feelings, reviews, notes, follows, likes and comments. Titles/authors are ours (pt-BR); Open Library
  * supplies the id, cover and year when it finds the book.
  */
+import type { Feeling } from "@grimo/core";
+
 type Status = "want_to_read" | "reading" | "read" | "abandoned";
 
 interface CatalogBook {
@@ -186,6 +188,46 @@ export const catalog = {
 } satisfies Record<string, CatalogBook>;
 
 export type BookKey = keyof typeof catalog;
+
+/**
+ * What each book makes readers feel. Each reader picks a few of them (rotated by reader), so
+ * the book pages show a spread rather than everyone agreeing.
+ */
+export const bookFeelings: Record<BookKey, Feeling[]> = {
+  duna: ["tensao", "curiosidade", "reflexao", "surpresa"],
+  maoEsquerda: ["reflexao", "curiosidade", "paixao"],
+  nomeDoVento: ["curiosidade", "nostalgia", "alegria", "tensao"],
+  hobbit: ["conforto", "alegria", "nostalgia", "diversao"],
+  orwell: ["angustia", "medo", "reflexao", "raiva"],
+  domCasmurro: ["curiosidade", "reflexao", "raiva", "surpresa"],
+  tortoArado: ["tristeza", "esperanca", "raiva", "reflexao"],
+  horaDaEstrela: ["tristeza", "reflexao", "angustia"],
+  sapiens: ["curiosidade", "reflexao", "surpresa", "tedio"],
+  tresCorpos: ["curiosidade", "tensao", "surpresa", "medo"],
+  mistborn: ["tensao", "alegria", "surpresa", "esperanca"],
+  hailMary: ["diversao", "esperanca", "alegria", "tensao"],
+  garotaExemplar: ["tensao", "surpresa", "raiva", "angustia"],
+  expressoOriente: ["curiosidade", "surpresa", "conforto"],
+  it: ["medo", "tensao", "nostalgia", "angustia"],
+  habitos: ["inspiracao", "reflexao", "tedio"],
+  persepolis: ["tristeza", "reflexao", "raiva", "esperanca"],
+  cemAnos: ["nostalgia", "reflexao", "surpresa", "tristeza"],
+  pequenoPrincipe: ["conforto", "nostalgia", "reflexao", "tristeza"],
+  orgulho: ["paixao", "diversao", "conforto"],
+  neuromancer: ["curiosidade", "tensao", "tedio"],
+  meiaNoite: ["esperanca", "reflexao", "conforto", "tristeza"],
+  senhorDosAneis: ["esperanca", "tensao", "nostalgia", "alegria"],
+  watchmen: ["reflexao", "angustia", "tensao"],
+};
+
+/** The `count` feelings reader number `reader` picks for a book. */
+export const feelingsFor = (book: BookKey, reader: number, count: number) => {
+  const all = bookFeelings[book];
+  return Array.from(
+    { length: Math.min(count, all.length) },
+    (_, i) => all[(reader + i) % all.length]!,
+  );
+};
 
 interface ShelfSeed {
   book: BookKey;

@@ -1,4 +1,4 @@
-import { errorMessage, useBook, useCreatePost, useUpdateShelfEntry } from "@grimo/client";
+import { errorMessage, useBook, useCreatePost } from "@grimo/client";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Switch, TextInput, View } from "react-native";
@@ -6,13 +6,16 @@ import { Button, Stars, Text } from "@/components/ui";
 import { Fonts, fontSize, radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
-/** Review composer: rating, text on ruled paper and a spoiler switch. */
+/**
+ * Review composer: rating, text on ruled paper and a spoiler switch. The rating is your shelf's
+ * (one per reader and book): changing it here changes it there too (`posts.create`).
+ */
 export function ReviewComposer({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
   const { data } = useBook(openLibraryId);
   const createPost = useCreatePost();
-  const updateEntry = useUpdateShelfEntry();
-  const [rating, setRating] = useState<number | null>(null);
+  /** undefined: not touched, so it follows the shelf's. */
+  const [rating, setRating] = useState<number | null | undefined>(undefined);
   const [body, setBody] = useState("");
   const [spoiler, setSpoiler] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +23,7 @@ export function ReviewComposer({ openLibraryId }: { openLibraryId: string }) {
 
   const bookId = data.book.id;
   const entry = data.entry;
-  const value = rating ?? entry?.rating ?? null;
+  const value = rating === undefined ? (entry?.rating ?? null) : rating;
 
   async function publish() {
     setError(null);
@@ -32,7 +35,6 @@ export function ReviewComposer({ openLibraryId }: { openLibraryId: string }) {
         body,
         hasSpoilers: spoiler,
       });
-      if (entry && value !== entry.rating) updateEntry.mutate({ id: entry.id, rating: value });
       router.back();
     } catch (e) {
       setError(errorMessage(e, "Não foi possível publicar"));

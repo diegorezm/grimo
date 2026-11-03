@@ -18,7 +18,7 @@ import { env } from "./model/env";
 import { ensureReading, freeInviteCode, joinGroup } from "./model/groups";
 import { acceptLegal, legalStatus } from "./model/legal";
 import { searchOpenLibrary } from "./model/openLibrary";
-import { type BookKey, catalog, comments, group, readers } from "./model/seedData";
+import { type BookKey, catalog, comments, feelingsFor, group, readers } from "./model/seedData";
 import { addToShelf, bookByOpenLibraryId, updateShelfEntry } from "./model/shelves";
 import { addComment, createPost, setLike } from "./posts";
 import { bookInput } from "./schema";
@@ -120,7 +120,7 @@ export const populate = internalMutation({
     }
 
     const postIds = new Map<string, Id<"posts">[]>();
-    for (const { reader, user } of [main, ...others]) {
+    for (const [readerIndex, { reader, user }] of [main, ...others].entries()) {
       await updateProfile(ctx, await fresh(user._id), {
         bio: reader.bio,
         favoriteGenres: reader.genres,
@@ -145,12 +145,18 @@ export const populate = internalMutation({
         const patch = {
           ...(shelf.pages && { pageCount: shelf.pages }),
           ...(shelf.page && { currentPage: shelf.page }),
-          ...(shelf.rating && { rating: shelf.rating }),
+          ...(shelf.rating && {
+            rating: shelf.rating,
+            feelings: feelingsFor(shelf.book, readerIndex, 2 + (readerIndex % 2)),
+          }),
           ...(finishedAt && { finishedAt: new Date(finishedAt) }),
         };
         if (Object.keys(patch).length > 0) {
           const note = shelf.note ? { body: shelf.note, hasSpoilers: false } : undefined;
-          await updateShelfEntry(ctx, user._id, entry._id, patch, at, { note });
+          // A page marked while reading says how it feels there (the diary on the book page).
+          const pageFeelings =
+            shelf.page && !finishedAt ? feelingsFor(shelf.book, readerIndex + 1, 2) : undefined;
+          await updateShelfEntry(ctx, user._id, entry._id, patch, at, { note, pageFeelings });
         }
         if (shelf.status === "abandoned") {
           await updateShelfEntry(ctx, user._id, entry._id, { status: "abandoned" }, tick());

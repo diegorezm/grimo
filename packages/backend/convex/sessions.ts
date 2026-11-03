@@ -1,4 +1,5 @@
 import {
+  feelingsSchema,
   readingStreak,
   sessionMinutes,
   toDayKey,
@@ -79,6 +80,8 @@ export const finish = mutation({
   args: {
     page: v.number(),
     note: v.optional(v.object({ body: v.string(), hasSpoilers: v.boolean() })),
+    /** How you feel at the page you stopped on (the reading diary). */
+    pageFeelings: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const viewer = args.note ? await requireVerifiedViewer(ctx) : await requireViewer(ctx);
@@ -87,6 +90,7 @@ export const finish = mutation({
     const { currentPage } = parse(updateShelfEntrySchema, { currentPage: args.page });
     const note = args.note ? parse(updateNoteSchema, args.note) : undefined;
     if (note) await enforceRateLimit(ctx, "createPost", viewer._id);
+    const pageFeelings = args.pageFeelings && parse(feelingsSchema, args.pageFeelings);
     const now = Date.now();
     const minutes = sessionMinutes(session.startedAt, now);
     const entry = await updateShelfEntry(
@@ -95,7 +99,7 @@ export const finish = mutation({
       session.shelfEntryId,
       { currentPage },
       now,
-      { note, sessionMinutes: minutes },
+      { note, sessionMinutes: minutes, pageFeelings },
     );
     await ctx.db.patch(session._id, { endedAt: now, endPage: entry.currentPage });
     return { minutes, pagesRead: Math.max(0, entry.currentPage - session.startPage) };
