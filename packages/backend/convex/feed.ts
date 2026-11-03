@@ -49,7 +49,7 @@ export const community = query({
       else skipped += 1;
       if (picked.length > limit || skipped > COMMUNITY_MAX_SKIPPED) break;
     }
-    return activityPage(ctx, picked, viewer._id, limit);
+    return activityPage(ctx, picked, viewer._id, blocked, limit);
   },
 });
 

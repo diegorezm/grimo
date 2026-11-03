@@ -122,15 +122,15 @@ export const get = query({
     const post = id ? await ctx.db.get(id) : null;
     if (!post) throw notFound("Post");
     const viewer = await getViewer(ctx);
-    const [author, book, view, comments, blocked] = await Promise.all([
+    const blocked = await blockedIds(ctx, viewer?._id ?? null);
+    const [author, book, view, comments] = await Promise.all([
       ctx.db.get(post.authorId),
       post.bookId ? ctx.db.get(post.bookId) : null,
-      postView(ctx, post, viewer?._id ?? null),
+      postView(ctx, post, viewer?._id ?? null, blocked),
       ctx.db
         .query("postComments")
         .withIndex("by_post", (q) => q.eq("postId", post._id))
         .collect(),
-      blockedIds(ctx, viewer?._id ?? null),
     ]);
     if (!author || isHidden(author) || blocked.has(author._id)) throw notFound("Post");
     // An update shows what happened ("está lendo · p. 120 de 300") above the note.
