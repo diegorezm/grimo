@@ -258,7 +258,10 @@ export const detail = query({
           const author = await ctx.db.get(post.authorId);
           // Like everywhere else: nothing from hidden readers, or between blocked readers.
           return author && !isHidden(author) && !blocked.has(author._id)
-            ? { ...(await postView(ctx, post, viewer?._id ?? null)), author: authorOf(author) }
+            ? {
+                ...(await postView(ctx, post, viewer?._id ?? null, blocked)),
+                author: authorOf(author),
+              }
             : null;
         }),
       );

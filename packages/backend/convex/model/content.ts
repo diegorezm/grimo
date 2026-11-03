@@ -16,14 +16,47 @@ export const bookSummary = (book: Doc<"books">) => ({
   coverUrl: book.coverUrl,
 });
 
-/** A post as seen by `viewerId` (null when signed out). */
-export async function postView(ctx: Ctx, post: Doc<"posts">, viewerId: Id<"users"> | null) {
-  const liked = viewerId
-    ? await ctx.db
-        .query("postLikes")
-        .withIndex("by_post_user", (q) => q.eq("postId", post._id).eq("userId", viewerId))
-        .unique()
-    : null;
+/** Comments read per post to take hidden and blocked commenters out of its count. */
+const COUNTED_COMMENTS = 100;
+
+/**
+ * The post's comment count without the comments the thread hides from the viewer (`posts.get`):
+ * by hidden readers, or across a block. Past the first `COUNTED_COMMENTS`, all count.
+ */
+async function visibleCommentCount(ctx: Ctx, post: Doc<"posts">, blocked: Set<Id<"users">>) {
+  if (post.commentCount === 0) return 0;
+  const comments = await ctx.db
+    .query("postComments")
+    .withIndex("by_post", (q) => q.eq("postId", post._id))
+    .take(COUNTED_COMMENTS);
+  const authors = await Promise.all(
+    comments.map((comment) =>
+      blocked.has(comment.authorId) ? null : ctx.db.get(comment.authorId),
+    ),
+  );
+  const hidden = authors.filter((author) => !author || isHidden(author)).length;
+  return Math.max(0, post.commentCount - hidden);
+}
+
+/**
+ * A post as seen by `viewerId` (null when signed out); `blocked` is `blockedIds(viewerId)`, read
+ * once by the caller.
+ */
+export async function postView(
+  ctx: Ctx,
+  post: Doc<"posts">,
+  viewerId: Id<"users"> | null,
+  blocked: Set<Id<"users">>,
+) {
+  const [liked, commentCount] = await Promise.all([
+    viewerId
+      ? ctx.db
+          .query("postLikes")
+          .withIndex("by_post_user", (q) => q.eq("postId", post._id).eq("userId", viewerId))
+          .unique()
+      : null,
+    visibleCommentCount(ctx, post, blocked),
+  ]);
   return {
     id: post._id,
     kind: post.kind,
@@ -33,7 +66,7 @@ export async function postView(ctx: Ctx, post: Doc<"posts">, viewerId: Id<"users
     page: post.page ?? null,
     createdAt: post._creationTime,
     likeCount: post.likeCount,
-    commentCount: post.commentCount,
+    commentCount,
     likedByMe: liked !== null,
   };
 }
@@ -43,6 +76,7 @@ export async function activityView(
   ctx: Ctx,
   activity: Doc<"activities">,
   viewerId: Id<"users"> | null,
+  blocked: Set<Id<"users">>,
 ) {
   const [actor, target, book, post] = await Promise.all([
     ctx.db.get(activity.actorId),
@@ -57,7 +91,7 @@ export async function activityView(
   if (activity.postId && !post) return null;
   const [reading, postData] = await Promise.all([
     book ? readingOf(ctx, activity, book, viewerId) : null,
-    post ? postView(ctx, post, viewerId) : null,
+    post ? postView(ctx, post, viewerId, blocked) : null,
   ]);
   return {
     id: activity._id,
@@ -139,7 +173,7 @@ export async function listActivities(
     )
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, limit + 1);
-  return activityPage(ctx, newest, viewerId, limit);
+  return activityPage(ctx, newest, viewerId, blocked, limit);
 }
 
 /** Up to `limit + 1` activities (newest first) as a page of feed items. */
@@ -147,10 +181,11 @@ export async function activityPage(
   ctx: Ctx,
   newest: Doc<"activities">[],
   viewerId: Id<"users"> | null,
+  blocked: Set<Id<"users">>,
   limit: number,
 ) {
   const views = await Promise.all(
-    newest.slice(0, limit).map((activity) => activityView(ctx, activity, viewerId)),
+    newest.slice(0, limit).map((activity) => activityView(ctx, activity, viewerId, blocked)),
   );
   return {
     items: views.filter((view): view is ActivityView => view !== null),
