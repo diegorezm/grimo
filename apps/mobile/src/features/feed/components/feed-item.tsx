@@ -8,6 +8,7 @@ import {
 } from "@grimo/client";
 import {
   activityProgress,
+  cardFeelings,
   commentCountLabel,
   feedHeadline,
   SHELF_LABELS,
@@ -16,7 +17,7 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Avatar, Card, MentionText, ProgressBar, Stars, Text } from "@/components/ui";
+import { Avatar, Card, FeelingTags, MentionText, ProgressBar, Stars, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover, QuoteText } from "@/features/books";
 import { showPostActions } from "@/features/moderation";
@@ -199,13 +200,17 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
   );
 }
 
-/** Under the title: the progress bar, the stars or the shelf, depending on what happened. */
+/**
+ * Under the title: the progress bar, the stars or the shelf, depending on what happened, and
+ * how the reader felt (at that page, or about the book they finished).
+ */
 function BookDetail({ item }: { item: FeedItemData }) {
   const theme = useTheme();
   const { kind, data, reading, post } = item;
+  const feelings = cardFeelings(data, reading?.feelings);
   if (kind === "progress") {
     const progress = activityProgress(data, reading?.pages ?? null);
-    if (!progress) return null;
+    if (!progress) return <FeelingTags feelings={feelings} />;
     return (
       <View style={styles.progress}>
         {progress.percent !== null && <ProgressBar percent={progress.percent} />}
@@ -213,11 +218,19 @@ function BookDetail({ item }: { item: FeedItemData }) {
           {progress.label}
           {progress.percent !== null && ` · ${progress.percent}%`}
         </Text>
+        <FeelingTags feelings={feelings} />
       </View>
     );
   }
   const rating = post?.rating ?? reading?.rating ?? null;
-  if (rating) return <Stars value={rating} size={15} />;
+  if (rating || feelings.length > 0) {
+    return (
+      <View style={styles.progress}>
+        {rating ? <Stars value={rating} size={15} /> : null}
+        <FeelingTags feelings={feelings} />
+      </View>
+    );
+  }
   const status = data?.status as ShelfStatus | undefined;
   if (kind === "shelved" && status) {
     return (

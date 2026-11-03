@@ -9,7 +9,8 @@ export const migrations = new Migrations<DataModel>(components.migrations);
 export const run = migrations.runner();
 
 /**
- * Computes `readerCount`, `ratingSum` and `ratingCount` of every book from its shelf entries.
+ * Computes the community counters of every book (readers, ratings, star bars, feelings) from
+ * its shelf entries.
  * Each book is read and written in one transaction, so it can't race with a shelf mutation.
  * Idempotent: books already counted are recomputed to the same values.
  */

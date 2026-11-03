@@ -7,6 +7,7 @@ import {
 } from "@grimo/client";
 import {
   activityProgress,
+  cardFeelings,
   commentCountLabel,
   feedHeadline,
   SHELF_LABELS,
@@ -16,6 +17,7 @@ import {
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
+import { FeelingTags } from "@/components/ui/feelings";
 import { MentionText } from "@/components/ui/mention-text";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { StaffBadge } from "@/components/ui/staff-badge";
@@ -233,21 +235,33 @@ function Reactions({
   );
 }
 
-/** Under the title: the progress bar, the stars or the shelf, depending on what happened. */
+/**
+ * Under the title: the progress bar, the stars or the shelf, depending on what happened, and
+ * how the reader felt (at that page, or about the book they finished).
+ */
 function BookDetail({ item }: { item: FeedItemData }) {
   const { kind, data, reading, post } = item;
+  const feelings = cardFeelings(data, reading?.feelings);
   if (kind === "progress") {
     const progress = activityProgress(data, reading?.pages ?? null);
-    if (!progress) return null;
+    if (!progress) return <FeelingTags feelings={feelings} />;
     return (
-      <div className="mt-1 flex max-w-xs flex-col gap-1">
+      <div className="mt-1 flex max-w-xs flex-col gap-1.5">
         {progress.percent !== null && <ProgressBar percent={progress.percent} />}
         <span className="font-mono text-[11px] text-text-muted">{progress.label}</span>
+        <FeelingTags feelings={feelings} />
       </div>
     );
   }
   const rating = post?.rating ?? reading?.rating ?? null;
-  if (rating) return <Stars rating={rating} />;
+  if (rating || feelings.length > 0) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        {rating ? <Stars rating={rating} /> : null}
+        <FeelingTags feelings={feelings} />
+      </div>
+    );
+  }
   const status = data?.status as ShelfStatus | undefined;
   if (kind === "shelved" && status) {
     return (

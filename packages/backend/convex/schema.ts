@@ -1,6 +1,7 @@
 import {
   ACTIVITY_KINDS,
   BOOK_REVIEW_STATUSES,
+  FEELINGS,
   LEGAL_DOCUMENTS,
   NOTIFICATION_KINDS,
   POST_KINDS,
@@ -20,6 +21,7 @@ export const shelfStatus = literals(SHELF_STATUSES);
 export const bookReviewStatus = literals(BOOK_REVIEW_STATUSES);
 export const postKind = literals(POST_KINDS);
 export const activityKind = literals(ACTIVITY_KINDS);
+export const feeling = literals(FEELINGS);
 export const legalDocument = literals(LEGAL_DOCUMENTS);
 export const notificationKind = literals(NOTIFICATION_KINDS);
 export const reportTarget = literals(REPORT_TARGETS);
@@ -153,6 +155,11 @@ export default defineSchema({
     readerCount: v.optional(v.number()),
     ratingSum: v.optional(v.number()),
     ratingCount: v.optional(v.number()),
+    /** Ratings in each star bar (1 to 5; half stars count in the bar below). */
+    ratingStars: v.optional(v.array(v.number())),
+    /** Readers who picked each feeling when rating, and how many picked any. */
+    feelingCounts: v.optional(v.record(v.string(), v.number())),
+    feelingReaders: v.optional(v.number()),
     /**
      * Hand-added books (`GR…` ids, `books.addManual`): who added it and the moderation review.
      * Until approved only that reader sees it. Absent on Open Library books.
@@ -176,6 +183,8 @@ export default defineSchema({
     /** Pages in this reader's edition, when it differs from the book's (absent: the book's). */
     pageCount: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
+    /** How the book made the reader feel, picked with the rating. */
+    feelings: v.optional(v.array(feeling)),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
     updatedAt: v.number(),
@@ -192,6 +201,8 @@ export default defineSchema({
     shelfEntryId: v.id("shelfEntries"),
     page: v.number(),
     pagesRead: v.number(),
+    /** How the reader felt at this page (the diary the rating suggests feelings from). */
+    feelings: v.optional(v.array(feeling)),
     createdAt: v.number(),
   })
     .index("by_user_created", ["userId", "createdAt"])
@@ -256,6 +267,7 @@ export default defineSchema({
     commentCount: v.number(),
   })
     .index("by_author", ["authorId"])
+    .index("by_author_book_kind", ["authorId", "bookId", "kind"])
     .index("by_book_kind", ["bookId", "kind"]),
 
   postLikes: defineTable({

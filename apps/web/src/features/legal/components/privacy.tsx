@@ -46,9 +46,12 @@ export function PrivacyPage() {
             do seu aparelho (para contar seus meses e anos de leitura).
           </li>
           <li>
-            <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações, datas
-            de início e fim, e as sessões de leitura que você cronometra (quando começou, quando
-            parou e em que página), para a ofensiva e o feed.
+            <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações (nota e
+            os sentimentos que o livro deixou), os sentimentos que você marca numa página enquanto
+            lê (seu diário de leitura), datas de início e fim, e as sessões de leitura que você
+            cronometra (quando começou, quando parou e em que página), para a ofensiva e o feed. Os
+            sentimentos são escolhidos numa lista fixa e servem para mostrar a sua leitura e somar,
+            sem identificar ninguém, como os leitores se sentiram com cada livro.
           </li>
           <li>
             <strong>Listas:</strong> as listas de livros que você monta (nome, descrição, livros e a
@@ -122,10 +125,11 @@ export function PrivacyPage() {
         <p>
           O Grimo é uma rede social aberta. <strong>Qualquer pessoa, mesmo sem conta</strong>, pode
           ver seu nome, @, foto, bio, gêneros favoritos, livros que você está lendo e já leu,
-          avaliações, resenhas, notas, comentários, quem você segue e quem segue você, e suas
-          estatísticas de leitura. O que você faz nas estantes (começar, marcar página, terminar,
-          avaliar) também aparece no feed &ldquo;Comunidade&rdquo;, que mostra a atividade de todos
-          os leitores. Seu email e os dados técnicos nunca são públicos.
+          avaliações (com os sentimentos), os sentimentos marcados nas páginas, resenhas, notas,
+          comentários, quem você segue e quem segue você, e suas estatísticas de leitura. O que você
+          faz nas estantes (começar, marcar página, terminar, avaliar) também aparece no feed
+          &ldquo;Comunidade&rdquo;, que mostra a atividade de todos os leitores. Seu email e os
+          dados técnicos nunca são públicos.
         </p>
         <p>
           Num grupo do Juntos, os outros participantes veem seu progresso no livro e suas mensagens.

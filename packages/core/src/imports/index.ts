@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { ratingSchema } from "../ratings";
 import type { ShelfStatus } from "../shelves/constants";
-import { MAX_CURRENT_PAGE, ratingSchema, shelfStatusSchema } from "../shelves/schemas";
+import { MAX_CURRENT_PAGE, shelfStatusSchema } from "../shelves/schemas";
 
 /**
  * Importing a shelf from another app. Goodreads exports a CSV (My Books → Import and export →

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ratingSchema } from "../shelves/schemas";
+import { ratingSchema } from "../ratings";
 
 /**
  * `quote` is a passage of a book with its page (Skoob's citações). `update` is the post of a

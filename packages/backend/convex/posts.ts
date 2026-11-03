@@ -9,6 +9,7 @@ import { notify, notifyMentions, unnotify } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
 import { blockedIds, isBlockedBetween, isBookVisible, isHidden } from "./model/safety";
+import { updateShelfEntry } from "./model/shelves";
 import { postKind } from "./schema";
 
 /** Creates a review, note or quote (and its feed activity). Used by the seed too. */
@@ -105,11 +106,21 @@ export const create = mutation({
     const viewer = await requireVerifiedViewer(ctx);
     const input = parse(createPostSchema, args);
     await enforceRateLimit(ctx, "createPost", viewer._id);
-    if (input.bookId && !(await ctx.db.get(input.bookId as Id<"books">))) throw notFound("Livro");
-    const postId = await createPost(ctx, viewer._id, {
-      ...input,
-      bookId: input.bookId as Id<"books"> | null,
-    });
+    const bookId = input.bookId as Id<"books"> | null;
+    if (bookId && !(await ctx.db.get(bookId))) throw notFound("Livro");
+    // One rating per reader and book, the shelf's: a review shows it, or sets it.
+    const entry =
+      input.kind === "review" && bookId
+        ? await ctx.db
+            .query("shelfEntries")
+            .withIndex("by_user_book", (q) => q.eq("userId", viewer._id).eq("bookId", bookId))
+            .unique()
+        : null;
+    const rating = input.rating ?? entry?.rating ?? null;
+    const postId = await createPost(ctx, viewer._id, { ...input, bookId, rating });
+    if (entry && rating !== entry.rating) {
+      await updateShelfEntry(ctx, viewer._id, entry._id, { rating });
+    }
     return { post: { id: postId } };
   },
 });

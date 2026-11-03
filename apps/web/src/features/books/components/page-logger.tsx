@@ -1,6 +1,7 @@
 import { errorMessage, useUpdateShelfEntry } from "@grimo/client";
-import { firstIssue, readingPercent, updateNoteSchema } from "@grimo/core";
+import { type Feeling, firstIssue, readingPercent, updateNoteSchema } from "@grimo/core";
 import { type CSSProperties, useEffect, useState } from "react";
+import { FeelingPicker } from "@/components/ui/feelings";
 import { Sparkle } from "@/components/ui/sparkle";
 import { cn } from "@/utils/cn";
 
@@ -10,7 +11,8 @@ const QUICK_STEPS = [5, 10, 25];
  * Log reading progress: drag the slider, tap a "+N" chip, or click the page number to type it.
  * Saves when you let go (optimistic). At the last page it offers to move the book to "Lidos".
  * "Comentar" (like Skoob's comentário de leitura) holds the page until you publish it with a
- * note, which shows in the feed. `compact` is the small version for shelf cards.
+ * note and/or how you feel there, which show in the feed (the feelings also go to your reading
+ * diary). `compact` is the small version for shelf cards.
  */
 export function PageLogger({
   entryId,
@@ -28,6 +30,7 @@ export function PageLogger({
   const [editing, setEditing] = useState(false);
   /** The note being written; null while the composer is closed. */
   const [note, setNote] = useState<{ body: string; hasSpoilers: boolean } | null>(null);
+  const [feelings, setFeelings] = useState<Feeling[]>([]);
   const [noteError, setNoteError] = useState<string | null>(null);
   useEffect(() => setDraft(page), [page]);
 
@@ -38,18 +41,29 @@ export function PageLogger({
     // While writing a note, the page waits to go out with it.
     if (next !== page && !note) update.mutate({ id: entryId, currentPage: next });
   };
+  const close = () => {
+    setNote(null);
+    setFeelings([]);
+    setNoteError(null);
+  };
   const publish = () => {
     if (!note) return;
+    // Feelings alone are enough: the text is optional then.
+    const written = note.body.trim().length > 0;
     const input = updateNoteSchema.safeParse(note);
-    if (!input.success) return setNoteError(firstIssue(input.error));
+    if ((written || feelings.length === 0) && !input.success) {
+      return setNoteError(firstIssue(input.error));
+    }
     if (draft === page) return setNoteError("Marque a página nova antes de publicar.");
     setNoteError(null);
     update.mutate(
-      { id: entryId, currentPage: draft, note: input.data },
       {
-        onSuccess: () => setNote(null),
-        onError: (error) => setNoteError(errorMessage(error)),
+        id: entryId,
+        currentPage: draft,
+        ...(written && input.success && { note: input.data }),
+        ...(feelings.length > 0 && { pageFeelings: feelings }),
       },
+      { onSuccess: close, onError: (error) => setNoteError(errorMessage(error)) },
     );
   };
   const percent = readingPercent(draft, pageCount);
@@ -193,7 +207,7 @@ export function PageLogger({
               !finished && "ml-auto",
             )}
           >
-            Comentar
+            Comentar ou sentir
           </button>
         )}
       </div>
@@ -211,6 +225,11 @@ export function PageLogger({
             aria-label="Comentário sobre a leitura"
             className="w-full resize-y bg-transparent text-sm outline-none placeholder:text-text-muted"
           />
+          <FeelingPicker
+            value={feelings}
+            onChange={setFeelings}
+            label="Como você está se sentindo nesta página?"
+          />
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-xs text-text-muted">
               <input
@@ -223,8 +242,7 @@ export function PageLogger({
             <button
               type="button"
               onClick={() => {
-                setNote(null);
-                setNoteError(null);
+                close();
                 // The page moved while writing: save it without the note.
                 if (draft !== page) update.mutate({ id: entryId, currentPage: draft });
               }}
