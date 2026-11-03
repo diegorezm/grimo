@@ -7,10 +7,13 @@ import {
 } from "@grimo/client";
 import {
   editionPages,
+  type Feeling,
+  formatRating,
   readingPercent,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
+  starShares,
   timeAgo,
 } from "@grimo/core";
 import { router } from "expo-router";
@@ -21,6 +24,8 @@ import {
   Avatar,
   Button,
   Card,
+  FeelingPicker,
+  FeelingTags,
   Glass,
   MentionText,
   ProgressBar,
@@ -59,7 +64,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
     );
   }
 
-  const { book, entry, community, reviews, quotes, friendsWant } = data;
+  const { book, entry, community, reviews, quotes, friendsWant, diary } = data;
   const pages = editionPages(entry?.pageCount, book.pageCount);
   const bookInput = bookInputOf(book);
   const percent = entry ? readingPercent(entry.currentPage, pages) : null;
@@ -134,18 +139,26 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           </Card>
         )}
 
-        {entry?.status === "read" && (
+        {(entry?.status === "read" || entry?.status === "abandoned") && (
           <>
-            <RatingCard entryId={entry.id} rating={entry.rating} />
-            <Button
-              variant="secondary"
-              title="Card de “terminei” para os Stories"
-              onPress={() =>
-                router.push({ pathname: "/book-card/[id]", params: { id: openLibraryId } })
-              }
+            <RatingCard
+              entryId={entry.id}
+              rating={entry.rating}
+              feelings={entry.feelings}
+              suggested={diary.suggested}
             />
+            {entry.status === "read" && (
+              <Button
+                variant="secondary"
+                title="Card de “terminei” para os Stories"
+                onPress={() =>
+                  router.push({ pathname: "/book-card/[id]", params: { id: openLibraryId } })
+                }
+              />
+            )}
           </>
         )}
+        <Diary marks={diary.marks} />
 
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
           <StartGroup book={bookInput} />
@@ -165,11 +178,13 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           </Card>
         )}
 
+        <CommunityFeelings community={community} />
+
         <View style={styles.section}>
           <View style={styles.between}>
             <Text variant="heading">Resenhas</Text>
             <Text variant="label" color="textMuted">
-              {community.averageRating ? `★ ${community.averageRating} · ` : ""}
+              {community.averageRating ? `★ ${formatRating(community.averageRating)} · ` : ""}
               {community.readers} leitores
             </Text>
           </View>
@@ -287,19 +302,145 @@ function ShelfPicker({ book, entry }: { book: Detail["book"]; entry: Detail["ent
   );
 }
 
-function RatingCard({ entryId, rating }: { entryId: string; rating: number | null }) {
+/** Your rating: half stars and the feelings the book left (the diary suggests them). */
+function RatingCard({
+  entryId,
+  rating,
+  feelings,
+  suggested,
+}: {
+  entryId: string;
+  rating: number | null;
+  feelings: Feeling[];
+  suggested: Feeling[];
+}) {
   const update = useUpdateShelfEntry();
   return (
-    <Card style={styles.centerCard}>
-      <Text variant="label" color="textMuted">
-        Sua nota
-      </Text>
-      <Stars
-        value={rating}
-        size={30}
-        onChange={(value) => update.mutate({ id: entryId, rating: value })}
+    <Card>
+      <View style={styles.centerCard}>
+        <Text variant="label" color="textMuted">
+          Sua nota{rating !== null ? ` · ${formatRating(rating)}` : ""}
+        </Text>
+        <Stars
+          value={rating}
+          size={30}
+          onChange={(value) => update.mutate({ id: entryId, rating: value })}
+        />
+      </View>
+      <FeelingPicker
+        value={feelings}
+        suggested={suggested}
+        onChange={(next) => update.mutate({ id: entryId, feelings: next })}
       />
     </Card>
+  );
+}
+
+/** The pages where you said how you felt: the diary your rating's feelings come from. */
+function Diary({ marks }: { marks: Detail["diary"]["marks"] }) {
+  const [open, setOpen] = useState(false);
+  if (marks.length === 0) return null;
+  return (
+    <Card>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen(!open)}
+        style={styles.between}
+      >
+        <Text variant="label" color="textMuted">
+          Seu diário de leitura · {marks.length} {marks.length === 1 ? "página" : "páginas"}
+        </Text>
+        <Text variant="label" color="textMuted">
+          {open ? "−" : "+"}
+        </Text>
+      </Pressable>
+      {open &&
+        marks.map((mark) => (
+          <View key={mark.at} style={styles.diaryRow}>
+            <Text variant="label" color="textMuted" style={styles.diaryPage}>
+              p. {mark.page}
+            </Text>
+            <View style={styles.grow}>
+              <FeelingTags feelings={mark.feelings} />
+            </View>
+          </View>
+        ))}
+    </Card>
+  );
+}
+
+/** "Como os leitores se sentiram" and the star bars, once someone rated or felt the book. */
+function CommunityFeelings({ community }: { community: Detail["community"] }) {
+  if (community.ratings === 0 && community.feelings.length === 0) return null;
+  return (
+    <View style={styles.section}>
+      {community.feelings.length > 0 && (
+        <Card>
+          <Text variant="title">Como os leitores se sentiram</Text>
+          {community.feelings.map((row) => (
+            <BarRow
+              key={row.feeling}
+              label={row.label}
+              percent={row.percent}
+              end={`${row.percent}%`}
+            />
+          ))}
+          <Text variant="label" color="textMuted">
+            De {community.feelingReaders}{" "}
+            {community.feelingReaders === 1 ? "leitor que contou" : "leitores que contaram"}
+          </Text>
+        </Card>
+      )}
+      {community.ratings > 0 && (
+        <Card>
+          <Text variant="title">
+            Notas · ★ {formatRating(community.averageRating ?? 0)} ({community.ratings})
+          </Text>
+          {starShares(community.stars).map((bar) => (
+            <BarRow
+              key={bar.star}
+              label={`${bar.star} ★`}
+              percent={bar.percent}
+              end={String(bar.count)}
+              gold
+            />
+          ))}
+        </Card>
+      )}
+    </View>
+  );
+}
+
+function BarRow({
+  label,
+  percent,
+  end,
+  gold = false,
+}: {
+  label: string;
+  percent: number;
+  end: string;
+  gold?: boolean;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.barRow}>
+      <Text variant="small" style={styles.barLabel} color={gold ? "gold" : "text"}>
+        {label}
+      </Text>
+      <View style={[styles.barTrack, { backgroundColor: theme.surfaceMuted }]}>
+        <View
+          style={[
+            styles.barFill,
+            { width: `${percent}%`, backgroundColor: gold ? theme.gold : theme.accent },
+          ]}
+        />
+      </View>
+      <Text variant="label" color="textMuted" style={styles.barEnd}>
+        {end}
+      </Text>
+    </View>
   );
 }
 
@@ -349,7 +490,7 @@ function Review({ review }: { review: Detail["reviews"][number] }) {
           {timeAgo(new Date(review.createdAt))}
         </Text>
       </View>
-      {review.rating ? <Stars value={review.rating} size={14} /> : null}
+      {review.rating !== null ? <Stars value={review.rating} size={14} /> : null}
       {revealed ? (
         <MentionText text={review.body} />
       ) : (
@@ -376,6 +517,13 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   section: { gap: spacing[3] },
   centerCard: { alignItems: "center" },
+  diaryRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  diaryPage: { width: 56 },
+  barRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  barLabel: { width: 96 },
+  barTrack: { flex: 1, height: 8, borderRadius: radius.full, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: radius.full },
+  barEnd: { width: 40, textAlign: "right" },
   bold: { fontWeight: "700" },
   author: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   picker: { flexDirection: "row", padding: spacing[1], gap: spacing[1], borderRadius: radius.xl },

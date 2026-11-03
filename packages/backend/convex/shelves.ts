@@ -1,5 +1,6 @@
 import {
   addToShelfSchema,
+  feelingsSchema,
   isManualBookId,
   updateNoteSchema,
   updateShelfEntrySchema,
@@ -80,13 +81,17 @@ export const update = mutation({
     status: v.optional(shelfStatus),
     currentPage: v.optional(v.number()),
     rating: v.optional(v.union(v.number(), v.null())),
+    /** How the book made you feel, with the rating. */
+    feelings: v.optional(v.array(v.string())),
     startedAt: v.optional(v.union(v.number(), v.null())),
     finishedAt: v.optional(v.union(v.number(), v.null())),
     pageCount: v.optional(v.union(v.number(), v.null())),
     /** A note on this update (Skoob's "comentário de leitura"): it shows in the feed. */
     note: v.optional(v.object({ body: v.string(), hasSpoilers: v.boolean() })),
+    /** How you feel at the page you marked: it shows in the feed and in your reading diary. */
+    pageFeelings: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { id, note, ...patch }) => {
+  handler: async (ctx, { id, note, pageFeelings, ...patch }) => {
     // Writing in the feed is social, so it needs a confirmed email (marking pages doesn't).
     const viewer = note ? await requireVerifiedViewer(ctx) : await requireViewer(ctx);
     const input = parse(updateShelfEntrySchema, patch);
@@ -94,6 +99,7 @@ export const update = mutation({
     if (noteInput) await enforceRateLimit(ctx, "createPost", viewer._id);
     const entry = await updateShelfEntry(ctx, viewer._id, id, input, Date.now(), {
       note: noteInput,
+      pageFeelings: pageFeelings && parse(feelingsSchema, pageFeelings),
     });
     return { entry: entryView(entry) };
   },

@@ -88,7 +88,7 @@ function RootNavigator() {
           name="progress/[id]"
           options={{
             presentation: "formSheet",
-            sheetAllowedDetents: [0.55, 0.8],
+            sheetAllowedDetents: [0.65, 0.95],
             sheetGrabberVisible: true,
           }}
         />

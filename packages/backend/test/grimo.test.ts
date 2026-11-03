@@ -497,17 +497,17 @@ describe("moderation", () => {
 
     const mine = (await rafa.as.mutation(api.shelves.add, { book, status: "reading" })).entry;
     const hers = (await bia.as.mutation(api.shelves.add, { book, status: "read" })).entry;
-    expect(await community()).toEqual({ readers: 2, ratings: 0, averageRating: null });
+    expect(await community()).toMatchObject({ readers: 2, ratings: 0, averageRating: null });
 
     await rafa.as.mutation(api.shelves.update, { id: mine.id, rating: 5 });
     await bia.as.mutation(api.shelves.update, { id: hers.id, rating: 2 });
-    expect(await community()).toEqual({ readers: 2, ratings: 2, averageRating: 3.5 });
+    expect(await community()).toMatchObject({ readers: 2, ratings: 2, averageRating: 3.5 });
 
     await bia.as.mutation(api.shelves.update, { id: hers.id, rating: 4 });
-    expect(await community()).toEqual({ readers: 2, ratings: 2, averageRating: 4.5 });
+    expect(await community()).toMatchObject({ readers: 2, ratings: 2, averageRating: 4.5 });
 
     await bia.as.mutation(api.shelves.remove, { id: hers.id });
-    expect(await community()).toEqual({ readers: 1, ratings: 1, averageRating: 5 });
+    expect(await community()).toMatchObject({ readers: 1, ratings: 1, averageRating: 5 });
 
     // A book from before the counters existed is counted from its entries until backfilled.
     await t.run(async (ctx) => {
@@ -523,7 +523,7 @@ describe("moderation", () => {
         genres: row.genres,
       });
     });
-    expect(await community()).toEqual({ readers: 1, ratings: 1, averageRating: 5 });
+    expect(await community()).toMatchObject({ readers: 1, ratings: 1, averageRating: 5 });
   });
 
   it("rate limits posting and requires login for Open Library lookups", async () => {

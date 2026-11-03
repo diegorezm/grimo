@@ -1,5 +1,5 @@
 import { api, type Id } from "@grimo/backend";
-import type { UpdateNoteInput } from "@grimo/core";
+import type { Feeling, UpdateNoteInput } from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useState } from "react";
@@ -65,7 +65,7 @@ export function useFinishSession() {
   const { convex } = useConvexCache();
   const patchQueries = usePatchQueries();
   return useMutation({
-    mutationFn: (input: { page: number; note?: UpdateNoteInput }) =>
+    mutationFn: (input: { page: number; note?: UpdateNoteInput; pageFeelings?: Feeling[] }) =>
       convex.mutation(api.sessions.finish, input),
     onMutate: () => patchQueries<ActiveSession | null>(active(), () => null),
     onError: (_error, _input, rollback) => rollback?.(),

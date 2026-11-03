@@ -114,7 +114,7 @@ const entryOf = (ctx: Ctx, userId: Id<"users">, bookId: Id<"books">) =>
 
 /**
  * What the feed card shows under the book: the pages of the reader's edition (progress bar),
- * their rating once they finished it, and where the book is on the viewer's own shelves
+ * their rating and feelings once they finished it, and where the book is on the viewer's own shelves
  * ("Quero ler" button or "Na sua estante").
  */
 async function readingOf(
@@ -135,6 +135,7 @@ async function readingOf(
   return {
     pages: editionPages(entry?.pageCount, book.pageCount),
     rating: activity.kind === "finished" ? (entry?.rating ?? null) : null,
+    feelings: activity.kind === "finished" ? (entry?.feelings ?? []) : [],
     viewerStatus: own?.status ?? null,
   };
 }

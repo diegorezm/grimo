@@ -9,17 +9,21 @@ import {
 } from "@grimo/client";
 import {
   editionPages,
+  type Feeling,
+  formatRating,
   GENRE_LABELS,
   type Genre,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
+  starShares,
   timeAgo,
 } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { FeelingPicker, FeelingTags } from "@/components/ui/feelings";
 import { MentionText } from "@/components/ui/mention-text";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
@@ -61,9 +65,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
           {community.readers > 0 && (
             <p className="text-sm text-text-muted">
               {community.averageRating !== null && (
-                <span className="mr-2 text-gold">
-                  ★ {community.averageRating.toLocaleString("pt-BR")}
-                </span>
+                <span className="mr-2 text-gold">★ {formatRating(community.averageRating)}</span>
               )}
               {community.readers} {community.readers === 1 ? "leitor" : "leitores"} no Grimo
             </p>
@@ -85,7 +87,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
         </div>
       </header>
 
-      {entry && (entry.status === "reading" || entry.status === "read") && (
+      {entry && entry.status !== "want_to_read" && (
         <section
           aria-labelledby="my-reading"
           className="flex flex-col gap-3 rounded-xl bg-surface-muted p-5"
@@ -120,16 +122,24 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             </>
           ) : (
             <>
-              <RatingRow entryId={entry.id} rating={entry.rating} />
-              <Link
-                to="/card/livro/$openLibraryId"
-                params={{ openLibraryId: book.openLibraryId }}
-                className="w-fit font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"
-              >
-                Card de “terminei” para os Stories →
-              </Link>
+              <RatingRow
+                entryId={entry.id}
+                rating={entry.rating}
+                feelings={entry.feelings}
+                suggested={detail.diary.suggested}
+              />
+              {entry.status === "read" && (
+                <Link
+                  to="/card/livro/$openLibraryId"
+                  params={{ openLibraryId: book.openLibraryId }}
+                  className="w-fit font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"
+                >
+                  Card de “terminei” para os Stories →
+                </Link>
+              )}
             </>
           )}
+          <Diary marks={detail.diary.marks} />
           <EditionPages entryId={entry.id} pageCount={entry.pageCount} bookPages={book.pageCount} />
         </section>
       )}
@@ -144,6 +154,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
       <OpenReads openLibraryId={book.openLibraryId} />
       {book.description && <Synopsis text={book.description} />}
 
+      <CommunityFeelings community={community} />
       <Reviews detail={detail} />
       <BookQuotes detail={detail} />
     </div>
@@ -154,17 +165,117 @@ function Chip({ children }: { children: React.ReactNode }) {
   return <li className="rounded-full border border-border px-2.5 py-0.5">{children}</li>;
 }
 
-function RatingRow({ entryId, rating }: { entryId: string; rating: number | null }) {
+/** Your rating: half stars and the feelings the book left (the diary suggests them). */
+function RatingRow({
+  entryId,
+  rating,
+  feelings,
+  suggested,
+}: {
+  entryId: string;
+  rating: number | null;
+  feelings: Feeling[];
+  suggested: Feeling[];
+}) {
   const update = useUpdateShelfEntry();
   return (
-    <div className="flex items-center gap-3 text-sm text-text-muted">
-      Sua nota
-      <Stars
-        rating={rating}
-        onChange={(value) => update.mutate({ id: entryId, rating: value })}
-        className="text-xl"
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3 text-sm text-text-muted">
+        Sua nota
+        <Stars
+          rating={rating}
+          onChange={(value) => update.mutate({ id: entryId, rating: value })}
+          className="text-xl"
+        />
+      </div>
+      <FeelingPicker
+        value={feelings}
+        suggested={suggested}
+        onChange={(next) => update.mutate({ id: entryId, feelings: next })}
       />
     </div>
+  );
+}
+
+/** The pages where you said how you felt: the diary your rating's feelings come from. */
+function Diary({ marks }: { marks: BookDetail["diary"]["marks"] }) {
+  if (marks.length === 0) return null;
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text">
+        Seu diário de leitura · {marks.length} {marks.length === 1 ? "página" : "páginas"}
+      </summary>
+      <ol className="mt-3 flex flex-col gap-2 border-l border-border pl-4">
+        {marks.map((mark) => (
+          <li key={mark.at} className="flex flex-wrap items-center gap-2">
+            <span className="w-14 font-mono text-xs text-text-muted">p. {mark.page}</span>
+            <FeelingTags feelings={mark.feelings} />
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+/** "Como os leitores se sentiram" and the star bars, once someone rated or felt the book. */
+function CommunityFeelings({ community }: { community: BookDetail["community"] }) {
+  if (community.ratings === 0 && community.feelings.length === 0) return null;
+  return (
+    <section aria-label="Na comunidade" className="grid gap-8 @3xl/main:grid-cols-2">
+      {community.feelings.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="text-2xl font-medium italic">Como os leitores se sentiram</h2>
+          <ul className="flex flex-col gap-2">
+            {community.feelings.map((row) => (
+              <li key={row.feeling} className="flex items-center gap-3 text-sm">
+                <span className="w-24 shrink-0">{row.label}</span>
+                <Bar percent={row.percent} />
+                <span className="w-10 text-right font-mono text-xs text-text-muted">
+                  {row.percent}%
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+            De {community.feelingReaders}{" "}
+            {community.feelingReaders === 1 ? "leitor que contou" : "leitores que contaram"}
+          </p>
+        </div>
+      )}
+      {community.ratings > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="flex items-baseline gap-3 text-2xl font-medium italic">
+            Notas
+            <span className="font-mono text-sm not-italic text-text-muted">
+              ★ {formatRating(community.averageRating ?? 0)} · {community.ratings}{" "}
+              {community.ratings === 1 ? "nota" : "notas"}
+            </span>
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {starShares(community.stars).map((bar) => (
+              <li key={bar.star} className="flex items-center gap-3 text-sm">
+                <span className="w-8 shrink-0 font-mono text-xs text-gold">{bar.star} ★</span>
+                <Bar percent={bar.percent} gold />
+                <span className="w-10 text-right font-mono text-xs text-text-muted">
+                  {bar.count}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Bar({ percent, gold = false }: { percent: number; gold?: boolean }) {
+  return (
+    <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-muted">
+      <span
+        className={cn("block h-full rounded-full", gold ? "bg-gold" : "bg-accent")}
+        style={{ width: `${percent}%` }}
+      />
+    </span>
   );
 }
 
@@ -205,7 +316,7 @@ function Reviews({ detail }: { detail: BookDetail }) {
         Resenhas
       </h2>
       {detail.book.id ? (
-        <ReviewComposer bookId={detail.book.id} />
+        <ReviewComposer bookId={detail.book.id} shelfRating={detail.entry?.rating ?? null} />
       ) : (
         <p className="text-sm text-text-muted">Adicione à estante para escrever uma resenha.</p>
       )}
@@ -230,7 +341,7 @@ function Reviews({ detail }: { detail: BookDetail }) {
                     <span className="font-semibold">{review.author.name}</span>
                   )}
                   <StaffBadge role={review.author.role} />
-                  {review.rating && <Stars rating={review.rating} />}
+                  {review.rating !== null && <Stars rating={review.rating} />}
                   <span className="font-mono text-[10px] text-text-muted">
                     {timeAgo(new Date(review.createdAt))}
                   </span>
@@ -253,20 +364,28 @@ function Reviews({ detail }: { detail: BookDetail }) {
   );
 }
 
-function ReviewComposer({ bookId }: { bookId: string }) {
+/**
+ * A review shows your shelf's rating (one per reader and book); changing the stars here changes
+ * it on the shelf too (`posts.create`).
+ */
+function ReviewComposer({ bookId, shelfRating }: { bookId: string; shelfRating: number | null }) {
   const create = useCreatePost();
-  const [rating, setRating] = useState<number | null>(null);
+  /** undefined: not touched, so it follows the shelf's. */
+  const [rating, setRating] = useState<number | null | undefined>(undefined);
   const [body, setBody] = useState("");
+  const [spoiler, setSpoiler] = useState(false);
+  const value = rating === undefined ? shelfRating : rating;
 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!body.trim()) return;
     create.mutate(
-      { kind: "review", bookId, rating, body: body.trim(), hasSpoilers: false },
+      { kind: "review", bookId, rating: value, body: body.trim(), hasSpoilers: spoiler },
       {
         onSuccess: () => {
           setBody("");
-          setRating(null);
+          setRating(undefined);
+          setSpoiler(false);
         },
       },
     );
@@ -284,7 +403,11 @@ function ReviewComposer({ bookId }: { bookId: string }) {
         className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-text-muted"
       />
       <div className="flex items-center justify-between gap-3">
-        <Stars rating={rating} onChange={setRating} className="text-lg" />
+        <Stars rating={value} onChange={setRating} className="text-lg" />
+        <label className="mr-auto flex items-center gap-2 text-xs text-text-muted">
+          <input type="checkbox" checked={spoiler} onChange={(e) => setSpoiler(e.target.checked)} />
+          Contém spoiler
+        </label>
         <Button type="submit" disabled={!body.trim() || create.isPending}>
           Publicar
         </Button>
