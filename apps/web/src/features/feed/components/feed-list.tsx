@@ -20,7 +20,7 @@ export function FeedTimeline({
   onTabChange: (tab: FeedTab) => void;
 }) {
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <div role="tablist" aria-label="Feed" className="grid grid-cols-2 gap-3">
         {TABS.map((item) => {
           const active = item.id === tab;
@@ -64,7 +64,7 @@ function FeedList({ tab, onShowCommunity }: { tab: FeedTab; onShowCommunity: () 
   if (feed.isPending) return <Spinner />;
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-text-muted">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-14 text-center text-text-muted">
         {tab === "following" ? (
           <>
             <p>Ninguém por aqui ainda. Siga leitores para ver o que estão lendo.</p>
@@ -85,10 +85,12 @@ function FeedList({ tab, onShowCommunity }: { tab: FeedTab; onShowCommunity: () 
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {groups.map(({ id, items: [item, ...more] }) => (
-        <FeedItem key={id} item={item!} more={more} />
-      ))}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col divide-y divide-border">
+        {groups.map(({ id, items: [item, ...more] }) => (
+          <FeedItem key={id} item={item!} more={more} />
+        ))}
+      </div>
       <LoadMore {...feed} />
     </div>
   );

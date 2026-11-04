@@ -3,10 +3,14 @@ import { Spinner } from "@/components/feedback/spinner";
 import { LoadMore } from "@/components/ui/load-more";
 import { ReaderGrid, ReaderTile } from "./reader-tile";
 
-/** Readers to follow: people followed by people you follow come first. Scrolls for more. */
-export function ReaderSuggestions() {
+/**
+ * Readers to follow: people followed by people you follow come first. Scrolls for more, or with
+ * `limit` shows only the first few, stacked, for a side column.
+ */
+export function ReaderSuggestions({ limit }: { limit?: number }) {
   const suggestions = useReaderSuggestions();
-  const items = suggestions.data?.items ?? [];
+  const all = suggestions.data?.items ?? [];
+  const items = limit ? all.slice(0, limit) : all;
 
   if (suggestions.isPending) return <Spinner />;
   if (items.length === 0) {
@@ -17,24 +21,25 @@ export function ReaderSuggestions() {
     );
   }
 
+  const tiles = items.map((reader) => (
+    <ReaderTile
+      key={reader.id}
+      reader={reader}
+      canFollow
+      note={
+        reader.mutualName
+          ? reader.mutuals > 1
+            ? `Seguido por ${reader.mutualName} e mais ${reader.mutuals - 1}`
+            : `Seguido por ${reader.mutualName}`
+          : undefined
+      }
+    />
+  ));
+  if (limit) return <ul className="flex flex-col gap-2">{tiles}</ul>;
+
   return (
     <div className="flex flex-col gap-2">
-      <ReaderGrid>
-        {items.map((reader) => (
-          <ReaderTile
-            key={reader.id}
-            reader={reader}
-            canFollow
-            note={
-              reader.mutualName
-                ? reader.mutuals > 1
-                  ? `Seguido por ${reader.mutualName} e mais ${reader.mutuals - 1}`
-                  : `Seguido por ${reader.mutualName}`
-                : undefined
-            }
-          />
-        ))}
-      </ReaderGrid>
+      <ReaderGrid>{tiles}</ReaderGrid>
       <LoadMore {...suggestions} />
     </div>
   );
