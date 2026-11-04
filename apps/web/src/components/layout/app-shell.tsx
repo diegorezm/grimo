@@ -13,7 +13,7 @@ import {
   UserIcon,
 } from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
-import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeCycleButton } from "@/components/ui/theme-toggle";
 import { UserMenu } from "./user-menu";
 
 /**
@@ -168,7 +168,7 @@ function TopBar({ actions }: { actions?: ReactNode }) {
       </search>
 
       <div className="flex items-center gap-4">
-        <ThemeToggle className="lg:hidden" />
+        <ThemeCycleButton className="lg:hidden" />
         {actions}
         {me?.isStaff && (
           <Link

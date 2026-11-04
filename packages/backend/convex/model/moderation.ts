@@ -18,7 +18,13 @@ export async function deletePost(ctx: MutationCtx, post: Doc<"posts">) {
       .withIndex("by_post", (q) => q.eq("postId", post._id))
       .collect(),
   ]);
-  for (const doc of related.flat()) await ctx.db.delete(doc._id);
+  const [likes, comments, activities] = related;
+  for (const doc of [...likes, ...comments]) await ctx.db.delete(doc._id);
+  // A review or note goes with its feed entry; an update's entry stays, without the post.
+  for (const activity of activities) {
+    if (post.kind === "update") await ctx.db.patch(activity._id, { postId: null });
+    else await ctx.db.delete(activity._id);
+  }
   await deletePostNotifications(ctx, post._id);
   await ctx.db.delete(post._id);
 }

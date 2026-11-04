@@ -14,10 +14,11 @@ export function StartGroup({ book }: { book: BookSearchResult }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [days, setDays] = useState<number | null>(30);
+  const [openRead, setOpenRead] = useState(false);
 
   function start() {
     create.mutate(
-      { book, finishBy: finishByFor(days) },
+      { book, finishBy: finishByFor(days), open: openRead },
       { onSuccess: ({ id }) => navigate({ to: "/juntos/$id", params: { id } }) },
     );
   }
@@ -50,6 +51,20 @@ export function StartGroup({ book }: { book: BookSearchResult }) {
         </span>
         <FinishPicker days={days} onChange={setDays} />
       </div>
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          checked={openRead}
+          onChange={(e) => setOpenRead(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          <span className="font-medium">Leitura aberta</span>
+          <span className="block text-text-muted">
+            Aparece na página do livro e no Juntos: qualquer leitor pode entrar, sem convite.
+          </span>
+        </span>
+      </label>
       {create.error && (
         <p role="alert" className="text-sm text-danger">
           {errorMessage(create.error)}

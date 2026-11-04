@@ -1,7 +1,14 @@
-import { readerActivityQuery, readerQuery, useMe, useReader } from "@grimo/client";
+import {
+  readerActivityQuery,
+  readerListsQuery,
+  readerQuery,
+  useMe,
+  useReader,
+} from "@grimo/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
+import { ReaderLists } from "@/features/lists";
 import { ReaderSafetyMenu } from "@/features/moderation";
 import { BookRow, ProfileHeader } from "@/features/profile";
 import { FollowButton, ReaderActivity, ShareProfileButton } from "@/features/readers";
@@ -12,6 +19,7 @@ export const Route = createFileRoute("/_app/u/$username")({
   loader: ({ context: { queryClient }, params }) => {
     void queryClient.prefetchQuery(readerQuery(params.username));
     void queryClient.prefetchQuery(readerActivityQuery(params.username));
+    void queryClient.prefetchQuery(readerListsQuery(params.username));
   },
   component: ReaderPage,
 });
@@ -90,6 +98,7 @@ function ReaderPage() {
             items={books.favorites}
             empty="Os livros mais bem avaliados aparecem aqui."
           />
+          <ReaderLists username={username} isMe={isMe} />
         </div>
 
         {/* Fixed height, scrolling inside: a long history never stretches the page. */}

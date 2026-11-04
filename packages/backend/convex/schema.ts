@@ -1,6 +1,7 @@
 import {
   ACTIVITY_KINDS,
   BOOK_REVIEW_STATUSES,
+  FEELINGS,
   LEGAL_DOCUMENTS,
   NOTIFICATION_KINDS,
   POST_KINDS,
@@ -20,6 +21,7 @@ export const shelfStatus = literals(SHELF_STATUSES);
 export const bookReviewStatus = literals(BOOK_REVIEW_STATUSES);
 export const postKind = literals(POST_KINDS);
 export const activityKind = literals(ACTIVITY_KINDS);
+export const feeling = literals(FEELINGS);
 export const legalDocument = literals(LEGAL_DOCUMENTS);
 export const notificationKind = literals(NOTIFICATION_KINDS);
 export const reportTarget = literals(REPORT_TARGETS);
@@ -153,6 +155,11 @@ export default defineSchema({
     readerCount: v.optional(v.number()),
     ratingSum: v.optional(v.number()),
     ratingCount: v.optional(v.number()),
+    /** Ratings in each star bar (1 to 5; half stars count in the bar below). */
+    ratingStars: v.optional(v.array(v.number())),
+    /** Readers who picked each feeling when rating, and how many picked any. */
+    feelingCounts: v.optional(v.record(v.string(), v.number())),
+    feelingReaders: v.optional(v.number()),
     /**
      * Hand-added books (`GR…` ids, `books.addManual`): who added it and the moderation review.
      * Until approved only that reader sees it. Absent on Open Library books.
@@ -176,6 +183,8 @@ export default defineSchema({
     /** Pages in this reader's edition, when it differs from the book's (absent: the book's). */
     pageCount: v.optional(v.number()),
     rating: v.union(v.number(), v.null()),
+    /** How the book made the reader feel, picked with the rating. */
+    feelings: v.optional(v.array(feeling)),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
     updatedAt: v.number(),
@@ -192,10 +201,49 @@ export default defineSchema({
     shelfEntryId: v.id("shelfEntries"),
     page: v.number(),
     pagesRead: v.number(),
+    /** How the reader felt at this page (the diary the rating suggests feelings from). */
+    feelings: v.optional(v.array(feeling)),
     createdAt: v.number(),
   })
     .index("by_user_created", ["userId", "createdAt"])
     .index("by_entry", ["shelfEntryId"]),
+
+  /**
+   * Timed reading ("sessão de leitura"): open while `endedAt` is null (one per reader). The
+   * timer lives here, so it survives closing the app and shows on every device.
+   */
+  readingSessions: defineTable({
+    userId: v.id("users"),
+    shelfEntryId: v.id("shelfEntries"),
+    bookId: v.id("books"),
+    startedAt: v.number(),
+    endedAt: v.union(v.number(), v.null()),
+    startPage: v.number(),
+    endPage: v.union(v.number(), v.null()),
+  })
+    .index("by_user_ended", ["userId", "endedAt"])
+    .index("by_user_started", ["userId", "startedAt"])
+    .index("by_entry", ["shelfEntryId"]),
+
+  /** Lists curated by readers ("terror para começar"), public like the profile. */
+  lists: defineTable({
+    ownerId: v.id("users"),
+    title: v.string(),
+    description: v.string(),
+    itemCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_owner_updated", ["ownerId", "updatedAt"]),
+
+  listItems: defineTable({
+    listId: v.id("lists"),
+    bookId: v.id("books"),
+    /** Why the book is on the list, in a line. */
+    note: v.union(v.string(), v.null()),
+    addedAt: v.number(),
+  })
+    .index("by_list_added", ["listId", "addedAt"])
+    .index("by_list_book", ["listId", "bookId"]),
 
   follows: defineTable({
     followerId: v.id("users"),
@@ -213,10 +261,13 @@ export default defineSchema({
     rating: v.union(v.number(), v.null()),
     body: v.string(),
     hasSpoilers: v.boolean(),
+    /** Where a quote is in the book. */
+    page: v.optional(v.union(v.number(), v.null())),
     likeCount: v.number(),
     commentCount: v.number(),
   })
     .index("by_author", ["authorId"])
+    .index("by_author_book_kind", ["authorId", "bookId", "kind"])
     .index("by_book_kind", ["bookId", "kind"]),
 
   postLikes: defineTable({
@@ -313,7 +364,12 @@ export default defineSchema({
     memberCount: v.number(),
     createdAt: v.number(),
     lastMessageAt: v.union(v.number(), v.null()),
-  }).index("by_inviteCode", ["inviteCode"]),
+    /** A "leitura aberta": listed for everyone, joined without an invite. */
+    isOpen: v.optional(v.boolean()),
+  })
+    .index("by_inviteCode", ["inviteCode"])
+    .index("by_book_open", ["bookId", "isOpen", "createdAt"])
+    .index("by_open_created", ["isOpen", "createdAt"]),
 
   groupMembers: defineTable({
     groupId: v.id("groups"),

@@ -1,4 +1,10 @@
-import { addToShelfSchema, isManualBookId, updateShelfEntrySchema } from "@grimo/core";
+import {
+  addToShelfSchema,
+  feelingsSchema,
+  isManualBookId,
+  updateNoteSchema,
+  updateShelfEntrySchema,
+} from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
@@ -6,7 +12,7 @@ import { notFound, parse } from "./model/errors";
 import { booksFriendsWant } from "./model/friends";
 import { listLimit } from "./model/limits";
 import { enforceRateLimit } from "./model/rateLimit";
-import { requireViewer } from "./model/readers";
+import { requireVerifiedViewer, requireViewer } from "./model/readers";
 import { isBookVisible } from "./model/safety";
 import {
   addToShelf,
@@ -75,14 +81,27 @@ export const update = mutation({
     status: v.optional(shelfStatus),
     currentPage: v.optional(v.number()),
     rating: v.optional(v.union(v.number(), v.null())),
+    /** How the book made you feel, with the rating. */
+    feelings: v.optional(v.array(v.string())),
     startedAt: v.optional(v.union(v.number(), v.null())),
     finishedAt: v.optional(v.union(v.number(), v.null())),
     pageCount: v.optional(v.union(v.number(), v.null())),
+    /** A note on this update (Skoob's "comentário de leitura"): it shows in the feed. */
+    note: v.optional(v.object({ body: v.string(), hasSpoilers: v.boolean() })),
+    /** How you feel at the page you marked: it shows in the feed and in your reading diary. */
+    pageFeelings: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { id, ...patch }) => {
-    const viewer = await requireViewer(ctx);
+  handler: async (ctx, { id, note, pageFeelings, ...patch }) => {
+    // Writing in the feed is social, so it needs a confirmed email (marking pages doesn't).
+    const viewer = note ? await requireVerifiedViewer(ctx) : await requireViewer(ctx);
     const input = parse(updateShelfEntrySchema, patch);
-    return { entry: entryView(await updateShelfEntry(ctx, viewer._id, id, input)) };
+    const noteInput = note ? parse(updateNoteSchema, note) : undefined;
+    if (noteInput) await enforceRateLimit(ctx, "createPost", viewer._id);
+    const entry = await updateShelfEntry(ctx, viewer._id, id, input, Date.now(), {
+      note: noteInput,
+      pageFeelings: pageFeelings && parse(feelingsSchema, pageFeelings),
+    });
+    return { entry: entryView(entry) };
   },
 });
 

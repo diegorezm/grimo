@@ -39,7 +39,14 @@ const finishBySchema = z
   .refine((ms) => ms < Date.now() + 366 * DAY, "No máximo um ano")
   .nullable();
 
-export const createGroupSchema = z.object({ finishBy: finishBySchema });
+/**
+ * `open`: a "leitura aberta", listed on the book page and in Juntos so anyone can join (no
+ * invite). Closed groups are only reached by their link.
+ */
+export const createGroupSchema = z.object({
+  finishBy: finishBySchema,
+  open: z.boolean().default(false),
+});
 export const updateGroupSchema = z.object({ finishBy: finishBySchema });
 
 export const groupMessageSchema = z.object({

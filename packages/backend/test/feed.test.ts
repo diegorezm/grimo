@@ -39,13 +39,23 @@ describe("feed cards", () => {
     let items = (await bia.as.query(api.feed.list, { limit: 20 })).items;
     const progress = items.find((item) => item.kind === "progress");
     expect(progress?.data).toMatchObject({ page: 100 });
-    expect(progress?.reading).toEqual({ pages: 400, rating: null, viewerStatus: null });
+    expect(progress?.reading).toEqual({
+      pages: 400,
+      rating: null,
+      feelings: [],
+      viewerStatus: null,
+    });
 
     await rafa.as.mutation(api.shelves.update, { id: entry.id, status: "read", rating: 4 });
     await bia.as.mutation(api.shelves.add, { book, status: "want_to_read" });
     items = (await bia.as.query(api.feed.list, { limit: 20 })).items;
     const finished = items.find((item) => item.kind === "finished");
-    expect(finished?.reading).toEqual({ pages: 400, rating: 4, viewerStatus: "want_to_read" });
+    expect(finished?.reading).toEqual({
+      pages: 400,
+      rating: 4,
+      feelings: [],
+      viewerStatus: "want_to_read",
+    });
     // On my own activity, "my shelf" is the actor's.
     const mine = items.find((item) => item.actor.username === "bia");
     expect(mine?.reading?.viewerStatus).toBe("want_to_read");

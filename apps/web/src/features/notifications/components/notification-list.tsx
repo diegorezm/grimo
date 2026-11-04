@@ -4,7 +4,7 @@ import {
   useNotifications,
   useUnreadNotifications,
 } from "@grimo/client";
-import { describeNotification, timeAgo } from "@grimo/core";
+import { describeNotification, isModerationNotice, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Spinner } from "@/components/feedback/spinner";
@@ -61,6 +61,7 @@ export function NotificationList() {
 }
 
 function Row({ item }: { item: NotificationItem }) {
+  if (isModerationNotice(item.kind)) return <ModerationNotice item={item} />;
   const { actor, post, comment } = item;
   const text = describeNotification(item.kind, {
     postKind: post?.kind,
@@ -110,6 +111,27 @@ function Row({ item }: { item: NotificationItem }) {
           size="sm"
         />
       )}
+      {!item.read && (
+        <span className="size-2 shrink-0 rounded-full bg-accent">
+          <span className="sr-only">Nova</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** What moderation decided about a report you made: from the Grimo, not from a reader. */
+function ModerationNotice({ item }: { item: NotificationItem }) {
+  return (
+    <div className={cn("flex items-center gap-3 px-2 py-3.5", !item.read && "bg-surface-muted/60")}>
+      <Avatar src={null} name="Grimo" />
+      <p className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+        <strong className="font-semibold">Moderação do Grimo</strong>
+        <span className="text-text-muted">{describeNotification(item.kind)}</span>
+        <span className="font-mono text-[11px] text-text-muted">
+          {timeAgo(new Date(item.createdAt))}
+        </span>
+      </p>
       {!item.read && (
         <span className="size-2 shrink-0 rounded-full bg-accent">
           <span className="sr-only">Nova</span>

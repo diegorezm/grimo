@@ -1,26 +1,28 @@
-import { createCommentSchema, createPostSchema } from "@grimo/core";
+import { createCommentSchema, createPostSchema, editionPages } from "@grimo/core";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
-import { bookSummary, postView, recordActivity } from "./model/content";
+import { bookSummary, postView, recordActivity, updatePostFor } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
 import { deleteComment, deletePost } from "./model/moderation";
 import { notify, notifyMentions, unnotify } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
-import { blockedIds, isBlockedBetween, isHidden } from "./model/safety";
+import { blockedIds, isBlockedBetween, isBookVisible, isHidden } from "./model/safety";
+import { updateShelfEntry } from "./model/shelves";
 import { postKind } from "./schema";
 
-/** Creates a review or note (and its feed activity). Used by the seed too. */
+/** Creates a review, note or quote (and its feed activity). Used by the seed too. */
 export async function createPost(
   ctx: MutationCtx,
   authorId: Id<"users">,
   input: {
-    kind: "review" | "note";
+    kind: "review" | "note" | "quote";
     bookId: Id<"books"> | null;
     rating: number | null;
     body: string;
     hasSpoilers: boolean;
+    page?: number | null;
   },
   now = Date.now(),
 ) {
@@ -35,6 +37,8 @@ export async function createPost(
     kind: "posted",
     postId,
     bookId: input.bookId,
+    // The feed says "guardou uma citação" for quotes.
+    data: { postKind: input.kind },
     createdAt: now,
   });
   await notifyMentions(ctx, { actorId: authorId, text: input.body, postId }, now);
@@ -96,16 +100,27 @@ export const create = mutation({
     rating: v.optional(v.union(v.number(), v.null())),
     body: v.string(),
     hasSpoilers: v.optional(v.boolean()),
+    page: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     const viewer = await requireVerifiedViewer(ctx);
     const input = parse(createPostSchema, args);
     await enforceRateLimit(ctx, "createPost", viewer._id);
-    if (input.bookId && !(await ctx.db.get(input.bookId as Id<"books">))) throw notFound("Livro");
-    const postId = await createPost(ctx, viewer._id, {
-      ...input,
-      bookId: input.bookId as Id<"books"> | null,
-    });
+    const bookId = input.bookId as Id<"books"> | null;
+    if (bookId && !(await ctx.db.get(bookId))) throw notFound("Livro");
+    // One rating per reader and book, the shelf's: a review shows it, or sets it.
+    const entry =
+      input.kind === "review" && bookId
+        ? await ctx.db
+            .query("shelfEntries")
+            .withIndex("by_user_book", (q) => q.eq("userId", viewer._id).eq("bookId", bookId))
+            .unique()
+        : null;
+    const rating = input.rating ?? entry?.rating ?? null;
+    const postId = await createPost(ctx, viewer._id, { ...input, bookId, rating });
+    if (entry && rating !== entry.rating) {
+      await updateShelfEntry(ctx, viewer._id, entry._id, { rating });
+    }
     return { post: { id: postId } };
   },
 });
@@ -118,17 +133,32 @@ export const get = query({
     const post = id ? await ctx.db.get(id) : null;
     if (!post) throw notFound("Post");
     const viewer = await getViewer(ctx);
-    const [author, book, view, comments, blocked] = await Promise.all([
+    const blocked = await blockedIds(ctx, viewer?._id ?? null);
+    const [author, book, view, comments] = await Promise.all([
       ctx.db.get(post.authorId),
       post.bookId ? ctx.db.get(post.bookId) : null,
-      postView(ctx, post, viewer?._id ?? null),
+      postView(ctx, post, viewer?._id ?? null, blocked),
       ctx.db
         .query("postComments")
         .withIndex("by_post", (q) => q.eq("postId", post._id))
         .collect(),
-      blockedIds(ctx, viewer?._id ?? null),
     ]);
     if (!author || isHidden(author) || blocked.has(author._id)) throw notFound("Post");
+    // An update shows what happened ("está lendo · p. 120 de 300") above the note.
+    const activity =
+      post.kind === "update"
+        ? await ctx.db
+            .query("activities")
+            .withIndex("by_post", (q) => q.eq("postId", post._id))
+            .first()
+        : null;
+    const entry =
+      activity && book
+        ? await ctx.db
+            .query("shelfEntries")
+            .withIndex("by_user_book", (q) => q.eq("userId", post.authorId).eq("bookId", book._id))
+            .unique()
+        : null;
     const commentViews = await Promise.all(
       comments.map(async (comment) => {
         const commenter = await ctx.db.get(comment.authorId);
@@ -144,6 +174,13 @@ export const get = query({
     );
     return {
       post: { ...view, author: authorOf(author), book: book ? bookSummary(book) : null },
+      update: activity
+        ? {
+            kind: activity.kind,
+            data: activity.data,
+            pages: editionPages(entry?.pageCount, book?.pageCount ?? null),
+          }
+        : null,
       comments: commentViews.filter((comment) => comment !== null),
     };
   },
@@ -192,5 +229,43 @@ export const removeComment = mutation({
     }
     await deleteComment(ctx, comment);
     return null;
+  },
+});
+
+/** A feed update `userId` may react to: its reader and book are visible, nobody blocked anybody. */
+async function updatePost(ctx: MutationCtx, userId: Id<"users">, activityId: Id<"activities">) {
+  const activity = await ctx.db.get(activityId);
+  const [actor, book] = await Promise.all([
+    activity ? ctx.db.get(activity.actorId) : null,
+    activity?.bookId ? ctx.db.get(activity.bookId) : null,
+  ]);
+  const visible = activity && actor && !isHidden(actor) && (!book || isBookVisible(book, userId));
+  if (!visible) throw notFound("Atualização");
+  const postId = await updatePostFor(ctx, activity as Doc<"activities">);
+  if (!postId) throw appError("INVALID", "Não dá para reagir a essa atualização.");
+  return postId;
+}
+
+/**
+ * Like or unlike an update in the feed ("está lendo", "terminou de ler"…), like Skoob. Its
+ * post is made on the first like, so likes, comments and notifications work like on posts.
+ */
+export const setActivityLiked = mutation({
+  args: { activityId: v.id("activities"), like: v.boolean() },
+  handler: async (ctx, { activityId, like }) => {
+    const viewer = await requireVerifiedViewer(ctx);
+    const activity = await ctx.db.get(activityId);
+    // Nothing to unlike on an update nobody reacted to.
+    if (!like && !activity?.postId) return { liked: false };
+    return setLike(ctx, viewer._id, await updatePost(ctx, viewer._id, activityId), like);
+  },
+});
+
+/** The post to open for commenting on a feed update (made if it has none yet). */
+export const activityPost = mutation({
+  args: { activityId: v.id("activities") },
+  handler: async (ctx, { activityId }) => {
+    const viewer = await requireVerifiedViewer(ctx);
+    return { post: { id: await updatePost(ctx, viewer._id, activityId) } };
   },
 });

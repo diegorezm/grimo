@@ -1,8 +1,10 @@
 /**
- * Demo data for `pnpm seed` (convex/seed.ts): readers, books, shelves, progress, ratings,
- * reviews, notes, follows, likes and comments. Titles/authors are ours (pt-BR); Open Library
+ * Demo data for `pnpm seed` (convex/seed.ts): readers, books, shelves, progress, ratings and
+ * feelings, reviews, notes, follows, likes and comments. Titles/authors are ours (pt-BR); Open Library
  * supplies the id, cover and year when it finds the book.
  */
+import type { Feeling } from "@grimo/core";
+
 type Status = "want_to_read" | "reading" | "read" | "abandoned";
 
 interface CatalogBook {
@@ -187,6 +189,46 @@ export const catalog = {
 
 export type BookKey = keyof typeof catalog;
 
+/**
+ * What each book makes readers feel. Each reader picks a few of them (rotated by reader), so
+ * the book pages show a spread rather than everyone agreeing.
+ */
+export const bookFeelings: Record<BookKey, Feeling[]> = {
+  duna: ["tensao", "curiosidade", "reflexao", "surpresa"],
+  maoEsquerda: ["reflexao", "curiosidade", "paixao"],
+  nomeDoVento: ["curiosidade", "nostalgia", "alegria", "tensao"],
+  hobbit: ["conforto", "alegria", "nostalgia", "diversao"],
+  orwell: ["angustia", "medo", "reflexao", "raiva"],
+  domCasmurro: ["curiosidade", "reflexao", "raiva", "surpresa"],
+  tortoArado: ["tristeza", "esperanca", "raiva", "reflexao"],
+  horaDaEstrela: ["tristeza", "reflexao", "angustia"],
+  sapiens: ["curiosidade", "reflexao", "surpresa", "tedio"],
+  tresCorpos: ["curiosidade", "tensao", "surpresa", "medo"],
+  mistborn: ["tensao", "alegria", "surpresa", "esperanca"],
+  hailMary: ["diversao", "esperanca", "alegria", "tensao"],
+  garotaExemplar: ["tensao", "surpresa", "raiva", "angustia"],
+  expressoOriente: ["curiosidade", "surpresa", "conforto"],
+  it: ["medo", "tensao", "nostalgia", "angustia"],
+  habitos: ["inspiracao", "reflexao", "tedio"],
+  persepolis: ["tristeza", "reflexao", "raiva", "esperanca"],
+  cemAnos: ["nostalgia", "reflexao", "surpresa", "tristeza"],
+  pequenoPrincipe: ["conforto", "nostalgia", "reflexao", "tristeza"],
+  orgulho: ["paixao", "diversao", "conforto"],
+  neuromancer: ["curiosidade", "tensao", "tedio"],
+  meiaNoite: ["esperanca", "reflexao", "conforto", "tristeza"],
+  senhorDosAneis: ["esperanca", "tensao", "nostalgia", "alegria"],
+  watchmen: ["reflexao", "angustia", "tensao"],
+};
+
+/** The `count` feelings reader number `reader` picks for a book. */
+export const feelingsFor = (book: BookKey, reader: number, count: number) => {
+  const all = bookFeelings[book];
+  return Array.from(
+    { length: Math.min(count, all.length) },
+    (_, i) => all[(reader + i) % all.length]!,
+  );
+};
+
 interface ShelfSeed {
   book: BookKey;
   status: Status;
@@ -196,11 +238,15 @@ interface ShelfSeed {
   rating?: number;
   /** "MM-DD" in the current year. */
   finished?: string;
+  /** Comment written with the page (shows on the feed card). */
+  note?: string;
 }
 
 interface PostSeed {
-  kind: "review" | "note";
+  kind: "review" | "note" | "quote";
   book?: BookKey;
+  /** Page of a quote. */
+  page?: number;
   rating?: number;
   body: string;
   spoilers?: boolean;
@@ -225,7 +271,13 @@ export const readers: ReaderSeed[] = [
     genres: ["science_fiction", "fantasy", "literary_fiction"],
     goal: 24,
     shelves: [
-      { book: "duna", status: "reading", page: 312, pages: 720 },
+      {
+        book: "duna",
+        status: "reading",
+        page: 312,
+        pages: 720,
+        note: "Os Fremen são a melhor parte até aqui. Que mundo!",
+      },
       { book: "maoEsquerda", status: "reading", page: 118 },
       { book: "nomeDoVento", status: "reading", page: 540 },
       { book: "hobbit", status: "read", rating: 5, finished: "01-19" },
@@ -284,7 +336,12 @@ export const readers: ReaderSeed[] = [
     shelves: [
       { book: "orgulho", status: "read", rating: 5, finished: "02-02" },
       { book: "expressoOriente", status: "read", rating: 5, finished: "06-10" },
-      { book: "meiaNoite", status: "reading", page: 190 },
+      {
+        book: "meiaNoite",
+        status: "reading",
+        page: 190,
+        note: "Cada capítulo é uma vida nova. Não consigo parar.",
+      },
       { book: "cemAnos", status: "want_to_read" },
       { book: "pequenoPrincipe", status: "want_to_read" },
       { book: "garotaExemplar", status: "want_to_read" },
@@ -296,6 +353,12 @@ export const readers: ReaderSeed[] = [
         book: "expressoOriente",
         rating: 5,
         body: "Poirot nunca decepciona. Achei que tinha descoberto o culpado na metade… não tinha.",
+      },
+      {
+        kind: "quote",
+        book: "domCasmurro",
+        page: 64,
+        body: "Olhos de cigana oblíqua e dissimulada.",
       },
       {
         kind: "note",

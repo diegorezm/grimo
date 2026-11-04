@@ -46,7 +46,7 @@ Ao decidir se algo entra, pergunte:
 | Busca e sugestões de leitores                                            | todos             |   ◐    | Agora (falta no mobile, F3) |
 | Feed da rede com agrupamento                                             | todos             |   ✓    | —       |
 | **Feed estilo Skoob**: card com capa grande, barra de progresso, estrelas, "Quero ler" direto do card, abas Seguindo e Comunidade (`/feed`) | Skoob | ✓ | — |
-| Curtir e comentar qualquer atualização (não só posts), comentário junto da página marcada, tipos novos (abandonou, relendo, citação) | Skoob | — | Agora (parte 2 do feed) |
+| Curtir e comentar qualquer atualização (não só posts), comentário junto da página marcada, frases como "começou a ler" e "abandonou" | Skoob | ✓ | — |
 | Curtidas e comentários em posts                                          | todos             |   ✓    | —       |
 | **Notificações** (seguidor, curtida, comentário) + push no iPhone (F6)   | todos             |   ◐    | Agora (falta o push) |
 | **Menções** com @ em posts e comentários (notifica o mencionado)         | Twitter/Letterboxd |  ✓    | —       |
@@ -65,15 +65,15 @@ Ao decidir se algo entra, pergunte:
 | Quatro estantes, progresso por página, nota, datas                       | Skoob             |   ✓    | —       |
 | Remover livro da estante (F2)                                            | —                 |   ◐    | Agora (falta no mobile) |
 | Paginômetro / páginas lidas no ano                                       | Skoob             |   ✓    | —       |
-| **Sessão de leitura com cronômetro** (tempo + páginas por sessão)        | StoryGraph/Maratona | —    | Próximo |
+| **Sessão de leitura com cronômetro** (tempo + páginas por sessão, no feed) | StoryGraph/Maratona | ✓  | —       |
 | **Live Activity / Dynamic Island** durante a sessão de leitura           | —                 |   —    | Próximo (precisa de build EAS) |
-| **Ofensiva**: dias seguidos lendo, com lembrete gentil                   | Duolingo/Maratona |   —    | Próximo |
+| **Ofensiva**: dias seguidos lendo (feito); lembrete gentil por push      | Duolingo/Maratona |   ◐    | Junto com o push |
 | Formato do exemplar (físico, ebook, audiobook) e progresso em % ou minutos | StoryGraph      |   —    | Depois  |
 | Releituras com histórico de cada leitura (F8)                            | Goodreads         |   —    | Depois  |
 | Estantes personalizadas / tags ("favoritos", "emprestei", "2026")        | Skoob/Goodreads   |   —    | Depois  |
 | Motivo ao abandonar ("não me prendeu", "pausa")                          | StoryGraph        |   —    | Depois  |
 | Notas privadas por livro (só você vê)                                    | Skoob             |   —    | Depois  |
-| **Citações** com página: post tipo `quote`, card no estúdio, e dá para citar dentro da conversa do Juntos (F11) | Skoob/Kindle | — | Próximo |
+| **Citações** com página: post tipo `quote` no feed e na página do livro (feito); card no estúdio e citar dentro da conversa do Juntos (F11) | Skoob/Kindle | ◐ | Próximo |
 | Número de páginas **da sua edição** (`pageCount` por entrada): progresso e meta certos (F13) | StoryGraph | ✓ | — |
 | Meta mensal e meta por páginas (F9)                                      | Goodreads         |   —    | Depois  |
 | Escanear o código de barras (ISBN) para adicionar (F14)                  | Skoob/Goodreads   |   —    | Próximo |
@@ -107,7 +107,7 @@ convite**, e o convite é um link que traz gente nova.
 | 1 | Card do grupo e card de "terminamos juntos" | Spotify Wrapped | ✓ | — |
 | 2 | **Clubes**: grupo fixo que lê um livro depois do outro, enquete para o próximo | Bookclubs/Fable | — | Depois |
 | 2 | Encontros do clube com data (lembrete, link da chamada ou local) | Bookclubs | — | Depois |
-| 3 | **Leituras abertas**: grupos públicos por livro, qualquer um entra (resolve a aba vazia de quem não tem amigos no app) | Maratona | — | Depois |
+| 3 | **Leituras abertas**: grupos públicos por livro, qualquer um entra (resolve a aba vazia de quem não tem amigos no app) | Maratona | ✓ | — |
 | 3 | **Maratonas literárias**: evento com prazo e meta; o Grimo pode lançar uma por mês ("Maratona de Halloween") | Maratona | — | Depois |
 | 3 | Clube público de criador (booktuber, BookTok) com página própria | Fable | — | Talvez |
 
@@ -145,8 +145,8 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Recurso                                                                  | Inspiração        | Status | Quando  |
 | ------------------------------------------------------------------------ | ----------------- | :----: | ------- |
 | Busca e página do livro com resenhas da comunidade                       | todos             |   ✓    | —       |
-| **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas e seguíveis | Letterboxd | — | Próximo |
-| Em alta entre quem você segue (F10)                                      | Letterboxd        |   —    | Próximo |
+| **Listas curadas por leitores** ("terror para começar", "melhores de 2026"), públicas no perfil (seguir listas fica para depois) | Letterboxd | ◐ | — |
+| Em alta entre quem você segue (F10)                                      | Letterboxd        |   ✓    | —       |
 | Amigos que querem ler o mesmo livro → "ler juntos?" (F10)                | —                 |   ✓    | —       |
 | Livros parecidos na página do livro                                      | StoryGraph        |   —    | Depois  |
 | Explorar por gênero / humor                                              | StoryGraph        |   —    | Depois  |
@@ -159,8 +159,8 @@ Motivar sem transformar leitura em competição: nada de ranking global, só voc
 | Card do mês para Stories (4 modelos) na web                              | Spotify Wrapped   |   ✓    | —       |
 | **Estúdio do card do mês no mobile** com compartilhamento nativo (F3)    | —                 |   ✓    | —       |
 | **Retrospectiva do ano** (dezembro, mesmos modelos) (F9)                 | Skoob/Spotify     |   ✓    | —       |
-| Card de resenha e card de citação                                        | Letterboxd        |   —    | Próximo |
-| Card de "terminei de ler" (capa + nota + frase)                          | —                 |   —    | Próximo |
+| Card de citação (feito) e card de resenha                                | Letterboxd        |   ◐    | Próximo |
+| Card de "terminei de ler" (capa + nota + tempo de leitura)               | —                 |   ✓    | —       |
 | Link do perfil bonito (preview com OG image)                             | Letterboxd        |   —    | Próximo |
 | Widget na tela inicial (livro atual, meta, ofensiva)                     | —                 |   —    | Depois (precisa de build EAS) |
 
@@ -185,7 +185,7 @@ Exigem logística, endereço ou parceiros: só fazem sentido com uma base grande
 | **Botão "Entrar com Apple"** no mobile (exigido pela App Store)          | —                 |   ◐    | Próximo (trava a App Store) |
 | **Importar do Skoob e do Goodreads** (F7)                                | —                 |   ◐    | Goodreads feito; o Skoob não tem exportação oficial |
 | Exportar em CSV (além do JSON)                                           | Goodreads         |   —    | Depois  |
-| Painel de moderação `/admin` (F15)                                       | —                 |   ✓    | Falta avisar quem denunciou do resultado |
+| Painel de moderação `/admin` (F15), com aviso do resultado para quem denunciou | —            |   ✓    | —       |
 | Filtro automático de conteúdo (F16)                                      | —                 |   —    | Depois  |
 | Preferências de notificação por tipo                                     | —                 |   —    | Junto com as notificações |
 

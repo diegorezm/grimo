@@ -72,6 +72,9 @@ function RootNavigator() {
         <Stack.Screen name="feed" />
         <Stack.Screen name="group/[id]" />
         <Stack.Screen name="group-card/[id]" />
+        <Stack.Screen name="book-card/[id]" />
+        <Stack.Screen name="quote-card/[id]" />
+        <Stack.Screen name="list/[id]" />
         <Stack.Screen
           name="report"
           options={{
@@ -85,7 +88,7 @@ function RootNavigator() {
           name="progress/[id]"
           options={{
             presentation: "formSheet",
-            sheetAllowedDetents: [0.55, 0.8],
+            sheetAllowedDetents: [0.65, 0.95],
             sheetGrabberVisible: true,
           }}
         />
@@ -94,6 +97,30 @@ function RootNavigator() {
           options={{
             presentation: "formSheet",
             sheetAllowedDetents: [0.85],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
+          name="new-list"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.6],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
+          name="add-to-list/[id]"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.6, 0.9],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
+          name="quote/[id]"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.7],
             sheetGrabberVisible: true,
           }}
         />

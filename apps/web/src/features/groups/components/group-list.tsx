@@ -1,4 +1,10 @@
-import { errorMessage, useFriendsWant, useGroups, useJoinGroup } from "@grimo/client";
+import {
+  errorMessage,
+  useFriendsWant,
+  useGroups,
+  useJoinGroup,
+  useOpenRecent,
+} from "@grimo/client";
 import { friendsWantLabel, membersLabel, parseInviteCode } from "@grimo/core";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
@@ -6,7 +12,7 @@ import { Spinner } from "@/components/feedback/spinner";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import { Button } from "@/components/ui/button";
 import { formatFinishBy } from "@/components/ui/finish-picker";
-import { BookCard, BookCover, BookPeekLink } from "@/features/books";
+import { BookCard, BookCover, BookPeekLink, OpenReadRow } from "@/features/books";
 
 /** The Juntos tab: your groups, a box for an invite code, and ideas when there are none. */
 export function GroupList() {
@@ -54,8 +60,34 @@ export function GroupList() {
         </p>
       )}
       <JoinByCode />
+      <OpenRecent />
       <Ideas />
     </div>
+  );
+}
+
+/** "Entre numa leitura": open reads of any book you can join now (for those without friends here). */
+function OpenRecent() {
+  const reads = useOpenRecent().data?.items ?? [];
+  if (reads.length === 0) return null;
+  return (
+    <section aria-labelledby="open-recent" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2 id="open-recent" className="text-2xl font-medium italic">
+          Entre numa leitura
+        </h2>
+        <p className="text-sm text-text-muted">
+          Leituras abertas: qualquer leitor entra, sem convite.
+        </p>
+      </div>
+      <ul className="grid grid-cols-1 gap-3 @3xl/main:grid-cols-2">
+        {reads.map((read) => (
+          <li key={read.id}>
+            <OpenReadRow read={read} signedIn showBook />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

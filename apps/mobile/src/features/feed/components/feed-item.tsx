@@ -3,10 +3,12 @@ import {
   useMe,
   useSetBlocked,
   useShelveFromFeed,
-  useToggleLike,
+  useToggleUpdateLike,
+  useUpdateThread,
 } from "@grimo/client";
 import {
   activityProgress,
+  cardFeelings,
   commentCountLabel,
   feedHeadline,
   SHELF_LABELS,
@@ -15,14 +17,17 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Avatar, Card, MentionText, ProgressBar, Stars, Text } from "@/components/ui";
+import { Avatar, Card, FeelingTags, MentionText, ProgressBar, Stars, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
-import { BookCover } from "@/features/books";
+import { BookCover, QuoteText } from "@/features/books";
 import { showPostActions } from "@/features/moderation";
 import { useTheme } from "@/hooks/use-theme";
 
 /** Covers shown for a grouped entry before "+N". */
 const MAX_COVERS = 5;
+
+/** Updates readers can like and comment on (follows can't). */
+const REACTABLE = new Set<FeedItemData["kind"]>(["shelved", "progress", "finished", "posted"]);
 
 /**
  * One activity as a card: who did what, the book with a big cover and what it means for the
@@ -30,7 +35,8 @@ const MAX_COVERS = 5;
  * are older activities grouped into this one (see `groupActivities`).
  */
 export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedItemData[] }) {
-  const toggleLike = useToggleLike();
+  const toggleLike = useToggleUpdateLike();
+  const thread = useUpdateThread();
   const setBlocked = useSetBlocked();
   const theme = useTheme();
   const me = useMe().data;
@@ -38,6 +44,7 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
   const mine = me?.id === actor.id;
   const openLibraryId = book?.openLibraryId;
   const openBook = (id: string) => router.push({ pathname: "/book/[id]", params: { id } });
+  const openThread = (id: string) => router.push({ pathname: "/post/[id]", params: { id } });
   // Progress groups show only the latest page; shelf and finished groups list every book.
   const books =
     more.length > 0 && item.kind !== "progress"
@@ -130,69 +137,80 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
         )
       )}
 
-      {post?.id && (
-        <>
-          {post.body && (
-            <MentionText
-              style={styles.quote}
-              numberOfLines={6}
-              text={post.hasSpoilers ? "Contém spoiler · abra o livro para ler." : post.body}
-            />
-          )}
-          <View style={[styles.actions, { borderTopColor: theme.border }]}>
+      {post?.kind === "quote" ? (
+        <QuoteText body={post.body} page={post.page} />
+      ) : post?.body ? (
+        <MentionText
+          style={styles.quote}
+          numberOfLines={6}
+          text={post.hasSpoilers ? "Contém spoiler · toque em comentários para ler." : post.body}
+        />
+      ) : null}
+      {REACTABLE.has(item.kind) && (
+        <View style={[styles.actions, { borderTopColor: theme.border }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={post?.likedByMe ? "Descurtir" : "Curtir"}
+            onPress={() => toggleLike.mutate({ activityId: item.id, like: !post?.likedByMe })}
+            hitSlop={8}
+          >
+            <Text variant="label" color={post?.likedByMe ? "accent" : "textMuted"}>
+              {post?.likedByMe ? "♥" : "♡"} {post?.likeCount ?? 0}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ver comentários"
+            disabled={thread.isPending}
+            onPress={() =>
+              post?.id
+                ? openThread(post.id)
+                : thread.mutate(item.id, {
+                    onSuccess: ({ post: created }) => openThread(created.id),
+                  })
+            }
+            hitSlop={8}
+            style={styles.flex}
+          >
+            <Text variant="label" color="textMuted">
+              {post?.id ? commentCountLabel(post.commentCount) : "Comentar"}
+            </Text>
+          </Pressable>
+          {!mine && post?.id && post.body ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={post.likedByMe ? "Descurtir" : "Curtir"}
-              onPress={() => toggleLike.mutate({ postId: post.id!, like: !post.likedByMe })}
-              hitSlop={8}
-            >
-              <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-                {post.likedByMe ? "♥" : "♡"} {post.likeCount}
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Ver comentários"
-              onPress={() => router.push({ pathname: "/post/[id]", params: { id: post.id! } })}
-              hitSlop={8}
-              style={styles.flex}
+              accessibilityLabel="Denunciar ou bloquear"
+              onPress={() =>
+                showPostActions({
+                  postId: post.id!,
+                  author: actor,
+                  block: (userId) => setBlocked.mutate({ userId, block: true }),
+                })
+              }
+              hitSlop={10}
             >
               <Text variant="label" color="textMuted">
-                {commentCountLabel(post.commentCount)}
+                ⋯
               </Text>
             </Pressable>
-            {!mine && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Denunciar ou bloquear"
-                onPress={() =>
-                  showPostActions({
-                    postId: post.id!,
-                    author: actor,
-                    block: (userId) => setBlocked.mutate({ userId, block: true }),
-                  })
-                }
-                hitSlop={10}
-              >
-                <Text variant="label" color="textMuted">
-                  ⋯
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        </>
+          ) : null}
+        </View>
       )}
     </Card>
   );
 }
 
-/** Under the title: the progress bar, the stars or the shelf, depending on what happened. */
+/**
+ * Under the title: the progress bar, the stars or the shelf, depending on what happened, and
+ * how the reader felt (at that page, or about the book they finished).
+ */
 function BookDetail({ item }: { item: FeedItemData }) {
   const theme = useTheme();
   const { kind, data, reading, post } = item;
+  const feelings = cardFeelings(data, reading?.feelings);
   if (kind === "progress") {
     const progress = activityProgress(data, reading?.pages ?? null);
-    if (!progress) return null;
+    if (!progress) return <FeelingTags feelings={feelings} />;
     return (
       <View style={styles.progress}>
         {progress.percent !== null && <ProgressBar percent={progress.percent} />}
@@ -200,11 +218,19 @@ function BookDetail({ item }: { item: FeedItemData }) {
           {progress.label}
           {progress.percent !== null && ` · ${progress.percent}%`}
         </Text>
+        <FeelingTags feelings={feelings} />
       </View>
     );
   }
   const rating = post?.rating ?? reading?.rating ?? null;
-  if (rating) return <Stars value={rating} size={15} />;
+  if (rating || feelings.length > 0) {
+    return (
+      <View style={styles.progress}>
+        {rating ? <Stars value={rating} size={15} /> : null}
+        <FeelingTags feelings={feelings} />
+      </View>
+    );
+  }
   const status = data?.status as ShelfStatus | undefined;
   if (kind === "shelved" && status) {
     return (

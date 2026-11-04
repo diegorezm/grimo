@@ -7,10 +7,13 @@ import {
 } from "@grimo/client";
 import {
   editionPages,
+  type Feeling,
+  formatRating,
   readingPercent,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
+  starShares,
   timeAgo,
 } from "@grimo/core";
 import { router } from "expo-router";
@@ -21,6 +24,8 @@ import {
   Avatar,
   Button,
   Card,
+  FeelingPicker,
+  FeelingTags,
   Glass,
   MentionText,
   ProgressBar,
@@ -32,6 +37,9 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
 import { FriendsWant } from "./friends-want";
+import { OpenReads } from "./open-reads";
+import { QuoteText } from "./quote-text";
+import { SessionControl } from "./session-control";
 import { StartGroup } from "./start-group";
 
 /** Book page: cover, shelf picker, progress / rating, synopsis and reviews. */
@@ -56,7 +64,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
     );
   }
 
-  const { book, entry, community, reviews, friendsWant } = data;
+  const { book, entry, community, reviews, quotes, friendsWant, diary } = data;
   const pages = editionPages(entry?.pageCount, book.pageCount);
   const bookInput = bookInputOf(book);
   const percent = entry ? readingPercent(entry.currentPage, pages) : null;
@@ -94,6 +102,15 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
         </View>
 
         <ShelfPicker book={book} entry={entry} />
+        {book.id && (
+          <Button
+            variant="ghost"
+            title="Adicionar a uma lista"
+            onPress={() =>
+              router.push({ pathname: "/add-to-list/[id]", params: { id: openLibraryId } })
+            }
+          />
+        )}
 
         {entry?.status === "reading" && (
           <Card>
@@ -112,13 +129,42 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
                 router.push({ pathname: "/progress/[id]", params: { id: openLibraryId } })
               }
             />
+            {book.id && (
+              <SessionControl
+                entryId={entry.id}
+                page={entry.currentPage}
+                book={{ ...book, id: book.id }}
+              />
+            )}
           </Card>
         )}
 
-        {entry?.status === "read" && <RatingCard entryId={entry.id} rating={entry.rating} />}
+        {(entry?.status === "read" || entry?.status === "abandoned") && (
+          <>
+            <RatingCard
+              entryId={entry.id}
+              rating={entry.rating}
+              feelings={entry.feelings}
+              suggested={diary.suggested}
+            />
+            {entry.status === "read" && (
+              <Button
+                variant="secondary"
+                title="Card de “terminei” para os Stories"
+                onPress={() =>
+                  router.push({ pathname: "/book-card/[id]", params: { id: openLibraryId } })
+                }
+              />
+            )}
+          </>
+        )}
+        <Diary marks={diary.marks} />
 
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
           <StartGroup book={bookInput} />
+        )}
+        {(book.reviewStatus === null || book.reviewStatus === "approved") && (
+          <OpenReads openLibraryId={openLibraryId} />
         )}
 
         {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}
@@ -132,11 +178,13 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           </Card>
         )}
 
+        <CommunityFeelings community={community} />
+
         <View style={styles.section}>
           <View style={styles.between}>
             <Text variant="heading">Resenhas</Text>
             <Text variant="label" color="textMuted">
-              {community.averageRating ? `★ ${community.averageRating} · ` : ""}
+              {community.averageRating ? `★ ${formatRating(community.averageRating)} · ` : ""}
               {community.readers} leitores
             </Text>
           </View>
@@ -154,6 +202,44 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           )}
           {reviews.map((review) => (
             <Review key={review.id} review={review} />
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text variant="heading">Citações</Text>
+          {book.id && entry && (
+            <Button
+              variant="secondary"
+              title="Guardar citação"
+              onPress={() =>
+                router.push({ pathname: "/quote/[id]", params: { id: openLibraryId } })
+              }
+            />
+          )}
+          {quotes.length === 0 && (
+            <Text color="textMuted">Ninguém guardou um trecho deste livro ainda.</Text>
+          )}
+          {quotes.map((quote) => (
+            <Card key={quote.id}>
+              <QuoteText body={quote.body} page={quote.page} />
+              <View style={styles.between}>
+                <Text variant="small" color="textMuted" style={styles.grow}>
+                  {quote.author.name} · {timeAgo(new Date(quote.createdAt))}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Card da citação para os Stories"
+                  onPress={() =>
+                    router.push({ pathname: "/quote-card/[id]", params: { id: quote.id } })
+                  }
+                  hitSlop={8}
+                >
+                  <Text variant="label" color="accent">
+                    Card
+                  </Text>
+                </Pressable>
+              </View>
+            </Card>
           ))}
         </View>
       </ScrollView>
@@ -216,19 +302,145 @@ function ShelfPicker({ book, entry }: { book: Detail["book"]; entry: Detail["ent
   );
 }
 
-function RatingCard({ entryId, rating }: { entryId: string; rating: number | null }) {
+/** Your rating: half stars and the feelings the book left (the diary suggests them). */
+function RatingCard({
+  entryId,
+  rating,
+  feelings,
+  suggested,
+}: {
+  entryId: string;
+  rating: number | null;
+  feelings: Feeling[];
+  suggested: Feeling[];
+}) {
   const update = useUpdateShelfEntry();
   return (
-    <Card style={styles.centerCard}>
-      <Text variant="label" color="textMuted">
-        Sua nota
-      </Text>
-      <Stars
-        value={rating}
-        size={30}
-        onChange={(value) => update.mutate({ id: entryId, rating: value })}
+    <Card>
+      <View style={styles.centerCard}>
+        <Text variant="label" color="textMuted">
+          Sua nota{rating !== null ? ` · ${formatRating(rating)}` : ""}
+        </Text>
+        <Stars
+          value={rating}
+          size={30}
+          onChange={(value) => update.mutate({ id: entryId, rating: value })}
+        />
+      </View>
+      <FeelingPicker
+        value={feelings}
+        suggested={suggested}
+        onChange={(next) => update.mutate({ id: entryId, feelings: next })}
       />
     </Card>
+  );
+}
+
+/** The pages where you said how you felt: the diary your rating's feelings come from. */
+function Diary({ marks }: { marks: Detail["diary"]["marks"] }) {
+  const [open, setOpen] = useState(false);
+  if (marks.length === 0) return null;
+  return (
+    <Card>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen(!open)}
+        style={styles.between}
+      >
+        <Text variant="label" color="textMuted">
+          Seu diário de leitura · {marks.length} {marks.length === 1 ? "página" : "páginas"}
+        </Text>
+        <Text variant="label" color="textMuted">
+          {open ? "−" : "+"}
+        </Text>
+      </Pressable>
+      {open &&
+        marks.map((mark) => (
+          <View key={mark.at} style={styles.diaryRow}>
+            <Text variant="label" color="textMuted" style={styles.diaryPage}>
+              p. {mark.page}
+            </Text>
+            <View style={styles.grow}>
+              <FeelingTags feelings={mark.feelings} />
+            </View>
+          </View>
+        ))}
+    </Card>
+  );
+}
+
+/** "Como os leitores se sentiram" and the star bars, once someone rated or felt the book. */
+function CommunityFeelings({ community }: { community: Detail["community"] }) {
+  if (community.ratings === 0 && community.feelings.length === 0) return null;
+  return (
+    <View style={styles.section}>
+      {community.feelings.length > 0 && (
+        <Card>
+          <Text variant="title">Como os leitores se sentiram</Text>
+          {community.feelings.map((row) => (
+            <BarRow
+              key={row.feeling}
+              label={row.label}
+              percent={row.percent}
+              end={`${row.percent}%`}
+            />
+          ))}
+          <Text variant="label" color="textMuted">
+            De {community.feelingReaders}{" "}
+            {community.feelingReaders === 1 ? "leitor que contou" : "leitores que contaram"}
+          </Text>
+        </Card>
+      )}
+      {community.ratings > 0 && (
+        <Card>
+          <Text variant="title">
+            Notas · ★ {formatRating(community.averageRating ?? 0)} ({community.ratings})
+          </Text>
+          {starShares(community.stars).map((bar) => (
+            <BarRow
+              key={bar.star}
+              label={`${bar.star} ★`}
+              percent={bar.percent}
+              end={String(bar.count)}
+              gold
+            />
+          ))}
+        </Card>
+      )}
+    </View>
+  );
+}
+
+function BarRow({
+  label,
+  percent,
+  end,
+  gold = false,
+}: {
+  label: string;
+  percent: number;
+  end: string;
+  gold?: boolean;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.barRow}>
+      <Text variant="small" style={styles.barLabel} color={gold ? "gold" : "text"}>
+        {label}
+      </Text>
+      <View style={[styles.barTrack, { backgroundColor: theme.surfaceMuted }]}>
+        <View
+          style={[
+            styles.barFill,
+            { width: `${percent}%`, backgroundColor: gold ? theme.gold : theme.accent },
+          ]}
+        />
+      </View>
+      <Text variant="label" color="textMuted" style={styles.barEnd}>
+        {end}
+      </Text>
+    </View>
   );
 }
 
@@ -278,7 +490,7 @@ function Review({ review }: { review: Detail["reviews"][number] }) {
           {timeAgo(new Date(review.createdAt))}
         </Text>
       </View>
-      {review.rating ? <Stars value={review.rating} size={14} /> : null}
+      {review.rating !== null ? <Stars value={review.rating} size={14} /> : null}
       {revealed ? (
         <MentionText text={review.body} />
       ) : (
@@ -302,8 +514,16 @@ const styles = StyleSheet.create({
   },
   hero: { alignItems: "center", gap: spacing[2] },
   between: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  grow: { flex: 1 },
   section: { gap: spacing[3] },
   centerCard: { alignItems: "center" },
+  diaryRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  diaryPage: { width: 56 },
+  barRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  barLabel: { width: 96 },
+  barTrack: { flex: 1, height: 8, borderRadius: radius.full, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: radius.full },
+  barEnd: { width: 40, textAlign: "right" },
   bold: { fontWeight: "700" },
   author: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   picker: { flexDirection: "row", padding: spacing[1], gap: spacing[1], borderRadius: radius.xl },

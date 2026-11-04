@@ -9,7 +9,7 @@ import {
   shelfQuery,
   yearOverviewQuery,
 } from "@grimo/client";
-import { computeMonthlySummary, type ShelfStatus, toMonthKey } from "@grimo/core";
+import { computeMonthlySummary, type Feeling, type ShelfStatus, toMonthKey } from "@grimo/core";
 import { QueryClient } from "@tanstack/react-query";
 import type { YearOverview } from "@/features/stats";
 
@@ -140,6 +140,7 @@ const SHELF: ShelfItem[] = ENTRIES.map((entry) => {
       currentPage: entry.page,
       pageCount: null,
       rating: entry.rating ?? null,
+      feelings: [],
       startedAt: entry.status === "want_to_read" ? null : at - 10 * DAY,
       finishedAt: entry.status === "read" ? at : null,
       createdAt: at - 10 * DAY,
@@ -198,6 +199,7 @@ const post = (key: string, body: string, likes: number, comments: number, likedB
   body,
   rating: 5,
   hasSpoilers: false,
+  page: null,
   createdAt: NOW - 2 * 60 * 60 * 1000,
   likeCount: likes,
   commentCount: comments,
@@ -206,9 +208,10 @@ const post = (key: string, body: string, likes: number, comments: number, likedB
 
 const book = (key: string) => BOOKS.find((item) => item.key === key)!;
 /** The card's progress bar and stars; the visitor has none of these books. */
-const reading = (key: string, rating: number | null = null) => ({
+const reading = (key: string, rating: number | null = null, feelings: Feeling[] = []) => ({
   pages: book(key).pages,
   rating,
+  feelings,
   viewerStatus: null,
 });
 const minutes = (value: number) => NOW - value * 60 * 1000;
@@ -245,7 +248,7 @@ const FEED_ITEMS: FeedItem[] = [
   {
     id: id("a3"),
     kind: "progress",
-    data: { status: "reading", page: 620 },
+    data: { status: "reading", page: 620, feelings: ["medo", "tensao"] },
     createdAt: minutes(180),
     actor: friend("caio", "Caio"),
     target: null,
@@ -261,7 +264,7 @@ const FEED_ITEMS: FeedItem[] = [
     actor: friend("lu", "Lu Prado"),
     target: null,
     book: summary(book("watch")),
-    reading: reading("watch", 5),
+    reading: reading("watch", 5, ["reflexao", "angustia"]),
     post: null,
   },
   {

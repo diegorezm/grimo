@@ -9,6 +9,7 @@ import {
   query,
 } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
+import { deleteList } from "./model/lists";
 import {
   deleteComment,
   deletePost,
@@ -48,6 +49,12 @@ async function reportedContent(ctx: MutationCtx, target: string, targetId: strin
     const message = id ? await ctx.db.get(id) : null;
     if (!message) throw notFound("Mensagem");
     return { userId: message.authorId, snapshot: message.body };
+  }
+  if (target === "list") {
+    const id = ctx.db.normalizeId("lists", targetId);
+    const list = id ? await ctx.db.get(id) : null;
+    if (!list) throw notFound("Lista");
+    return { userId: list.ownerId, snapshot: `${list.title}\n${list.description}`.trim() };
   }
   const id = ctx.db.normalizeId("users", targetId);
   const user = id ? await ctx.db.get(id) : null;
@@ -293,6 +300,10 @@ async function removeReported(ctx: MutationCtx, target: ReportTarget, targetId: 
   } else if (target === "message") {
     const id = ctx.db.normalizeId("groupMessages", targetId);
     if (id && (await ctx.db.get(id))) await ctx.db.delete(id);
+  } else if (target === "list") {
+    const id = ctx.db.normalizeId("lists", targetId);
+    const list = id ? await ctx.db.get(id) : null;
+    if (list) await deleteList(ctx, list);
   }
 }
 
@@ -710,6 +721,22 @@ async function reportContent(ctx: QueryCtx, report: Doc<"reports">) {
       members: group?.memberCount ?? null,
     };
   }
+  if (report.target === "list") {
+    const id = ctx.db.normalizeId("lists", report.targetId);
+    const list = id ? await ctx.db.get(id) : null;
+    if (!list) return null;
+    return {
+      kind: "list" as const,
+      postId: null,
+      groupId: null,
+      listId: list._id,
+      // Same shape as the snapshot, so an edited list shows as edited.
+      body: `${list.title}
+${list.description}`.trim(),
+      items: list.itemCount,
+      createdAt: list.createdAt,
+    };
+  }
   const id = ctx.db.normalizeId("users", report.targetId);
   const user = id ? await ctx.db.get(id) : null;
   if (!user) return null;
@@ -771,11 +798,35 @@ export const act = mutation({
     for (const other of open) {
       if (other.target === report.target && other.targetId === report.targetId) {
         await ctx.db.patch(other._id, { status, resolvedAt: now });
+        await noticeToReporter(ctx, other, status === "actioned", now);
       }
     }
     return null;
   },
 });
+
+/**
+ * Tells whoever reported that moderation looked at it (the App Store review expects reports to
+ * get an answer). The notice comes from the Grimo: the reporter is its own "actor", and it says neither
+ * who decided nor what happened to the other reader.
+ */
+async function noticeToReporter(
+  ctx: MutationCtx,
+  report: Doc<"reports">,
+  actioned: boolean,
+  now: number,
+) {
+  if (!report.reporterId) return;
+  await ctx.db.insert("notifications", {
+    userId: report.reporterId,
+    actorId: report.reporterId,
+    kind: actioned ? "report_actioned" : "report_dismissed",
+    postId: null,
+    commentId: null,
+    createdAt: now,
+    readAt: null,
+  });
+}
 
 /** Approve or reject a hand-added book from the panel. */
 export const decideBook = mutation({

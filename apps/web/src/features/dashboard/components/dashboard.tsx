@@ -9,6 +9,8 @@ import { FriendsWantRow } from "./friends-want-row";
 import { GoalHero } from "./goal-hero";
 import { MonthList } from "./month-list";
 import { ShelfCarousel } from "./shelf-carousel";
+import { StreakLine } from "./streak-line";
+import { TrendingRow } from "./trending-row";
 
 /**
  * Home: shelf tiles pick the carousel of books; goal and month highlights below; the feed
@@ -26,6 +28,7 @@ export function Dashboard() {
     <div className="grid grid-cols-1 gap-8 px-4 pt-2 @5xl/main:grid-cols-[minmax(0,1fr)_22rem] @5xl/main:gap-6 lg:px-8 lg:pt-6 lg:pb-8">
       <div className="flex min-w-0 flex-col gap-9">
         <OnboardingChecklist />
+        <StreakLine />
         <RetrospectiveBanner />
         <ShelfTiles counts={counts} selected={status} onSelect={setStatus} />
         <ShelfCarousel
@@ -36,6 +39,7 @@ export function Dashboard() {
           <GoalHero />
           <MonthList />
         </div>
+        <TrendingRow />
         <FriendsWantRow />
       </div>
       <FeedPanel className="h-[36rem] @5xl/main:sticky @5xl/main:top-6 @5xl/main:h-[calc(100dvh-8.5rem)]" />

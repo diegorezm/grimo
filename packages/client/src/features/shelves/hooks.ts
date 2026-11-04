@@ -1,5 +1,11 @@
 import { api, type Id } from "@grimo/backend";
-import type { AddToShelfInput, ShelfStatus, UpdateShelfEntryInput } from "@grimo/core";
+import type {
+  AddToShelfInput,
+  Feeling,
+  ShelfStatus,
+  UpdateNoteInput,
+  UpdateShelfEntryInput,
+} from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
@@ -7,6 +13,7 @@ import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
 
 type ShelfList = FunctionReturnType<typeof api.shelves.list>;
+type BookResult = FunctionReturnType<typeof api.books.detail>;
 export type ShelfItem = ShelfList["items"][number];
 
 /** Query options (also used by route loaders to prefetch). Omit `status` for every shelf. */
@@ -19,6 +26,7 @@ export function useShelf(status?: ShelfStatus) {
 }
 
 const shelves = [convexQueryPrefix(api.shelves.list)];
+const bookPages = [convexQueryPrefix(api.books.detail)];
 
 /** How many books "Amigos querem ler" shows. */
 const FRIENDS_WANT_LIMIT = 12;
@@ -49,20 +57,36 @@ export function useUpdateShelfEntry() {
   const { convex } = useConvexCache();
   const patchQueries = usePatchQueries();
   return useMutation({
-    mutationFn: ({ id, startedAt, finishedAt, ...patch }: UpdateShelfEntryInput & { id: string }) =>
+    /**
+     * `note`: what the reader wrote about this page or book; `pageFeelings`: how they feel at
+     * this page. Both show in the feed.
+     */
+    mutationFn: ({
+      id,
+      startedAt,
+      finishedAt,
+      ...patch
+    }: UpdateShelfEntryInput & { id: string; note?: UpdateNoteInput; pageFeelings?: Feeling[] }) =>
       convex.mutation(api.shelves.update, {
         id: id as Id<"shelfEntries">,
         ...patch,
         ...(startedAt !== undefined && { startedAt: toMs(startedAt) }),
         ...(finishedAt !== undefined && { finishedAt: toMs(finishedAt) }),
       }),
-    onMutate: ({ id, status, currentPage, rating, pageCount }) => {
+    onMutate: async ({ id, status, currentPage, rating, feelings, pageCount }) => {
       const patch = {
         ...(status !== undefined && { status }),
         ...(currentPage !== undefined && { currentPage }),
         ...(rating !== undefined && { rating }),
+        ...(feelings !== undefined && { feelings }),
       };
-      return patchQueries<ShelfList>(shelves, (data) => ({
+      // The book page shows the rating and feelings too: picking them can't wait for the server.
+      const rollbackBook = await patchQueries<BookResult>(bookPages, (data) =>
+        data.detail?.entry?.id === id
+          ? { ...data, detail: { ...data.detail, entry: { ...data.detail.entry, ...patch } } }
+          : data,
+      );
+      const rollbackShelves = await patchQueries<ShelfList>(shelves, (data) => ({
         ...data,
         items: data.items.map((item) => {
           if (item.entry.id !== id) return item;
@@ -75,6 +99,10 @@ export function useUpdateShelfEntry() {
           return { entry: { ...entry, pageCount }, book: { ...item.book, pageCount } };
         }),
       }));
+      return () => {
+        rollbackShelves();
+        rollbackBook();
+      };
     },
     onError: (_error, _input, rollback) => rollback?.(),
   });

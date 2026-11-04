@@ -226,7 +226,15 @@ function ReportedContent({ report }: { report: ReportDetail }) {
 
   const facts: string[] = [];
   if (content.kind === "post") {
-    facts.push(content.postKind === "review" ? "Resenha" : "Nota");
+    facts.push(
+      content.postKind === "review"
+        ? "Resenha"
+        : content.postKind === "update"
+          ? "Comentário de leitura"
+          : content.postKind === "quote"
+            ? "Citação"
+            : "Nota",
+    );
     if (content.book) facts.push(content.book.title);
     if (content.rating) facts.push(`${content.rating} de 5`);
     facts.push(
@@ -244,6 +252,8 @@ function ReportedContent({ report }: { report: ReportDetail }) {
       ago(content.createdAt),
       ...(content.members ? [plural(content.members, "membro", "membros")] : []),
     );
+  } else if (content.kind === "list") {
+    facts.push("Lista", plural(content.items, "livro", "livros"), ago(content.createdAt));
   } else {
     facts.push("Perfil", `criado ${ago(content.createdAt)}`);
   }

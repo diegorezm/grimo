@@ -1,5 +1,8 @@
+export { FinishedCardStudio, QuoteCardStudio } from "./card/book-card-studios";
+export { BookStoryCard } from "./card/book-story-card";
 export { CardPreview } from "./card/card-preview";
 export { CardStudio } from "./card/card-studio";
+export { PaletteStudio } from "./card/palette-studio";
 export { CardCover, CardFooter, CardSparkle } from "./card/parts";
 export { downloadCard, StoryCanvas, shareCard } from "./card/story-canvas";
 export type { CardData } from "./card/types";

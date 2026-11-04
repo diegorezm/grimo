@@ -53,6 +53,18 @@ function zonedParts(date: Date, timeZone?: string): ZonedParts {
 /** The year it is on the wall clock of `timeZone` (device zone when omitted). */
 export const yearOf = (date: Date, timeZone?: string): number => zonedParts(date, timeZone).year;
 
+/** Day key (`YYYY-MM-DD`) of `date` on the wall clock of `timeZone` (device zone when omitted). */
+export function toDayKey(date: Date, timeZone?: string): string {
+  const { year, month, day } = zonedParts(date, timeZone);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** The day key `delta` days from `key` (calendar days, no time zone involved). */
+export function shiftDay(key: string, delta: number): string {
+  const [year, month, day] = key.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day + delta)).toISOString().slice(0, 10);
+}
+
 /** Month key (`YYYY-MM`) of `date` on the wall clock of `timeZone` (device zone when omitted). */
 export function toMonthKey(date: Date, timeZone?: string): string {
   const { year, month } = zonedParts(date, timeZone);

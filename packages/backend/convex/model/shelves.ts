@@ -1,6 +1,7 @@
 import {
   type BookInput,
   editionPages,
+  type Feeling,
   type ImportedBook,
   planShelfTransition,
   type ShelfStatus,
@@ -8,9 +9,9 @@ import {
 } from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { recordBookCounters } from "./bookStats";
-import { recordActivity } from "./content";
-import { notFound } from "./errors";
+import { emptyBookCounters, recordBookCounters } from "./bookStats";
+import { recordActivity, updatePostFor } from "./content";
+import { appError, notFound } from "./errors";
 import { isBookVisible } from "./safety";
 
 /** Shelf entry as clients see it. */
@@ -22,6 +23,7 @@ export const entryView = (entry: Doc<"shelfEntries">) => ({
   /** Pages of this reader's edition, when they set one. */
   pageCount: entry.pageCount ?? null,
   rating: entry.rating,
+  feelings: entry.feelings ?? [],
   startedAt: entry.startedAt,
   finishedAt: entry.finishedAt,
   createdAt: entry._creationTime,
@@ -81,7 +83,7 @@ export async function upsertBook(ctx: MutationCtx, input: BookInput) {
     if (Object.keys(missing).length > 0) await ctx.db.patch(existing._id, missing);
     return existing._id;
   }
-  return ctx.db.insert("books", { ...input, readerCount: 0, ratingSum: 0, ratingCount: 0 });
+  return ctx.db.insert("books", { ...input, ...emptyBookCounters() });
 }
 
 const toMs = (date: Date | null | undefined) =>
@@ -93,6 +95,7 @@ function storedPatch(set: UpdateShelfEntryInput) {
   if (set.status !== undefined) patch.status = set.status;
   if (set.currentPage !== undefined) patch.currentPage = set.currentPage;
   if (set.rating !== undefined) patch.rating = set.rating;
+  if (set.feelings !== undefined) patch.feelings = set.feelings;
   // null clears it (back to the book's pages).
   if (set.pageCount !== undefined) patch.pageCount = set.pageCount ?? undefined;
   const startedAt = toMs(set.startedAt);
@@ -102,31 +105,55 @@ function storedPatch(set: UpdateShelfEntryInput) {
   return patch;
 }
 
-/** Reading log + feed activity for a shelf change. */
+/** What a reader wrote about the page they marked (or the book they finished). */
+type UpdateNote = { body: string; hasSpoilers: boolean };
+
+/** Extras of a shelf change: the reader's note and feelings, and the timed session it closes. */
+export interface UpdateExtras {
+  note?: UpdateNote;
+  /** How the reader feels at the page they marked: on the feed card and in the reading diary. */
+  pageFeelings?: Feeling[];
+  /** Minutes of the session; the feed says "leu 40 páginas em 35 min". */
+  sessionMinutes?: number;
+}
+
+/** Reading log + feed activity for a shelf change, with the reader's note on it. */
 async function recordSideEffects(
   ctx: MutationCtx,
   entry: Doc<"shelfEntries">,
   pagesRead: number,
   activity: Doc<"activities">["kind"] | null,
   now: number,
+  { note, sessionMinutes, pageFeelings = [] }: UpdateExtras = {},
 ) {
+  const feelings = pageFeelings.length > 0 ? pageFeelings : undefined;
   if (pagesRead > 0) {
     await ctx.db.insert("readingLogs", {
       userId: entry.userId,
       shelfEntryId: entry._id,
       page: entry.currentPage,
       pagesRead,
+      ...(feelings && { feelings }),
       createdAt: now,
     });
   }
   if (activity) {
-    await recordActivity(ctx, {
+    const activityId = await recordActivity(ctx, {
       actorId: entry.userId,
       kind: activity,
       bookId: entry.bookId,
-      data: { status: entry.status, page: entry.currentPage },
+      data: {
+        status: entry.status,
+        page: entry.currentPage,
+        ...(sessionMinutes !== undefined && { minutes: sessionMinutes, pagesRead }),
+        ...(feelings && { feelings }),
+      },
       createdAt: now,
     });
+    if (note) await updatePostFor(ctx, (await ctx.db.get(activityId))!, note);
+  } else if (note || feelings) {
+    // Nothing shows in the feed (same page, same shelf), so there's nothing to comment on.
+    throw appError("INVALID", "Marque uma página nova para comentar a leitura.");
   }
 }
 
@@ -136,6 +163,7 @@ export async function updateShelfEntry(
   entryId: Id<"shelfEntries">,
   patch: UpdateShelfEntryInput,
   now = Date.now(),
+  extras: UpdateExtras = {},
 ) {
   const entry = await ctx.db.get(entryId);
   if (!entry || entry.userId !== userId) throw notFound("Livro na estante");
@@ -161,9 +189,29 @@ export async function updateShelfEntry(
     updatedAt: now,
   });
   const updated = (await ctx.db.get(entryId))!;
-  if (updated.rating !== entry.rating) await recordBookCounters(ctx, entry.bookId, entry, updated);
-  await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now);
+  const sameFeelings = String(updated.feelings ?? []) === String(entry.feelings ?? []);
+  if (updated.rating !== entry.rating || !sameFeelings) {
+    await recordBookCounters(ctx, entry.bookId, entry, updated);
+  }
+  if (updated.rating !== entry.rating) await rateReviews(ctx, updated);
+  await recordSideEffects(ctx, updated, plan.pagesRead, plan.activity, now, extras);
   return updated;
+}
+
+/**
+ * One rating per reader and book: the shelf's. The reader's reviews of the book show it, so a
+ * new rating goes to them too.
+ */
+async function rateReviews(ctx: MutationCtx, entry: Doc<"shelfEntries">) {
+  const reviews = await ctx.db
+    .query("posts")
+    .withIndex("by_author_book_kind", (q) =>
+      q.eq("authorId", entry.userId).eq("bookId", entry.bookId).eq("kind", "review"),
+    )
+    .take(50);
+  for (const review of reviews) {
+    if (review.rating !== entry.rating) await ctx.db.patch(review._id, { rating: entry.rating });
+  }
 }
 
 export async function addToShelf(

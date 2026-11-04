@@ -5,7 +5,7 @@ import {
   useNotifications,
   useUnreadNotifications,
 } from "@grimo/client";
-import { describeNotification, timeAgo } from "@grimo/core";
+import { describeNotification, isModerationNotice, timeAgo } from "@grimo/core";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
@@ -55,6 +55,28 @@ export function NotificationList() {
 }
 
 function Row({ item }: { item: NotificationItem }) {
+  if (isModerationNotice(item.kind)) return <ModerationNotice item={item} />;
+  return <ReaderRow item={item} />;
+}
+
+/** What moderation decided about a report you made: from the Grimo, not from a reader. */
+function ModerationNotice({ item }: { item: NotificationItem }) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.row, !item.read && { backgroundColor: theme.surfaceMuted }]}>
+      <Avatar image={null} name="Grimo" size={40} />
+      <View style={styles.text}>
+        <Text style={styles.name}>Moderação do Grimo</Text>
+        <Text color="textMuted">{describeNotification(item.kind)}</Text>
+        <Text variant="label" color="textMuted">
+          {timeAgo(new Date(item.createdAt))}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ReaderRow({ item }: { item: NotificationItem }) {
   const theme = useTheme();
   const meId = useMe().data?.id;
   const { actor, post, comment } = item;

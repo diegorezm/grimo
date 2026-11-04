@@ -2,29 +2,36 @@ import {
   type FeedItem as FeedItemData,
   useMe,
   useShelveFromFeed,
-  useToggleLike,
+  useToggleUpdateLike,
+  useUpdateThread,
 } from "@grimo/client";
 import {
   activityProgress,
+  cardFeelings,
   commentCountLabel,
   feedHeadline,
   SHELF_LABELS,
   type ShelfStatus,
   timeAgo,
 } from "@grimo/core";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
+import { FeelingTags } from "@/components/ui/feelings";
 import { MentionText } from "@/components/ui/mention-text";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
-import { BookCover, BookPeekLink } from "@/features/books";
+import { BookCover, BookPeekLink, QuoteText } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
 import { PostPeekLink } from "@/features/posts";
 import { cn } from "@/utils/cn";
 
 /** Covers shown for a grouped entry before "+N". */
 const MAX_COVERS = 8;
+
+/** Updates readers can like and comment on (follows can't). */
+const REACTABLE = new Set<FeedItemData["kind"]>(["shelved", "progress", "finished", "posted"]);
 
 /**
  * One activity as a card (the feed, a reader's page): who did what, the book with a big cover,
@@ -42,7 +49,6 @@ export function FeedItem({
   more?: FeedItemData[];
   interactive?: boolean;
 }) {
-  const toggleLike = useToggleLike();
   const me = useMe({ enabled: interactive });
   const { actor, book, post, target, reading } = item;
   const mine = me.data?.id === actor.id;
@@ -133,54 +139,129 @@ export function FeedItem({
         )
       )}
 
-      {post?.id && (
-        <>
-          <MentionText text={post.body} className="text-sm leading-relaxed" />
-          <div className="flex items-center gap-4 border-t border-border pt-3 font-mono text-[11px] text-text-muted">
-            {interactive ? (
-              <button
-                type="button"
-                aria-pressed={Boolean(post.likedByMe)}
-                onClick={() => toggleLike.mutate({ postId: post.id!, like: !post.likedByMe })}
-                className={cn("hover:text-accent", post.likedByMe && "text-accent")}
-              >
-                {post.likedByMe ? "♥" : "♡"} {post.likeCount}
-              </button>
-            ) : (
-              <span>♡ {post.likeCount}</span>
-            )}
-            {interactive ? (
-              <PostPeekLink postId={post.id} className="hover:text-text">
-                {commentCountLabel(post.commentCount)}
-              </PostPeekLink>
-            ) : (
-              <span>{commentCountLabel(post.commentCount)}</span>
-            )}
-            {interactive && me.data && !mine && (
-              <ReportButton target="post" targetId={post.id} className="ml-auto" />
-            )}
-          </div>
-        </>
+      {post?.kind === "quote" ? (
+        <QuoteText body={post.body} page={post.page} />
+      ) : (
+        post?.body && <PostBody body={post.body} hasSpoilers={post.hasSpoilers} />
+      )}
+      {REACTABLE.has(item.kind) && (
+        <Reactions item={item} interactive={interactive} canReport={Boolean(me.data && !mine)} />
       )}
     </article>
   );
 }
 
-/** Under the title: the progress bar, the stars or the shelf, depending on what happened. */
+/** A review, note or comment on an update; spoilers stay hidden until asked. */
+function PostBody({ body, hasSpoilers }: { body: string; hasSpoilers: boolean }) {
+  const [shown, setShown] = useState(!hasSpoilers);
+  if (!shown) {
+    return (
+      <button
+        type="button"
+        onClick={() => setShown(true)}
+        className="w-fit rounded-md bg-surface-muted px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-text"
+      >
+        Contém spoiler · mostrar
+      </button>
+    );
+  }
+  return <MentionText text={body} className="text-sm leading-relaxed" />;
+}
+
+/**
+ * Like and comment on any update, like Skoob: an update nobody reacted to yet gets its thread
+ * on the first like or comment.
+ */
+function Reactions({
+  item,
+  interactive,
+  canReport,
+}: {
+  item: FeedItemData;
+  interactive: boolean;
+  canReport: boolean;
+}) {
+  const toggleLike = useToggleUpdateLike();
+  const thread = useUpdateThread();
+  const navigate = useNavigate();
+  const { post } = item;
+  const liked = Boolean(post?.likedByMe);
+  const likes = post?.likeCount ?? 0;
+  const comments = commentCountLabel(post?.commentCount ?? 0);
+  const openThread = (postId: string) =>
+    void navigate({
+      to: ".",
+      search: (prev) => ({ ...prev, post: postId, book: undefined, panel: undefined }),
+      resetScroll: false,
+    });
+
+  return (
+    <div className="flex items-center gap-4 border-t border-border pt-3 font-mono text-[11px] text-text-muted">
+      {interactive ? (
+        <button
+          type="button"
+          aria-pressed={liked}
+          aria-label={liked ? "Descurtir" : "Curtir"}
+          onClick={() => toggleLike.mutate({ activityId: item.id, like: !liked })}
+          className={cn("hover:text-accent", liked && "text-accent")}
+        >
+          {liked ? "♥" : "♡"} {likes}
+        </button>
+      ) : (
+        <span>♡ {likes}</span>
+      )}
+      {!interactive ? (
+        <span>{comments}</span>
+      ) : post?.id ? (
+        <PostPeekLink postId={post.id} className="hover:text-text">
+          {comments}
+        </PostPeekLink>
+      ) : (
+        <button
+          type="button"
+          disabled={thread.isPending}
+          onClick={() =>
+            thread.mutate(item.id, { onSuccess: ({ post: created }) => openThread(created.id) })
+          }
+          className="hover:text-text"
+        >
+          Comentar
+        </button>
+      )}
+      {interactive && canReport && post?.id && post.body && (
+        <ReportButton target="post" targetId={post.id} className="ml-auto" />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Under the title: the progress bar, the stars or the shelf, depending on what happened, and
+ * how the reader felt (at that page, or about the book they finished).
+ */
 function BookDetail({ item }: { item: FeedItemData }) {
   const { kind, data, reading, post } = item;
+  const feelings = cardFeelings(data, reading?.feelings);
   if (kind === "progress") {
     const progress = activityProgress(data, reading?.pages ?? null);
-    if (!progress) return null;
+    if (!progress) return <FeelingTags feelings={feelings} />;
     return (
-      <div className="mt-1 flex max-w-xs flex-col gap-1">
+      <div className="mt-1 flex max-w-xs flex-col gap-1.5">
         {progress.percent !== null && <ProgressBar percent={progress.percent} />}
         <span className="font-mono text-[11px] text-text-muted">{progress.label}</span>
+        <FeelingTags feelings={feelings} />
       </div>
     );
   }
   const rating = post?.rating ?? reading?.rating ?? null;
-  if (rating) return <Stars rating={rating} />;
+  if (rating || feelings.length > 0) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        {rating ? <Stars rating={rating} /> : null}
+        <FeelingTags feelings={feelings} />
+      </div>
+    );
+  }
   const status = data?.status as ShelfStatus | undefined;
   if (kind === "shelved" && status) {
     return (

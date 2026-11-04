@@ -7,7 +7,7 @@ import {
   useRemovePost,
   useToggleLike,
 } from "@grimo/client";
-import { commentCountLabel, timeAgo } from "@grimo/core";
+import { activityProgress, commentCountLabel, feedHeadline, timeAgo } from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { MentionText } from "@/components/ui/mention-text";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
-import { BookCover, BookPeekLink } from "@/features/books";
+import { BookCover, BookPeekLink, QuoteText } from "@/features/books";
 import { ReportButton } from "@/features/moderation";
 
 /** A post with its comments, a box to comment and, when it is yours, a way to delete it. */
@@ -29,7 +29,8 @@ export function PostThread({
   /** After deleting the post: close the peek or leave the page. */
   onRemoved: () => void;
 }) {
-  const { post, comments } = detail;
+  const { post, comments, update } = detail;
+  const progress = update?.kind === "progress" ? activityProgress(update.data, update.pages) : null;
   const me = useMe({ enabled: signedIn });
   const toggleLike = useToggleLike();
   const removePost = useRemovePost();
@@ -42,6 +43,13 @@ export function PostThread({
           <Avatar src={post.author.image} name={post.author.name} size="size-9" />
           <p className="text-sm">
             <AuthorLink author={post.author} />
+            {update && (
+              <span className="text-text-muted">
+                {" "}
+                {feedHeadline(update.kind, update.data, 1)}
+                {progress && ` · ${progress.label}`}
+              </span>
+            )}
             <span className="ml-2 font-mono text-[10px] text-text-muted">
               {timeAgo(new Date(post.createdAt))}
             </span>
@@ -60,7 +68,11 @@ export function PostThread({
           </BookPeekLink>
         )}
         {post.rating && <Stars rating={post.rating} />}
-        <MentionText text={post.body} className="leading-relaxed" />
+        {post.kind === "quote" ? (
+          <QuoteText body={post.body} page={post.page} />
+        ) : (
+          post.body && <MentionText text={post.body} className="leading-relaxed" />
+        )}
 
         <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
           {signedIn ? (
