@@ -140,7 +140,13 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             </>
           )}
           <Diary marks={detail.diary.marks} />
-          <EditionPages entryId={entry.id} pageCount={entry.pageCount} bookPages={book.pageCount} />
+          <div className="mt-1 border-t border-border pt-3">
+            <EditionPages
+              entryId={entry.id}
+              pageCount={entry.pageCount}
+              bookPages={book.pageCount}
+            />
+          </div>
         </section>
       )}
 

@@ -13,7 +13,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PublicShell } from "@/components/layout/public-shell";
 import { SidePeek } from "@/components/layout/side-peek";
 import { VerifyEmailBanner } from "@/features/account";
-import { BookPeek } from "@/features/books";
+import { BookPeek, ReadingFocus } from "@/features/books";
 import { LegalGate } from "@/features/legal";
 import { BookReviewPeek, ModeratorInviteBanner, ReportPeek } from "@/features/moderation";
 import { NotificationBell } from "@/features/notifications";
@@ -104,6 +104,7 @@ function SignedInLayout({
       <Outlet />
       {/* Terms changed (or never accepted): agree again before going on. */}
       <LegalGate />
+      <ReadingFocus />
     </AppShell>
   );
 }

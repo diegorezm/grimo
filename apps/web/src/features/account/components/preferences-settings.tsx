@@ -1,11 +1,14 @@
 import { SHELF_VIEW_HINTS, SHELF_VIEW_LABELS, SHELF_VIEWS } from "@grimo/core";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { SceneGallery } from "@/features/books";
+import { setReadingScene, useReadingScene } from "@/lib/reading-scene";
 import { setShelfView, useShelfView } from "@/lib/shelf-view";
 import { cn } from "@/utils/cn";
 
-/** "Preferências": how the app looks on this device (theme, how the shelf is shown). */
+/** "Preferências": how the app looks on this device (theme, how the shelf is shown, the reading timer). */
 export function PreferencesSettings() {
   const view = useShelfView();
+  const scene = useReadingScene();
 
   return (
     <div className="flex flex-col gap-10">
@@ -17,7 +20,7 @@ export function PreferencesSettings() {
         <ThemeToggle className="self-start" />
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4 border-b border-border pb-10">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-medium italic">Estante</h2>
           <p className="text-text-muted">Como os seus livros aparecem em Estantes.</p>
@@ -49,6 +52,14 @@ export function PreferencesSettings() {
             </label>
           ))}
         </fieldset>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl font-medium italic">Sessão de leitura</h2>
+          <p className="text-text-muted">O tema atrás do timer em tela cheia.</p>
+        </div>
+        <SceneGallery value={scene} onChange={setReadingScene} />
       </section>
     </div>
   );

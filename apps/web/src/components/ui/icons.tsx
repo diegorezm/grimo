@@ -94,6 +94,37 @@ export const PagesIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const WindIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 9h11a2.5 2.5 0 1 0-2.5-2.5M3 13h15a2.5 2.5 0 1 1-2.5 2.5M3 17h7" />
+  </Icon>
+);
+
+export const PlayIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 4.5v15l12-7.5z" />
+  </Icon>
+);
+
+export const PauseIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M8 5v14M16 5v14" />
+  </Icon>
+);
+
+export const SkipIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 5v14l10-7zM18 5v14" />
+  </Icon>
+);
+
+export const TimerIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="13.5" r="7.5" />
+    <path d="M12 9.5v4l2.5 1.5M9.5 3h5" />
+  </Icon>
+);
+
 export const HeartIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6 4.2 4.2 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" />

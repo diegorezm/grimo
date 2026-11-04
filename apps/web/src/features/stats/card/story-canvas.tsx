@@ -3,28 +3,32 @@ import { toBlob } from "html-to-image";
 import type { ReactNode, Ref } from "react";
 import { cn } from "@/utils/cn";
 
-/** Renders a card at full Stories size (1080×1920) and shows it scaled down. */
+/** Renders a card at full size (Stories, 1080×1920, by default) and shows it scaled down. */
 export function StoryCanvas({
   scale,
+  width = storyCard.width,
+  height = storyCard.height,
   className,
   ref,
   children,
 }: {
   scale: number;
+  width?: number;
+  height?: number;
   className?: string;
   ref?: Ref<HTMLDivElement>;
   children: ReactNode;
 }) {
   return (
     <div
-      style={{ width: storyCard.width * scale, height: storyCard.height * scale }}
+      style={{ width: width * scale, height: height * scale }}
       className={cn("shrink-0 overflow-hidden", className)}
     >
       <div
         ref={ref}
         style={{
-          width: storyCard.width,
-          height: storyCard.height,
+          width,
+          height,
           transform: `scale(${scale})`,
           transformOrigin: "top left",
         }}

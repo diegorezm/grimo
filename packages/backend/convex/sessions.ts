@@ -1,4 +1,5 @@
 import {
+  editionPages,
   feelingsSchema,
   readingStreak,
   sessionMinutes,
@@ -42,6 +43,7 @@ export const active = query({
       entryId: entry._id,
       startedAt: session.startedAt,
       startPage: session.startPage,
+      pageCount: editionPages(entry.pageCount, book.pageCount),
       book: bookSummary(book),
     };
   },
@@ -82,6 +84,8 @@ export const finish = mutation({
     note: v.optional(v.object({ body: v.string(), hasSpoilers: v.boolean() })),
     /** How you feel at the page you stopped on (the reading diary). */
     pageFeelings: v.optional(v.array(v.string())),
+    /** Pomodoro breaks and pauses: time on the clock that was not reading. */
+    restMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const viewer = args.note ? await requireVerifiedViewer(ctx) : await requireViewer(ctx);
@@ -92,7 +96,7 @@ export const finish = mutation({
     if (note) await enforceRateLimit(ctx, "createPost", viewer._id);
     const pageFeelings = args.pageFeelings && parse(feelingsSchema, args.pageFeelings);
     const now = Date.now();
-    const minutes = sessionMinutes(session.startedAt, now);
+    const minutes = sessionMinutes(session.startedAt, now - Math.max(0, args.restMs ?? 0));
     const entry = await updateShelfEntry(
       ctx,
       viewer._id,

@@ -8,4 +8,6 @@ export { BookSearch } from "./components/book-search";
 export { OpenReadRow } from "./components/open-reads";
 export { PageLogger } from "./components/page-logger";
 export { QuoteText } from "./components/quote-text";
+export { ReadingFocus } from "./components/reading-focus";
+export { SceneGallery } from "./components/scene-gallery";
 export { StartGroup } from "./components/start-group";

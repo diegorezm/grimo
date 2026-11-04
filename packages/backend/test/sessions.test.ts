@@ -30,6 +30,16 @@ afterEach(() => {
 });
 
 describe("reading sessions", () => {
+  it("does not count breaks and pauses as reading time", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const { entry } = await rafa.as.mutation(api.shelves.add, { book, status: "reading" });
+    await rafa.as.mutation(api.sessions.start, { entryId: entry.id });
+    vi.advanceTimersByTime(30 * MINUTE);
+    const result = await rafa.as.mutation(api.sessions.finish, { page: 10, restMs: 5 * MINUTE });
+    expect(result.minutes).toBe(25);
+  });
+
   it("times the reading and tells the feed how long it took", async () => {
     const t = newTest();
     const rafa = await reader(t, "rafa");
