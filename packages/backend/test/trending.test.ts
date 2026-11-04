@@ -25,6 +25,25 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("em alta no Grimo", () => {
+  it("ranks books by distinct readers in the last 30 days", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    await rafa.as.mutation(api.shelves.add, { book: book("OL9W", "Antigo"), status: "reading" });
+    vi.advanceTimersByTime(31 * 24 * 60 * 60 * 1000);
+    await rafa.as.mutation(api.shelves.add, { book: book("OL2W", "Kindred"), status: "reading" });
+    await rafa.as.mutation(api.shelves.add, { book: book("OL1W", "Duna"), status: "reading" });
+    await bia.as.mutation(api.shelves.add, { book: book("OL1W", "Duna"), status: "read" });
+
+    const { items } = await rafa.as.query(api.feed.popular, { limit: 10 });
+    expect(items.map(({ book, readers }) => [book.title, readers])).toEqual([
+      ["Duna", 2],
+      ["Kindred", 1],
+    ]);
+  });
+});
+
 describe("em alta entre quem você segue", () => {
   it("ranks books by how many friends are reading them this month", async () => {
     const t = newTest();

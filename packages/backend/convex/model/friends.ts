@@ -161,3 +161,50 @@ export async function booksTrendingWithFriends(
   );
   return rows.filter((row) => row !== null);
 }
+
+/** Recent activities read for "Em alta no Grimo": enough for today's network, always bounded. */
+const COMMUNITY_ACTIVITIES = 1000;
+
+/**
+ * "Em alta no Grimo": the books most readers started, read or finished in the last 30 days. Only
+ * counts leave here, never who read them; hidden accounts don't count.
+ */
+export async function booksTrendingInCommunity(
+  ctx: QueryCtx,
+  viewerId: Id<"users">,
+  limit: number,
+  now: number,
+) {
+  const recent = await ctx.db
+    .query("activities")
+    .withIndex("by_created", (q) => q.gte("createdAt", now - TRENDING_WINDOW_MS))
+    .order("desc")
+    .take(COMMUNITY_ACTIVITIES);
+  const reads = recent.filter(readsBook);
+  const actors = await Promise.all(
+    [...new Set(reads.map((activity) => activity.actorId))].map((id) => ctx.db.get(id)),
+  );
+  const visible = new Set(
+    actors.flatMap((actor) => (actor && !isHidden(actor) ? [actor._id] : [])),
+  );
+  const books = new Map<Id<"books">, { readers: Set<Id<"users">>; latest: number }>();
+  for (const activity of reads) {
+    if (!visible.has(activity.actorId)) continue;
+    const row = books.get(activity.bookId!) ?? { readers: new Set<Id<"users">>(), latest: 0 };
+    row.readers.add(activity.actorId);
+    row.latest = Math.max(row.latest, activity.createdAt);
+    books.set(activity.bookId!, row);
+  }
+  const ranked = [...books.entries()].sort(
+    ([, a], [, b]) => b.readers.size - a.readers.size || b.latest - a.latest,
+  );
+  const items = [];
+  for (const [bookId, row] of ranked) {
+    if (items.length >= limit) break;
+    const book = await ctx.db.get(bookId);
+    if (book && isBookVisible(book, viewerId)) {
+      items.push({ book: bookView(book), readers: row.readers.size });
+    }
+  }
+  return items;
+}
