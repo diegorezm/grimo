@@ -124,7 +124,7 @@
     90deg,
     var(--color-accent-start),
     var(--color-accent) var(--progress, 0%),
-    var(--color-surface-muted) var(--progress, 0%)
+    var(--color-border) var(--progress, 0%)
   );
   &::-webkit-slider-thumb {
     appearance: none;
@@ -150,5 +150,184 @@
   &:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 4px;
+  }
+}
+
+/* The themes behind the reading timer (`ReadingScene`). Sized in cq units: screen or example card. */
+.reading-scene {
+  container-type: size;
+}
+
+@keyframes scene-sway {
+  from {
+    transform: skewX(-0.6deg);
+  }
+  to {
+    transform: skewX(0.6deg);
+  }
+}
+
+@keyframes scene-firefly {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(24px, -48px);
+  }
+}
+
+@keyframes scene-drop {
+  from {
+    transform: translateY(-4rem);
+  }
+  to {
+    transform: translateY(105cqh);
+  }
+}
+
+@keyframes scene-star {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes scene-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.scene-sway {
+  transform-origin: bottom;
+  animation: scene-sway var(--sway, 15s) ease-in-out infinite alternate;
+}
+
+.scene-firefly {
+  opacity: 0;
+  box-shadow: 0 0 10px 2px var(--color-accent);
+  animation: scene-firefly 10s ease-in-out infinite;
+}
+
+.scene-drop {
+  opacity: 0.25;
+  animation: scene-drop 1.2s linear infinite;
+}
+
+.scene-star {
+  animation: scene-star 4s ease-in-out infinite;
+}
+
+.scene-wave {
+  animation: scene-wave var(--drift, 20s) linear infinite;
+}
+
+@keyframes scene-glow {
+  from {
+    transform: scale(0.94);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes scene-shimmer {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes scene-curtain {
+  from {
+    transform: skewX(-2deg) scaleX(0.98);
+  }
+  to {
+    transform: skewX(2deg) scaleX(1.03);
+  }
+}
+
+@keyframes scene-cloud {
+  from {
+    transform: translateX(-40px);
+  }
+  to {
+    transform: translateX(40px);
+  }
+}
+
+.scene-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scene-glow 5s ease-in-out infinite alternate;
+}
+
+.scene-shimmer {
+  animation: scene-shimmer 6s ease-in-out infinite;
+}
+
+.scene-curtain {
+  transform-origin: top left;
+  filter: blur(3px);
+  animation: scene-curtain 9s ease-in-out infinite alternate;
+}
+
+.scene-cloud {
+  animation: scene-cloud 60s ease-in-out infinite alternate;
+}
+
+/*
+ * Illustrated themes are paintings with their own palette, whatever the app theme: the timer's
+ * tokens follow the picture so the text stays readable on it.
+ */
+[data-reading-scene="cozy"] {
+  --color-surface: #fdf8ea;
+  --color-surface-muted: #f3e8cf;
+  --color-text: #33261c;
+  --color-text-muted: #6d5a48;
+  --color-border: #d8c7a6;
+  --color-accent: #a8482f;
+  --color-accent-start: #c0603c;
+  --color-accent-foreground: #fdf8ea;
+  --color-primary: #33261c;
+  --color-primary-foreground: #fdf8ea;
+}
+
+[data-reading-scene="window"],
+[data-reading-scene="sunset"] {
+  --color-surface: #2a1d16;
+  --color-surface-muted: #3a2a20;
+  --color-text: #fbf1dc;
+  --color-text-muted: #e0d0b6;
+  --color-border: #8a7360;
+  --color-accent: #f0b878;
+  --color-accent-start: #f6cf94;
+  --color-accent-foreground: #2a1d16;
+  --color-primary: #fbf1dc;
+  --color-primary-foreground: #2a1d16;
+}
+
+.reading-scene[data-paused] * {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-scene * {
+    animation: none;
+  }
+  .scene-firefly {
+    opacity: 0.4;
   }
 }

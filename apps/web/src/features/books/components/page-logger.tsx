@@ -2,6 +2,7 @@ import { errorMessage, useUpdateShelfEntry } from "@grimo/client";
 import { type Feeling, firstIssue, readingPercent, updateNoteSchema } from "@grimo/core";
 import { type CSSProperties, useEffect, useState } from "react";
 import { FeelingPicker } from "@/components/ui/feelings";
+import { PencilIcon } from "@/components/ui/icons";
 import { Sparkle } from "@/components/ui/sparkle";
 import { cn } from "@/utils/cn";
 
@@ -97,11 +98,14 @@ export function PageLogger({
       onClick={() => setEditing(true)}
       title="Clique para digitar a página"
       className={cn(
-        "rounded-md font-serif font-medium underline decoration-border decoration-dotted underline-offset-4 transition hover:text-accent hover:decoration-accent",
+        "group inline-flex items-center gap-1 rounded-md font-serif font-medium text-text transition hover:text-accent",
         compact ? "text-sm" : "text-3xl",
       )}
     >
       {draft}
+      {!compact && (
+        <PencilIcon className="size-3.5 text-text-muted transition group-hover:text-accent" />
+      )}
     </button>
   );
 
@@ -142,7 +146,7 @@ export function PageLogger({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="flex items-baseline gap-2 text-text-muted">
           <span className="text-sm">Página</span>
           {number}
@@ -150,10 +154,12 @@ export function PageLogger({
         </p>
         {percent !== null && (
           <p className="text-right">
-            <span className="font-serif text-2xl font-medium text-accent">{percent}%</span>
-            <span className="block font-mono text-[10px] uppercase tracking-wider text-text-muted">
-              {finished ? "última página!" : `faltam ${pageCount! - draft} páginas`}
-            </span>
+            <span className="font-mono text-sm font-medium text-accent">{percent}%</span>
+            {draft > 0 && (
+              <span className="block font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                {finished ? "última página!" : `faltam ${pageCount! - draft} páginas`}
+              </span>
+            )}
           </p>
         )}
       </div>
@@ -203,10 +209,11 @@ export function PageLogger({
             type="button"
             onClick={() => setNote({ body: "", hasSpoilers: false })}
             className={cn(
-              "rounded-full px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-text-muted transition hover:text-accent",
+              "inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 font-mono text-xs transition hover:border-accent hover:text-accent",
               !finished && "ml-auto",
             )}
           >
+            <PencilIcon className="size-3.5" />
             Comentar ou sentir
           </button>
         )}
