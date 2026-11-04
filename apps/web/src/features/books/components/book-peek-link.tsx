@@ -6,10 +6,12 @@ export function BookPeekLink({
   openLibraryId,
   className,
   children,
+  "aria-label": ariaLabel,
 }: {
   openLibraryId: string;
   className?: string;
   children: ReactNode;
+  "aria-label"?: string;
 }) {
   return (
     <Link
@@ -17,6 +19,7 @@ export function BookPeekLink({
       search={(prev) => ({ ...prev, book: openLibraryId, post: undefined })}
       resetScroll={false}
       className={className}
+      aria-label={ariaLabel}
     >
       {children}
     </Link>

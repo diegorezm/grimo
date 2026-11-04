@@ -5,11 +5,14 @@ import { Spinner } from "@/components/feedback/spinner";
 import { Select } from "@/components/ui/select";
 import { Stars } from "@/components/ui/stars";
 import { BookCard, PageLogger } from "@/features/books";
+import { useShelfView } from "@/lib/shelf-view";
+import { ShelfSpines } from "./shelf-spines";
 import { ShelfTiles } from "./shelf-tiles";
 
 /** All shelves: tiles on top pick the shelf; its books stand in a grid below. */
 export function ShelfBoard() {
   const { status, setStatus } = useShelfTabStore();
+  const view = useShelfView();
   const shelf = useShelf();
 
   if (shelf.isPending) return <Spinner />;
@@ -31,6 +34,8 @@ export function ShelfBoard() {
             Buscar livros
           </Link>
         </p>
+      ) : view === "spines" ? (
+        <ShelfSpines items={visible} />
       ) : (
         <ul className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] sm:gap-x-8">
           {visible.map((item) => (
