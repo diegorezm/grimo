@@ -18,6 +18,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { FeelingTags } from "@/components/ui/feelings";
+import { HeartIcon } from "@/components/ui/icons";
 import { MentionText } from "@/components/ui/mention-text";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { StaffBadge } from "@/components/ui/staff-badge";
@@ -63,7 +64,7 @@ export function FeedItem({
       : [];
 
   return (
-    <article className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 shadow-sm shadow-shadow @xl/main:p-5">
+    <article className="flex flex-col gap-4 py-6 first:pt-0">
       <header className="flex items-center gap-3">
         <Avatar src={actor.image} name={actor.name} size="size-9" />
         <p className="min-w-0 flex-1 text-sm leading-snug">
@@ -196,19 +197,23 @@ function Reactions({
     });
 
   return (
-    <div className="flex items-center gap-4 border-t border-border pt-3 font-mono text-[11px] text-text-muted">
+    <div className="flex items-center gap-4 font-mono text-[11px] text-text-muted">
       {interactive ? (
         <button
           type="button"
           aria-pressed={liked}
           aria-label={liked ? "Descurtir" : "Curtir"}
           onClick={() => toggleLike.mutate({ activityId: item.id, like: !liked })}
-          className={cn("hover:text-accent", liked && "text-accent")}
+          className={cn("flex items-center gap-1.5 hover:text-accent", liked && "text-accent")}
         >
-          {liked ? "♥" : "♡"} {likes}
+          <HeartIcon className={cn("size-4", liked && "fill-current")} />
+          {likes}
         </button>
       ) : (
-        <span>♡ {likes}</span>
+        <span className="flex items-center gap-1.5">
+          <HeartIcon className="size-4" />
+          {likes}
+        </span>
       )}
       {!interactive ? (
         <span>{comments}</span>
@@ -294,7 +299,7 @@ function ShelfAction({
       type="button"
       onClick={() => shelve.mutate({ book, status: "want_to_read" })}
       disabled={shelve.isPending}
-      className="mt-auto w-fit rounded-full border border-edge px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition hover:border-accent hover:text-accent disabled:opacity-50"
+      className="mt-auto w-fit rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-wider transition hover:border-accent hover:text-accent disabled:opacity-50"
     >
       + Quero ler
     </button>

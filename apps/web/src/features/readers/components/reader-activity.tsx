@@ -25,10 +25,12 @@ export function ReaderActivity({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {groups.map(({ id, items: [item, ...more] }) => (
-        <FeedItem key={id} item={item!} more={more} interactive={interactive} />
-      ))}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col divide-y divide-border">
+        {groups.map(({ id, items: [item, ...more] }) => (
+          <FeedItem key={id} item={item!} more={more} interactive={interactive} />
+        ))}
+      </div>
       <LoadMore {...activity} />
     </div>
   );
