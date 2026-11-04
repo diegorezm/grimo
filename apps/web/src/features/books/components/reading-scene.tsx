@@ -1,89 +1,35 @@
-import type { ReadingScene as Scene } from "@grimo/core";
+import {
+  SCENE_CHECKS,
+  SCENE_FIREFLIES,
+  SCENE_FOREST_LAYERS,
+  SCENE_HEIGHT,
+  SCENE_HILLS,
+  SCENE_RAIN_HILLS,
+  SCENE_RAINDROPS,
+  SCENE_SOUNDS,
+  SCENE_STARS,
+  SCENE_SUNSET_PINES,
+  SCENE_WAVES,
+  SCENE_WIDTH,
+  type ReadingScene as Scene,
+  type SceneSound,
+} from "@grimo/core";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
-
-const WIDTH = 1200;
-const HEIGHT = 400;
-
-/** Stable pseudo-random numbers, so a scene doesn't change on every render. */
-const noise = (seed: number) => {
-  const value = Math.sin(seed * 12.9898) * 43758.5453;
-  return value - Math.floor(value);
-};
 
 const ink = (percent: number) => ({
   fill: `color-mix(in srgb, var(--color-accent) ${percent}%, transparent)`,
 });
 
-/** A row of pines as one silhouette path. */
-function pines(seed: number, count: number, minHeight: number, maxHeight: number) {
-  const step = WIDTH / count;
-  let path = `M0 ${HEIGHT}`;
-  for (let tree = 0; tree <= count; tree++) {
-    const x = tree * step + (noise(seed + tree) - 0.5) * step * 0.6;
-    const height = minHeight + noise(seed + tree * 7) * (maxHeight - minHeight);
-    const half = height * 0.22;
-    const top = HEIGHT - height;
-    path += ` L${x - half} ${HEIGHT} L${x - half * 0.55} ${top + height * 0.62}`;
-    path += ` L${x - half * 0.8} ${top + height * 0.62} L${x - half * 0.35} ${top + height * 0.32}`;
-    path += ` L${x - half * 0.55} ${top + height * 0.32} L${x} ${top}`;
-    path += ` L${x + half * 0.55} ${top + height * 0.32} L${x + half * 0.35} ${top + height * 0.32}`;
-    path += ` L${x + half * 0.8} ${top + height * 0.62} L${x + half * 0.55} ${top + height * 0.62}`;
-    path += ` L${x + half} ${HEIGHT}`;
-  }
-  return `${path} L${WIDTH} ${HEIGHT} Z`;
-}
-
-/** Twice the screen wide with a whole number of crests, so sliding by half loops seamlessly. */
-function wave(height: number, amplitude: number) {
-  const period = 300;
-  let path = `M0 ${HEIGHT - height}`;
-  for (let x = 0; x < WIDTH * 2; x += period) {
-    path += ` q${period / 4} ${-amplitude} ${period / 2} 0 t${period / 2} 0`;
-  }
-  return `${path} L${WIDTH * 2} ${HEIGHT} L0 ${HEIGHT} Z`;
-}
-
-const FOREST_LAYERS = [
-  { path: pines(3, 26, 120, 210), ink: 9, sway: 11 },
-  { path: pines(11, 18, 150, 280), ink: 15, sway: 15 },
-  { path: pines(23, 11, 200, 360), ink: 24, sway: 19 },
-];
-const FIREFLIES = Array.from({ length: 16 }, (_, index) => ({
-  left: 4 + noise(index + 40) * 92,
-  bottom: 4 + noise(index + 70) * 42,
-  delay: -noise(index + 90) * 12,
-  duration: 8 + noise(index + 110) * 8,
-}));
-const RAINDROPS = Array.from({ length: 60 }, (_, index) => ({
-  left: noise(index + 200) * 100,
-  delay: -noise(index + 300) * 3,
-  duration: 0.9 + noise(index + 400) * 0.9,
-}));
-const STARS = Array.from({ length: 70 }, (_, index) => ({
-  left: noise(index + 500) * 100,
-  top: noise(index + 600) * 70,
-  size: 1 + noise(index + 700) * 2,
-  delay: -noise(index + 800) * 6,
-  duration: 3 + noise(index + 900) * 4,
-}));
-const WAVES = [
-  { path: wave(170, 26), ink: 9, drift: 26 },
-  { path: wave(115, 20), ink: 15, drift: 19 },
-  { path: wave(60, 14), ink: 24, drift: 13 },
-];
-const HILLS = `M0 ${HEIGHT} L0 300 Q200 210 420 290 T820 270 T${WIDTH} 300 L${WIDTH} ${HEIGHT} Z`;
-const RAIN_HILLS = pines(37, 16, 90, 190);
-
 function Forest() {
   return (
     <>
-      {FOREST_LAYERS.map((layer) => (
+      {SCENE_FOREST_LAYERS.map((layer) => (
         <svg
           aria-hidden="true"
           key={layer.ink}
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
           preserveAspectRatio="xMidYMax slice"
           className="scene-sway absolute inset-x-[-3%] bottom-0 h-[55cqh] w-[106%]"
           style={{ "--sway": `${layer.sway}s` } as CSSProperties}
@@ -91,7 +37,7 @@ function Forest() {
           <path d={layer.path} style={ink(layer.ink)} />
         </svg>
       ))}
-      {FIREFLIES.map((firefly) => (
+      {SCENE_FIREFLIES.map((firefly) => (
         <span
           key={firefly.left}
           className="scene-firefly absolute size-1.5 rounded-full bg-accent"
@@ -110,7 +56,7 @@ function Forest() {
 function Rain() {
   return (
     <>
-      {RAINDROPS.map((drop) => (
+      {SCENE_RAINDROPS.map((drop) => (
         <span
           key={drop.left}
           className="scene-drop absolute top-0 h-14 w-px bg-accent"
@@ -123,11 +69,11 @@ function Rain() {
       ))}
       <svg
         aria-hidden="true"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
         preserveAspectRatio="xMidYMax slice"
         className="absolute inset-x-0 bottom-0 h-[35cqh] w-full"
       >
-        <path d={RAIN_HILLS} style={ink(16)} />
+        <path d={SCENE_RAIN_HILLS} style={ink(16)} />
       </svg>
     </>
   );
@@ -136,7 +82,7 @@ function Rain() {
 function Night() {
   return (
     <>
-      {STARS.map((star) => (
+      {SCENE_STARS.map((star) => (
         <span
           key={star.left}
           className="scene-star absolute rounded-full bg-accent"
@@ -159,11 +105,11 @@ function Night() {
       </svg>
       <svg
         aria-hidden="true"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${SCENE_WIDTH} ${SCENE_HEIGHT}`}
         preserveAspectRatio="xMidYMax slice"
         className="absolute inset-x-0 bottom-0 h-[45cqh] w-full"
       >
-        <path d={HILLS} style={ink(18)} />
+        <path d={SCENE_HILLS} style={ink(18)} />
       </svg>
     </>
   );
@@ -173,11 +119,11 @@ function Ocean() {
   return (
     <>
       <span className="absolute bottom-[26cqh] left-1/2 size-[28cqh] -translate-x-1/2 rounded-full bg-accent opacity-15" />
-      {WAVES.map((layer) => (
+      {SCENE_WAVES.map((layer) => (
         <svg
           aria-hidden="true"
           key={layer.ink}
-          viewBox={`0 0 ${WIDTH * 2} ${HEIGHT}`}
+          viewBox={`0 0 ${SCENE_WIDTH * 2} ${SCENE_HEIGHT}`}
           preserveAspectRatio="none"
           className="scene-wave absolute bottom-0 left-0 h-[40cqh] w-[200%]"
           style={{ "--drift": `${layer.drift}s` } as CSSProperties}
@@ -190,13 +136,6 @@ function Ocean() {
 }
 
 const FULL_SCENE = "absolute inset-0 size-full";
-const SUNSET_PINES = pines(51, 24, 90, 300);
-const CHECKS = Array.from({ length: 24 }, (_, index) => ({
-  x: 215 + (index % 6) * 62,
-  y: 300 + Math.floor(index / 6) * 42,
-  fill: ["#d9a066", "#f0d9b5", "#7d7f4a", "#f0d9b5"][(index + Math.floor(index / 6)) % 4],
-}));
-
 /** Cozy: a sleepy tabby under a patchwork blanket, a lamp breathing light, drawn with a wobbly pen. */
 function Cozy() {
   return (
@@ -233,7 +172,7 @@ function Cozy() {
         <path d="M312 255l76-30 26 72-78 22z" fill="#a33b2c" />
         <path d="M392 226l26 72" fill="none" stroke="#f0d9b5" />
         <rect x="215" y="300" width="372" height="168" fill="#f0d9b5" />
-        {CHECKS.map((check) => (
+        {SCENE_CHECKS.map((check) => (
           <rect
             key={`${check.x}:${check.y}`}
             x={check.x}
@@ -366,7 +305,7 @@ function Sunset() {
         />
       </g>
       <g transform="translate(0 400)">
-        <path d={SUNSET_PINES} fill="#23291f" />
+        <path d={SCENE_SUNSET_PINES} fill="#23291f" />
       </g>
       <path d="M0 0h95q-12 300 12 800H0z" fill="#1f1a16" />
       <path
@@ -421,42 +360,8 @@ export function ReadingScene({
   );
 }
 
-interface Sound {
-  noise: "brown" | "white";
-  filter: BiquadFilterType;
-  frequency: number;
-  volume: number;
-  /** Slow swell: how fast (Hz) and how deep. */
-  swell: [number, number];
-  crickets?: boolean;
-}
-
-const SOUNDS: Record<Exclude<Scene, "none">, Sound> = {
-  cozy: { noise: "brown", filter: "lowpass", frequency: 380, volume: 0.3, swell: [0.04, 0.04] },
-  window: { noise: "brown", filter: "lowpass", frequency: 900, volume: 0.3, swell: [0.09, 0.2] },
-  sunset: {
-    noise: "brown",
-    filter: "lowpass",
-    frequency: 600,
-    volume: 0.25,
-    swell: [0.07, 0.1],
-    crickets: true,
-  },
-  forest: { noise: "brown", filter: "lowpass", frequency: 700, volume: 0.35, swell: [0.08, 0.12] },
-  rain: { noise: "white", filter: "bandpass", frequency: 2600, volume: 0.05, swell: [0.05, 0.01] },
-  night: {
-    noise: "brown",
-    filter: "lowpass",
-    frequency: 320,
-    volume: 0.2,
-    swell: [0.05, 0.05],
-    crickets: true,
-  },
-  ocean: { noise: "brown", filter: "lowpass", frequency: 1100, volume: 0.35, swell: [0.11, 0.25] },
-};
-
 /** Made here from noise and oscillators: no audio files. */
-function startSound(sound: Sound) {
+function startSound(sound: SceneSound) {
   const audio = new AudioContext();
   const buffer = audio.createBuffer(1, audio.sampleRate * 4, audio.sampleRate);
   const data = buffer.getChannelData(0);
@@ -506,7 +411,7 @@ export function useSceneSound(scene: Scene) {
   useEffect(() => {
     if (!on || scene === "none") return;
     try {
-      return startSound(SOUNDS[scene]);
+      return startSound(SCENE_SOUNDS[scene]);
     } catch {
       setOn(false);
     }

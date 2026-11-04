@@ -2,10 +2,13 @@ import { useFocusStore, useMe, useStreak } from "@grimo/client";
 import {
   READING_SCENES,
   type ReadingScene as Scene,
+  SESSION_SHARE_FORMATS,
   type SessionRecap,
+  type SessionShareFormat,
   sessionRecapStats,
   sessionShareText,
   streakLabel,
+  xPostUrl,
 } from "@grimo/core";
 import { cardPalettes } from "@grimo/tokens";
 import { useEffect, useRef, useState } from "react";
@@ -16,11 +19,10 @@ import { cn } from "@/utils/cn";
 import { launchFireworks } from "@/utils/fireworks";
 import { ReadingScene } from "./reading-scene";
 
-const FORMATS = {
-  story: { label: "Stories", width: 1080, height: 1920, scale: 0.24 },
-  square: { label: "Quadrado", width: 1080, height: 1080, scale: 0.34 },
-} as const;
-type Format = keyof typeof FORMATS;
+/** How much the preview shrinks each format to fit the dialog. */
+const PREVIEW_SCALE = { story: 0.24, square: 0.34 } as const;
+type Format = SessionShareFormat;
+const FORMATS = SESSION_SHARE_FORMATS;
 
 /** The image itself, at full size: the session on the picture it was read with. */
 function SessionCard({
@@ -151,7 +153,7 @@ export default function SessionShare({ recap }: { recap: SessionRecap }) {
         <div className="flex shrink-0 justify-center">
           <StoryCanvas
             ref={canvas}
-            scale={size.scale}
+            scale={PREVIEW_SCALE[format]}
             width={size.width}
             height={size.height}
             className="rounded-lg shadow-md shadow-shadow"
@@ -248,7 +250,7 @@ export default function SessionShare({ recap }: { recap: SessionRecap }) {
               {copied ? "Copiado" : "Copiar texto"}
             </button>
             <a
-              href={`https://x.com/intent/post?text=${encodeURIComponent(text)}`}
+              href={xPostUrl(text)}
               target="_blank"
               rel="noreferrer"
               className="font-mono text-[11px] uppercase tracking-wider text-accent hover:opacity-80"

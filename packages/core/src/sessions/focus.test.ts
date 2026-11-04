@@ -4,7 +4,9 @@ import {
   focusClock,
   focusRestMs,
   pauseFocus,
+  restoreFocus,
   resumeFocus,
+  serializeFocus,
   settleFocus,
   skipFocusPhase,
   startFocus,
@@ -52,6 +54,19 @@ describe("reading focus timer", () => {
     const paused = pauseFocus(inBreak, 26 * MIN);
     expect(focusRestMs(paused, 28 * MIN)).toBe(3 * MIN);
     expect(focusRestMs(resumeFocus(paused, 28 * MIN), 28 * MIN)).toBe(3 * MIN);
+  });
+
+  it("restores only the timer of this session", () => {
+    const session = { entryId: "a", startedAt: 100 * MIN };
+    const saved = serializeFocus("a", startFocus("long", 100 * MIN));
+    expect(restoreFocus(saved, "free", session).mode).toBe("long");
+    expect(
+      restoreFocus(serializeFocus("b", startFocus("long", 100 * MIN)), "free", session).mode,
+    ).toBe("free");
+    expect(restoreFocus(serializeFocus("a", startFocus("long", 0)), null, session).mode).toBe(
+      "classic",
+    );
+    expect(restoreFocus("{broken", "nope", session).mode).toBe("classic");
   });
 
   it("skips a phase", () => {

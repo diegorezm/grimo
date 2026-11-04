@@ -1,8 +1,21 @@
 import { api, type Id } from "@grimo/backend";
-import type { Feeling, FocusState, SessionRecap, UpdateNoteInput } from "@grimo/core";
+import {
+  buildSessionRecap,
+  type Feeling,
+  type FocusState,
+  focusClock,
+  focusPhaseKey,
+  focusRestMs,
+  isFocusOfSession,
+  restoreFocus,
+  type SessionRecap,
+  serializeFocus,
+  settleFocus,
+  type UpdateNoteInput,
+} from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { convexQuery, convexQueryPrefix } from "../../lib/convex-cache";
 import { usePatchQueries } from "../../lib/mutation";
@@ -114,4 +127,85 @@ export function useDiscardSession() {
     onMutate: () => patchQueries<ActiveSession | null>(active(), () => null),
     onError: (_error, _input, rollback) => rollback?.(),
   });
+}
+
+/** Where this device keeps the timer. Synchronous; may lose data (the timer then starts over). */
+export interface FocusStorage {
+  get: (key: string) => string | null;
+  set: (key: string, value: string) => void;
+}
+
+const FOCUS_STATE_KEY = "grimo:reading-focus";
+const FOCUS_MODE_KEY = "grimo:reading-focus-mode";
+
+/** Remembers the mode the next session starts in. */
+export const saveFocusMode = (storage: FocusStorage, mode: string) =>
+  storage.set(FOCUS_MODE_KEY, mode);
+
+/**
+ * The running session's timer, ticking every second: what the clock shows, and `update` for the
+ * controls (pass it `pauseFocus(...)`, `skipFocusPhase(...)`...). `onPhaseEnd` rings when a phase
+ * ends by itself. Keep it mounted while there is a session, so it also rings when minimized.
+ */
+export function useFocusTimer(
+  session: ActiveSession,
+  { storage, onPhaseEnd }: { storage: FocusStorage; onPhaseEnd?: () => void },
+) {
+  const timer = useFocusStore((store) => store.timer);
+  const setTimer = useFocusStore((store) => store.setTimer);
+  useElapsed(session.startedAt);
+  const now = Date.now();
+  const stored =
+    timer?.entryId === session.entryId && isFocusOfSession(timer.state, session)
+      ? timer.state
+      : restoreFocus(storage.get(FOCUS_STATE_KEY), storage.get(FOCUS_MODE_KEY), session);
+  const state = settleFocus(stored, now);
+  const lastPhase = useRef(focusPhaseKey(state));
+
+  const update = (next: FocusState) => {
+    lastPhase.current = focusPhaseKey(next);
+    setTimer({ entryId: session.entryId, state: next });
+    storage.set(FOCUS_STATE_KEY, serializeFocus(session.entryId, next));
+  };
+
+  useEffect(() => {
+    if (lastPhase.current === focusPhaseKey(state)) return;
+    onPhaseEnd?.();
+    update(state);
+  });
+
+  // Save from the start, so a reload finds the mode this session began with.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only once, when the timer mounts
+  useEffect(() => update(state), []);
+
+  return {
+    state,
+    now,
+    clock: focusClock(state, session.startedAt, now),
+    restMs: focusRestMs(state, now),
+    update,
+  };
+}
+
+/**
+ * Finishes the running session and opens its share card at once. Not `mutate` callbacks: the
+ * optimistic update closes the form before the result arrives. A failure closes the card.
+ */
+export function useFinishFocusSession(session: ActiveSession) {
+  const finish = useFinishSession();
+  const setRecap = useFocusStore((store) => store.setRecap);
+  return {
+    isPending: finish.isPending,
+    submit: (
+      input: { page: number; note?: UpdateNoteInput; readingMs: number; restMs: number },
+      onError: (error: unknown) => void,
+    ) => {
+      const page = session.pageCount ? Math.min(input.page, session.pageCount) : input.page;
+      setRecap(buildSessionRecap(session, page, input.readingMs));
+      finish.mutateAsync({ page, note: input.note, restMs: input.restMs }).catch((error) => {
+        setRecap(null);
+        onError(error);
+      });
+    },
+  };
 }

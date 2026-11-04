@@ -1,11 +1,13 @@
 import {
   type ActiveSession,
   errorMessage,
+  type FocusStorage,
+  saveFocusMode,
   useActiveSession,
   useDiscardSession,
-  useElapsed,
-  useFinishSession,
+  useFinishFocusSession,
   useFocusStore,
+  useFocusTimer,
 } from "@grimo/client";
 import {
   changeFocusMode,
@@ -13,20 +15,17 @@ import {
   type FocusMode,
   type FocusState,
   firstIssue,
-  focusClock,
+  type focusClock,
   focusRestMs,
   formatMinutes,
   formatTimer,
-  isFocusMode,
   pauseFocus,
   resumeFocus,
   type ReadingScene as Scene,
-  settleFocus,
   skipFocusPhase,
-  startFocus,
   updateNoteSchema,
 } from "@grimo/core";
-import { type FormEvent, lazy, Suspense, useEffect, useRef, useState } from "react";
+import { type FormEvent, lazy, Suspense, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,46 +45,25 @@ import { SceneGallery } from "./scene-gallery";
 // Lazy: the card tools are heavy and this component lives in the app layout.
 const SessionShare = lazy(() => import("./session-share"));
 
-const STATE_KEY = "grimo:reading-focus";
-const MODE_KEY = "grimo:reading-focus-mode";
 const RING_RADIUS = 46;
 const VISIBLE_DOTS = 8;
-/** A saved timer older than the session belongs to a previous one on the same book. */
-const SAME_SESSION_MARGIN_MS = 60_000;
-
 /** Storage may be blocked (private window): the timer then just lasts until a reload. */
-function read(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Not fatal, see `read`.
-  }
-}
-
-function loadState(session: ActiveSession): FocusState {
-  try {
-    const saved = JSON.parse(read(STATE_KEY) ?? "null");
-    if (
-      saved?.entryId === session.entryId &&
-      isFocusMode(saved.state?.mode) &&
-      isCurrent(saved.state, session)
-    ) {
-      return saved.state;
+const focusStorage: FocusStorage = {
+  get: (key) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
     }
-  } catch {
-    // Unreadable: start over.
-  }
-  const mode = read(MODE_KEY);
-  return startFocus(isFocusMode(mode) ? mode : "classic", session.startedAt);
-}
+  },
+  set: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Not fatal, see above.
+    }
+  },
+};
 
 /** A soft two-note chime when a phase ends. */
 function chime() {
@@ -108,8 +86,6 @@ function chime() {
   }
 }
 
-const phaseKeyOf = (state: FocusState) => `${state.phase}:${state.cycle}`;
-
 /**
  * The running reading session takes over the screen: a pomodoro (or free stopwatch) with the book.
  * Mounted in the app layout, so it comes back on reload and from any page. Minimized, the timer
@@ -130,41 +106,14 @@ export function ReadingFocus() {
   );
 }
 
-function isCurrent(state: FocusState, session: ActiveSession) {
-  return state.phaseStartedAt >= session.startedAt - SAME_SESSION_MARGIN_MS;
-}
-
 function FocusTimer({ session }: { session: ActiveSession }) {
   const minimized = useFocusStore((store) => store.minimized);
-  const timer = useFocusStore((store) => store.timer);
-  const setTimer = useFocusStore((store) => store.setTimer);
-  useElapsed(session.startedAt);
-  const now = Date.now();
-  const stored =
-    timer?.entryId === session.entryId && isCurrent(timer.state, session)
-      ? timer.state
-      : loadState(session);
-  const state = settleFocus(stored, now);
-  const clock = focusClock(state, session.startedAt, now);
-  const lastPhase = useRef(phaseKeyOf(state));
+  const { state, clock, now, update } = useFocusTimer(session, {
+    storage: focusStorage,
+    onPhaseEnd: chime,
+  });
   const scene = useReadingScene();
   const sound = useSceneSound(scene);
-
-  const update = (next: FocusState) => {
-    lastPhase.current = phaseKeyOf(next);
-    setTimer({ entryId: session.entryId, state: next });
-    write(STATE_KEY, JSON.stringify({ entryId: session.entryId, state: next }));
-  };
-
-  // A phase ended by itself: ring, and save what it moved to.
-  useEffect(() => {
-    if (lastPhase.current === phaseKeyOf(state)) return;
-    chime();
-    update(state);
-  });
-
-  // Save from the start, so a reload finds the mode this session began with.
-  useEffect(() => update(state), []);
 
   if (minimized)
     return <FocusCornerClock state={state} shownMs={clock.remainingMs ?? clock.readingMs} />;
@@ -252,7 +201,7 @@ function FocusScreen({
   const circumference = 2 * Math.PI * RING_RADIUS;
 
   const chooseMode = (mode: FocusMode) => {
-    write(MODE_KEY, mode);
+    saveFocusMode(focusStorage, mode);
     update(changeFocusMode(state, mode, Date.now()));
   };
 
@@ -515,8 +464,7 @@ function FinishForm({
   restMs: number;
   onBack: () => void;
 }) {
-  const finish = useFinishSession();
-  const setRecap = useFocusStore((store) => store.setRecap);
+  const finish = useFinishFocusSession(session);
   const discard = useDiscardSession();
   const [page, setPage] = useState(String(session.startPage));
   const [note, setNote] = useState("");
@@ -534,21 +482,9 @@ function FinishForm({
       parsedNote = input.data;
     }
     setError(null);
-    const endPage = pageCount ? Math.min(value, pageCount) : value;
-    const minutes = Math.max(1, Math.round(readingMs / 60_000));
-    setRecap({
-      title: session.book.title,
-      authors: session.book.authors,
-      coverUrl: session.book.coverUrl,
-      minutes,
-      pages: Math.max(0, endPage - session.startPage),
-      lastPage: pageCount !== null && endPage >= pageCount,
-    });
-    // Not `mutate` callbacks: the optimistic update closes this form before the result arrives.
-    finish.mutateAsync({ page: endPage, note: parsedNote, restMs }).catch((failure) => {
-      setRecap(null);
-      setError(errorMessage(failure));
-    });
+    finish.submit({ page: value, note: parsedNote, readingMs, restMs }, (failure) =>
+      setError(errorMessage(failure)),
+    );
   }
 
   return (

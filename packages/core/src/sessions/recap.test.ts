@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sessionRecapStats, sessionShareText } from "./recap";
+import { buildSessionRecap, sessionRecapStats, sessionShareText, xPostUrl } from "./recap";
 
 const recap = {
   title: "Duna",
@@ -11,6 +11,28 @@ const recap = {
 };
 
 describe("session recap", () => {
+  it("builds the recap from the finished session", () => {
+    const session = {
+      book: { title: "Duna", authors: [], coverUrl: null },
+      startPage: 10,
+      pageCount: 50,
+    };
+    expect(buildSessionRecap(session, 50, 90_000)).toMatchObject({
+      minutes: 2,
+      pages: 40,
+      lastPage: true,
+    });
+    expect(buildSessionRecap(session, 5, 0)).toMatchObject({
+      minutes: 1,
+      pages: 0,
+      lastPage: false,
+    });
+  });
+
+  it("links to the post with the text", () => {
+    expect(xPostUrl("a b")).toBe("https://x.com/intent/post?text=a%20b");
+  });
+
   it("sums up the session", () => {
     expect(sessionRecapStats(recap)).toBe("38 páginas · 42 min");
     expect(sessionRecapStats({ minutes: 42, pages: 1 })).toBe("1 página · 42 min");

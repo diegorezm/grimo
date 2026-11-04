@@ -35,3 +35,34 @@ export function sessionShareText(recap: SessionRecap, streakDays: number) {
   const streak = streakDays > 1 ? `, ${streakDays} dias seguidos lendo` : "";
   return `${read}${streak} 📖 #grimo`;
 }
+
+/** The image sizes of the share card. */
+export const SESSION_SHARE_FORMATS = {
+  story: { label: "Stories", width: 1080, height: 1920 },
+  square: { label: "Quadrado", width: 1080, height: 1080 },
+} as const;
+export type SessionShareFormat = keyof typeof SESSION_SHARE_FORMATS;
+
+/** The X post link with the text ready (it can't attach images). */
+export const xPostUrl = (text: string) =>
+  `https://x.com/intent/post?text=${encodeURIComponent(text)}`;
+
+/** The session just finished at `page`, ready for its card. */
+export function buildSessionRecap(
+  session: {
+    book: { title: string; authors: string[]; coverUrl: string | null };
+    startPage: number;
+    pageCount: number | null;
+  },
+  page: number,
+  readingMs: number,
+): SessionRecap {
+  return {
+    title: session.book.title,
+    authors: session.book.authors,
+    coverUrl: session.book.coverUrl,
+    minutes: Math.max(1, Math.round(readingMs / 60_000)),
+    pages: Math.max(0, page - session.startPage),
+    lastPage: session.pageCount !== null && page >= session.pageCount,
+  };
+}

@@ -102,6 +102,43 @@ export function focusClock(state: FocusState, sessionStartedAt: number, now: num
   };
 }
 
+/** Changes when a phase ends: compare it to notice the end and ring. */
+export const focusPhaseKey = (state: FocusState) => `${state.phase}:${state.cycle}`;
+
+/** A saved timer older than the session belongs to a previous one on the same book. */
+const SAME_SESSION_MARGIN_MS = 60_000;
+
+/** Whether a timer belongs to this running session. */
+export const isFocusOfSession = (state: FocusState, session: { startedAt: number }) =>
+  state.phaseStartedAt >= session.startedAt - SAME_SESSION_MARGIN_MS;
+
+export const serializeFocus = (entryId: string, state: FocusState) =>
+  JSON.stringify({ entryId, state });
+
+/**
+ * The timer saved on this device for this session, or a new one in the reader's last mode.
+ * Anything unreadable just starts over.
+ */
+export function restoreFocus(
+  saved: string | null,
+  lastMode: string | null,
+  session: { entryId: string; startedAt: number },
+): FocusState {
+  try {
+    const parsed = JSON.parse(saved ?? "null");
+    if (
+      parsed?.entryId === session.entryId &&
+      isFocusMode(parsed.state?.mode) &&
+      isFocusOfSession(parsed.state, session)
+    ) {
+      return parsed.state;
+    }
+  } catch {
+    // Start over, below.
+  }
+  return startFocus(isFocusMode(lastMode) ? lastMode : "classic", session.startedAt);
+}
+
 /** The themes behind the reading timer (web: `ReadingScene`). */
 export const READING_SCENES = {
   forest: "Floresta",

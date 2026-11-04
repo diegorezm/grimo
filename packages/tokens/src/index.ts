@@ -234,3 +234,38 @@ export const cardPalettes = {
 
 export type CardPaletteKey = keyof typeof cardPalettes;
 export type CardPalette = (typeof cardPalettes)[CardPaletteKey];
+
+/**
+ * Illustrated reading themes are paintings with their own colors, whatever the app theme: the
+ * timer's tokens follow the picture so the text stays readable on it. Web: `theme.css`
+ * (`[data-reading-scene]`). Mobile: use instead of `useTheme()` colors on the timer.
+ */
+const warmDusk = {
+  surface: "#2a1d16",
+  surfaceMuted: "#3a2a20",
+  text: "#fbf1dc",
+  textMuted: "#e0d0b6",
+  border: "#8a7360",
+  accent: "#f0b878",
+  accentStart: "#f6cf94",
+  accentForeground: "#2a1d16",
+  primary: "#fbf1dc",
+  primaryForeground: "#2a1d16",
+};
+
+export const readingScenePalettes = {
+  cozy: {
+    surface: "#fdf8ea",
+    surfaceMuted: "#f3e8cf",
+    text: "#33261c",
+    textMuted: "#6d5a48",
+    border: "#d8c7a6",
+    accent: "#a8482f",
+    accentStart: "#c0603c",
+    accentForeground: "#fdf8ea",
+    primary: "#33261c",
+    primaryForeground: "#fdf8ea",
+  },
+  window: warmDusk,
+  sunset: warmDusk,
+};
