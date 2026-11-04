@@ -7,6 +7,12 @@
     color-scheme: light dark;
   }
 
+  /* Slim scrollbars: an accent-tinted thumb on a transparent track, in both themes. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-accent) 45%, transparent) transparent;
+  }
+
   body {
     @apply bg-background text-text font-sans antialiased;
     /* The desk: two soft glows behind the pages (blush top-right, lavender bottom-left). */
