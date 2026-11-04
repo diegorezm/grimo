@@ -26,7 +26,7 @@ import {
   startFocus,
   updateNoteSchema,
 } from "@grimo/core";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,9 @@ import { cn } from "@/utils/cn";
 import { BookCover } from "./book-cover";
 import { ReadingScene, useSceneSound } from "./reading-scene";
 import { SceneGallery } from "./scene-gallery";
+
+// Lazy: the card tools are heavy and this component lives in the app layout.
+const SessionShare = lazy(() => import("./session-share"));
 
 const STATE_KEY = "grimo:reading-focus";
 const MODE_KEY = "grimo:reading-focus-mode";
@@ -114,8 +117,17 @@ const phaseKeyOf = (state: FocusState) => `${state.phase}:${state.cycle}`;
  */
 export function ReadingFocus() {
   const session = useActiveSession().data;
-  if (!session) return null;
-  return <FocusTimer key={session.entryId} session={session} />;
+  const recap = useFocusStore((store) => store.recap);
+  return (
+    <>
+      {session && <FocusTimer key={session.entryId} session={session} />}
+      {recap && (
+        <Suspense fallback={null}>
+          <SessionShare recap={recap} />
+        </Suspense>
+      )}
+    </>
+  );
 }
 
 function isCurrent(state: FocusState, session: ActiveSession) {
@@ -504,6 +516,7 @@ function FinishForm({
   onBack: () => void;
 }) {
   const finish = useFinishSession();
+  const setRecap = useFocusStore((store) => store.setRecap);
   const discard = useDiscardSession();
   const [page, setPage] = useState(String(session.startPage));
   const [note, setNote] = useState("");
@@ -521,10 +534,21 @@ function FinishForm({
       parsedNote = input.data;
     }
     setError(null);
-    finish.mutate(
-      { page: pageCount ? Math.min(value, pageCount) : value, note: parsedNote, restMs },
-      { onError: (failure) => setError(errorMessage(failure)) },
-    );
+    const endPage = pageCount ? Math.min(value, pageCount) : value;
+    const minutes = Math.max(1, Math.round(readingMs / 60_000));
+    setRecap({
+      title: session.book.title,
+      authors: session.book.authors,
+      coverUrl: session.book.coverUrl,
+      minutes,
+      pages: Math.max(0, endPage - session.startPage),
+      lastPage: pageCount !== null && endPage >= pageCount,
+    });
+    // Not `mutate` callbacks: the optimistic update closes this form before the result arrives.
+    finish.mutateAsync({ page: endPage, note: parsedNote, restMs }).catch((failure) => {
+      setRecap(null);
+      setError(errorMessage(failure));
+    });
   }
 
   return (

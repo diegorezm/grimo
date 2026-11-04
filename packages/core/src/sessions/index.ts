@@ -1,6 +1,7 @@
 import { shiftDay } from "../lib/date";
 
 export * from "./focus";
+export * from "./recap";
 
 /** A session left open longer than this counts only this long (you fell asleep reading). */
 export const SESSION_MAX_MS = 6 * 60 * 60 * 1000;
@@ -14,15 +15,6 @@ export function formatTimer(ms: number): string {
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`
     : `${minutes}:${seconds}`;
-}
-
-/** "35 min", "1 h", "1 h 20 min": how long a session took. */
-export function formatMinutes(minutes: number): string {
-  const m = Math.max(1, Math.round(minutes));
-  if (m < 60) return `${m} min`;
-  const hours = Math.floor(m / 60);
-  const rest = m % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
 
 /** Whole minutes a session lasted, capped at `SESSION_MAX_MS`. */

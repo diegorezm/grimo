@@ -5,6 +5,7 @@ import { FeelingPicker } from "@/components/ui/feelings";
 import { PencilIcon } from "@/components/ui/icons";
 import { Sparkle } from "@/components/ui/sparkle";
 import { cn } from "@/utils/cn";
+import { launchFireworks } from "@/utils/fireworks";
 
 const QUICK_STEPS = [5, 10, 25];
 
@@ -197,7 +198,10 @@ export function PageLogger({
         {finished && (
           <button
             type="button"
-            onClick={() => update.mutate({ id: entryId, status: "read" })}
+            onClick={() => {
+              launchFireworks();
+              update.mutate({ id: entryId, status: "read" });
+            }}
             className="bg-accent-gradient ml-auto flex items-center gap-1.5 rounded-full px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-accent-foreground shadow-md shadow-accent/30 hover:opacity-90"
           >
             <Sparkle className="size-3.5" />

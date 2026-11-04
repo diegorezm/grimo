@@ -1,5 +1,5 @@
 import { api, type Id } from "@grimo/backend";
-import type { Feeling, FocusState, UpdateNoteInput } from "@grimo/core";
+import type { Feeling, FocusState, SessionRecap, UpdateNoteInput } from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useState } from "react";
@@ -49,11 +49,16 @@ export const useFocusStore = create<{
   timer: { entryId: string; state: FocusState } | null;
   setMinimized: (minimized: boolean) => void;
   setTimer: (timer: { entryId: string; state: FocusState }) => void;
+  /** The session just saved, while its share card is open. */
+  recap: SessionRecap | null;
+  setRecap: (recap: SessionRecap | null) => void;
 }>((set) => ({
   minimized: false,
   timer: null,
   setMinimized: (minimized) => set({ minimized }),
   setTimer: (timer) => set({ timer }),
+  recap: null,
+  setRecap: (recap) => set({ recap }),
 }));
 
 const active = () => [convexQueryPrefix(api.sessions.active)];
