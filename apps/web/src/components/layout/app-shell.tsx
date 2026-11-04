@@ -1,5 +1,4 @@
 import { useMe } from "@grimo/client";
-import { greetingFor } from "@grimo/core";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/icons";
 import { Logo } from "@/components/ui/logo";
 import { ThemeCycleButton, ThemeToggle } from "@/components/ui/theme-toggle";
+import { UserMenu } from "./user-menu";
 
 /**
  * Main sections (also drawn by the landing page demo). The phone bar has room for five:
@@ -180,14 +180,7 @@ function TopBar({ actions }: { actions?: ReactNode }) {
             <ShieldIcon className="size-6" />
           </Link>
         )}
-        {me && (
-          <Link to="/me" className="hidden items-center gap-3 lg:flex">
-            <span className="text-right text-sm leading-tight">
-              <span className="block text-text-muted">{greetingFor(new Date())},</span>
-              <strong className="font-semibold">{me.name}</strong>
-            </span>
-          </Link>
-        )}
+        {me && <UserMenu me={me} />}
       </div>
     </header>
   );

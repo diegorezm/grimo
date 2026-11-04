@@ -7,15 +7,14 @@ import {
   yearOverviewQuery,
 } from "@grimo/client";
 import { finishedPerMonth, genreBreakdown } from "@grimo/core";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
 import { LogOutIcon, PencilIcon } from "@/components/ui/icons";
 import { BookRow, ProfileHeader } from "@/features/profile";
 import { ShareProfileButton } from "@/features/readers";
 import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
-import { clearCacheForSignOut } from "@/lib/api";
-import { authClient } from "@/lib/auth-client";
+import { useSignOut } from "@/lib/sign-out";
 
 export const Route = createFileRoute("/_app/me")({
   loader: ({ context: { queryClient } }) => {
@@ -32,13 +31,7 @@ const YEAR = new Date().getFullYear();
 function MePage() {
   const me = useMe();
   const shelf = useShelf();
-  const navigate = useNavigate();
-
-  async function signOut() {
-    await clearCacheForSignOut();
-    await authClient.signOut();
-    await navigate({ to: "/login" });
-  }
+  const signOut = useSignOut();
 
   if (!me.data || !shelf.data) return <Spinner />;
   const items = shelf.data.items;
