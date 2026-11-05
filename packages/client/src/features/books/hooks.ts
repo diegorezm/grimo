@@ -28,7 +28,7 @@ export function useBookSearch(q: string) {
 export type BookDetail = NonNullable<FunctionReturnType<typeof api.books.detail>["detail"]>;
 
 /** The book page's book as `shelves.add` and `groups.create` take it (only the book's fields). */
-export function bookInputOf(book: BookDetail["book"]): BookSearchResult {
+export function bookInputOf(book: BookSearchResult): BookSearchResult {
   const { openLibraryId, title, authors, coverUrl, pageCount, publishedYear, genres } = book;
   return { openLibraryId, title, authors, coverUrl, pageCount, publishedYear, genres };
 }

@@ -130,6 +130,20 @@ export function useUpdateThread() {
   });
 }
 
+/** How many books "Em alta no Grimo" shows. */
+const POPULAR_LIMIT = 18;
+
+export type PopularItem = FunctionReturnType<typeof api.feed.popular>["items"][number];
+
+/** What the whole community is reading now (route loaders prefetch). */
+export function popularBooksQuery() {
+  return convexQuery(api.feed.popular, { limit: POPULAR_LIMIT }, "required");
+}
+
+export function usePopularBooks() {
+  return useQuery(popularBooksQuery());
+}
+
 /** How many books "Em alta entre quem você segue" shows. */
 const TRENDING_LIMIT = 12;
 

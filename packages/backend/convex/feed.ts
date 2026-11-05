@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { activityPage, listActivities } from "./model/content";
-import { booksTrendingWithFriends } from "./model/friends";
+import { booksTrendingInCommunity, booksTrendingWithFriends } from "./model/friends";
 import { listLimit } from "./model/limits";
 import { requireViewer } from "./model/readers";
 import { blockedIds } from "./model/safety";
@@ -54,6 +54,17 @@ export const community = query({
 });
 
 /** "Em alta entre quem você segue": what friends are reading and finishing this month. */
+/** "Em alta no Grimo": what the whole community is reading now (the empty search screen). */
+export const popular = query({
+  args: { limit: v.number() },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    return {
+      items: await booksTrendingInCommunity(ctx, viewer._id, listLimit(args.limit), Date.now()),
+    };
+  },
+});
+
 export const trending = query({
   args: { limit: v.number() },
   handler: async (ctx, args) => {
