@@ -133,6 +133,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
               <SessionControl
                 entryId={entry.id}
                 page={entry.currentPage}
+                pageCount={pages}
                 book={{ ...book, id: book.id }}
               />
             )}

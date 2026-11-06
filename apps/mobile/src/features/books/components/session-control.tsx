@@ -12,10 +12,12 @@ import { spacing } from "@/constants/theme";
 export function SessionControl({
   entryId,
   page,
+  pageCount,
   book,
 }: {
   entryId: string;
   page: number;
+  pageCount: number | null;
   book: ActiveSession["book"];
 }) {
   const session = useActiveSession().data;
@@ -44,7 +46,7 @@ export function SessionControl({
       variant="secondary"
       title={session ? `Trocar a sessão para este livro` : "⏱ Iniciar sessão de leitura"}
       disabled={start.isPending}
-      onPress={() => start.mutate({ entryId, book, page })}
+      onPress={() => start.mutate({ entryId, book, page, pageCount })}
     />
   );
 }
