@@ -1,5 +1,5 @@
 import { useFeed, useMe, useShelf, useYearOverview } from "@grimo/client";
-import { goalProgress, greetingFor, readingPercent } from "@grimo/core";
+import { editionPages, goalProgress, greetingFor, readingPercent } from "@grimo/core";
 import { router } from "expo-router";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -181,7 +181,12 @@ function CurrentRead({ item }: { item: ReadingItem }) {
           router.push({ pathname: "/progress/[id]", params: { id: book.openLibraryId } })
         }
       />
-      <SessionControl entryId={entry.id} page={entry.currentPage} book={book} />
+      <SessionControl
+        entryId={entry.id}
+        page={entry.currentPage}
+        pageCount={editionPages(entry.pageCount, book.pageCount)}
+        book={book}
+      />
     </View>
   );
 }
