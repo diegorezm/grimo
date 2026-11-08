@@ -17,8 +17,8 @@ export interface SongCardData {
 }
 
 /**
- * "Trilha da leitura": the cover, the song and the artist on a card in the cover's color.
- * Tapping opens the song in its own app (nothing plays or loads here).
+ * "Trilha da leitura": a slim strip in the cover's color with the cover, the song and the
+ * artist. Tapping opens the song in its own app (nothing plays or loads here).
  */
 export function SongCard({
   song,
@@ -34,7 +34,7 @@ export function SongCard({
   return (
     <Pressable
       accessibilityRole="link"
-      accessibilityLabel={`${song.title}, de ${song.artist}. ${listen}`}
+      accessibilityLabel={`Trilha da leitura: ${song.title}, de ${song.artist}. ${listen}`}
       disabled={!interactive}
       onPress={() => Linking.openURL(song.url)}
       style={({ pressed }) => [
@@ -50,14 +50,9 @@ export function SongCard({
         </View>
       )}
       <View style={styles.text}>
-        <Text variant="label" style={{ color: ink, opacity: 0.75 }}>
-          Trilha da leitura
-        </Text>
-        <Text numberOfLines={2} style={[styles.title, { color: ink }]}>
+        <Text numberOfLines={1} style={[styles.title, { color: ink }]}>
           {song.title}
-        </Text>
-        <Text variant="small" numberOfLines={1} style={{ color: ink, opacity: 0.85 }}>
-          {song.artist}
+          <Text style={[styles.artist, { color: ink }]}> · {song.artist}</Text>
         </Text>
         <View style={styles.service}>
           {song.service && (
@@ -68,13 +63,13 @@ export function SongCard({
               ]}
             />
           )}
-          <Text variant="small" style={{ color: ink, opacity: 0.85 }}>
-            {listen}
+          <Text variant="small" numberOfLines={1} style={[styles.meta, { color: ink }]}>
+            Trilha da leitura · {listen}
           </Text>
         </View>
       </View>
       <View style={[styles.play, { backgroundColor: ink }]}>
-        <Svg width={14} height={14} viewBox="0 0 24 24" accessibilityElementsHidden>
+        <Svg width={12} height={12} viewBox="0 0 24 24" accessibilityElementsHidden>
           <Path d="M7 4v16l13-8z" fill={background} />
         </Svg>
       </View>
@@ -82,26 +77,30 @@ export function SongCard({
   );
 }
 
-const COVER = 76;
+const COVER = 44;
 
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[3],
-    borderRadius: radius.xl,
-    padding: spacing[3],
+    borderRadius: radius.lg,
+    paddingVertical: spacing[2],
+    paddingLeft: spacing[2],
+    paddingRight: spacing[3],
   },
-  cover: { width: COVER, height: COVER, borderRadius: radius.md },
+  cover: { width: COVER, height: COVER, borderRadius: radius.sm },
   noCover: { borderWidth: 1, alignItems: "center", justifyContent: "center", opacity: 0.6 },
-  note: { fontSize: 28, lineHeight: 34 },
+  note: { fontSize: 20, lineHeight: 24 },
   text: { flex: 1, gap: 2 },
-  title: { fontSize: 17, lineHeight: 22, fontWeight: "700" },
-  service: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
-  dot: { width: 10, height: 10, borderRadius: radius.full },
+  title: { fontSize: 15, lineHeight: 20, fontWeight: "700" },
+  artist: { fontWeight: "400", opacity: 0.85 },
+  service: { flexDirection: "row", alignItems: "center", gap: 6 },
+  dot: { width: 8, height: 8, borderRadius: radius.full },
+  meta: { opacity: 0.8, flexShrink: 1 },
   play: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",

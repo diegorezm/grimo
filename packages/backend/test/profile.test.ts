@@ -145,3 +145,41 @@ describe("profile personalization", () => {
     expect(row?.favoriteBookIds).toBeUndefined();
   });
 });
+
+describe("profile shelves", () => {
+  it("shows Lendo and Lidos in runs by year, and nothing to a blocked reader", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const shelve = async (n: number, status: "reading" | "read", finished?: string) => {
+      const { entry } = await rafa.as.mutation(api.shelves.add, {
+        book: { ...book, openLibraryId: `OL${n}W`, title: `Livro ${n}` },
+        status,
+      });
+      if (finished) {
+        await rafa.as.mutation(api.shelves.update, {
+          id: entry.id,
+          finishedAt: new Date(finished).getTime(),
+        });
+      }
+    };
+    await shelve(1, "read", "2025-05-10T12:00:00Z");
+    await shelve(2, "read", "2026-02-01T12:00:00Z");
+    await shelve(3, "reading");
+    await rafa.as.mutation(api.shelves.add, {
+      book: { ...book, openLibraryId: "OL9W", title: "Quero" },
+      status: "want_to_read",
+    });
+
+    const shelves = await bia.as.query(api.users.shelves, { username: "rafa" });
+    expect(shelves.reading).toMatchObject({ count: 1, items: [{ title: "Livro 3" }] });
+    expect(shelves.read.count).toBe(2);
+    expect(shelves.read.runs.map((run) => [run.year, run.items.map((i) => i.title)])).toEqual([
+      [2026, ["Livro 2"]],
+      [2025, ["Livro 1"]],
+    ]);
+
+    await rafa.as.mutation(api.moderation.setBlocked, { userId: bia.id, block: true });
+    await expect(bia.as.query(api.users.shelves, { username: "rafa" })).rejects.toThrow(/Leitor/);
+  });
+});

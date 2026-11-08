@@ -1,25 +1,25 @@
 import { type ReaderPage, useReaderActivity } from "@grimo/client";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
-import { BookTile } from "@/features/books";
 import { FeedItem } from "@/features/feed";
 import { ReaderLists } from "@/features/lists";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { useTheme } from "@/hooks/use-theme";
+import { ProfileShelves } from "./profile-shelves";
 
 const TABS = [
+  { id: "shelves", label: "Estantes" },
   { id: "activity", label: "Atividade" },
-  { id: "books", label: "Livros" },
   { id: "lists", label: "Listas" },
   { id: "year", label: "Ano" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
 /**
- * The bottom of a profile, one part at a time: what the reader posted, their best rated and
- * current books, their lists, and the year (with the monthly card on your own profile).
+ * The bottom of a profile, one part at a time: the shelves as rows of covers, what the reader
+ * posted, their lists, and the year (with the monthly card on your own profile).
  */
 export function ProfileTabs({
   page,
@@ -31,7 +31,7 @@ export function ProfileTabs({
   isMe: boolean;
 }) {
   const theme = useTheme();
-  const [tab, setTab] = useState<Tab>("activity");
+  const [tab, setTab] = useState<Tab>("shelves");
   return (
     <View style={styles.root}>
       <View style={[styles.bar, { borderColor: theme.edge }]} accessibilityRole="tablist">
@@ -53,7 +53,7 @@ export function ProfileTabs({
         })}
       </View>
       {tab === "activity" && <Activity username={username} />}
-      {tab === "books" && <Books page={page} />}
+      {tab === "shelves" && <ProfileShelves username={username} />}
       {tab === "lists" && <ReaderLists username={username} isMe={isMe} />}
       {tab === "year" && (
         <>
@@ -66,46 +66,6 @@ export function ProfileTabs({
           )}
         </>
       )}
-    </View>
-  );
-}
-
-function Books({ page }: { page: ReaderPage }) {
-  const { reading, favorites } = page.books;
-  if (reading.length === 0 && favorites.length === 0) {
-    return <Text color="textMuted">Nenhum livro lido ou em leitura ainda.</Text>;
-  }
-  return (
-    <>
-      {reading.length > 0 && (
-        <Row title="Lendo">
-          {reading.map(({ entry, book }) => (
-            <BookTile key={entry.id} book={book} currentPage={entry.currentPage} />
-          ))}
-        </Row>
-      )}
-      {favorites.length > 0 && (
-        <Row title="Melhores notas">
-          {favorites.map(({ entry, book }) => (
-            <BookTile key={entry.id} book={book} rating={entry.rating} />
-          ))}
-        </Row>
-      )}
-    </>
-  );
-}
-
-function Row({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text variant="heading">{title}</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-      >
-        {children}
-      </ScrollView>
     </View>
   );
 }

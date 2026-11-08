@@ -1,5 +1,6 @@
 import {
   avatarProblem,
+  groupByYearRead,
   setupProfileSchema,
   timeZoneSchema,
   USERNAME_REGEX,
@@ -518,5 +519,50 @@ export const setTimeZone = mutation({
     const timeZone = parse(timeZoneSchema, args.timeZone);
     if (viewer.timeZone !== timeZone) await ctx.db.patch(viewer._id, { timeZone });
     return null;
+  },
+});
+
+/** Covers per shelf on a profile: at most this many books each. */
+const SHELF_COVERS = 60;
+
+/**
+ * A reader's public shelves on their profile, as rows of covers: Lendo, and Lidos in runs by the
+ * year each book was finished ("Lidos '26"). Only these two shelves are public (Privacy Policy).
+ */
+export const shelves = query({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
+    if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
+    const byStatus = (status: "reading" | "read") =>
+      ctx.db
+        .query("shelfEntries")
+        .withIndex("by_user_status_updated", (q) => q.eq("userId", reader._id).eq("status", status))
+        .order("desc")
+        .collect();
+    const [reading, read] = await Promise.all([byStatus("reading"), byStatus("read")]);
+    const latestRead = [...read]
+      .sort((a, b) => (b.finishedAt ?? -1) - (a.finishedAt ?? -1))
+      .slice(0, SHELF_COVERS);
+    const [readingRows, readRows] = await Promise.all([
+      withBooks(ctx, reading.slice(0, SHELF_COVERS), viewer?._id ?? null),
+      withBooks(ctx, latestRead, viewer?._id ?? null),
+    ]);
+    const cover = ({ entry, book }: (typeof readRows)[number]) => ({
+      entryId: entry.id,
+      openLibraryId: book.openLibraryId,
+      title: book.title,
+      coverUrl: book.coverUrl,
+      rating: entry.rating,
+      finishedAt: entry.finishedAt,
+    });
+    const timeZone = timeZoneOf(reader);
+    return {
+      reading: { count: reading.length, items: readingRows.map(cover) },
+      read: {
+        count: read.length,
+        runs: groupByYearRead(readRows.map(cover), (date) => yearOf(date, timeZone)),
+      },
+    };
   },
 });

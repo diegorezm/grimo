@@ -14,3 +14,26 @@ export const SHELF_VIEW_HINTS: Record<ShelfView, string> = {
 export function isShelfView(value: unknown): value is ShelfView {
   return SHELF_VIEWS.includes(value as ShelfView);
 }
+
+/**
+ * Books read, newest first, in runs by the year they were finished ("Lidos '26", "Lidos '25"):
+ * the profile's shelf of covers. Books without a date go to the end, in their own run.
+ */
+export function groupByYearRead<T extends { finishedAt: number | null }>(
+  items: readonly T[],
+  yearOfDate: (date: Date) => number,
+): { year: number | null; items: T[] }[] {
+  const sorted = [...items].sort((a, b) => (b.finishedAt ?? -1) - (a.finishedAt ?? -1));
+  const groups: { year: number | null; items: T[] }[] = [];
+  for (const item of sorted) {
+    const year = item.finishedAt === null ? null : yearOfDate(new Date(item.finishedAt));
+    const last = groups[groups.length - 1];
+    if (last && last.year === year) last.items.push(item);
+    else groups.push({ year, items: [item] });
+  }
+  return groups;
+}
+
+/** "Lidos '26": the short year label of a run. */
+export const yearRunLabel = (year: number | null) =>
+  year === null ? "Sem data" : `Lidos '${String(year).slice(-2)}`;
