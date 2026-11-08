@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Security updates come anyway; this keeps the rest from piling up. Expo and React are
+  # pinned to the SDK: update them with `expo install`, not here.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "expo*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
