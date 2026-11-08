@@ -10,3 +10,4 @@ export { ProgressBar } from "./progress-bar";
 export { Screen } from "./screen";
 export { Stars } from "./stars";
 export { Text } from "./text";
+export { Toaster } from "./toaster";

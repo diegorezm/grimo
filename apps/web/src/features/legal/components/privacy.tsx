@@ -43,7 +43,11 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Perfil:</strong> foto, bio, gêneros favoritos, meta de leitura e o fuso horário
-            do seu aparelho (para contar seus meses e anos de leitura).
+            do seu aparelho (para contar seus meses e anos de leitura). Se você quiser, também:
+            pronomes, cor da capa, a música do perfil (nome, artista e o link que você colar), os
+            livros de cabeceira, a citação destacada e quais cartões de leitura aparecem. A música é
+            só um link: o Grimo não toca nem carrega nada do serviço de música, que só recebe você
+            se tocar no link.
           </li>
           <li>
             <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações (nota e
@@ -124,10 +128,11 @@ export function PrivacyPage() {
       <Section title="4. O que é público">
         <p>
           O Grimo é uma rede social aberta. <strong>Qualquer pessoa, mesmo sem conta</strong>, pode
-          ver seu nome, @, foto, bio, gêneros favoritos, livros que você está lendo e já leu,
-          avaliações (com os sentimentos), os sentimentos marcados nas páginas, resenhas, notas,
-          comentários, quem você segue e quem segue você, e suas estatísticas de leitura. O que você
-          faz nas estantes (começar, marcar página, terminar, avaliar) também aparece no feed
+          ver seu nome, @, foto, bio, pronomes, gêneros favoritos, a música, os livros de cabeceira
+          e a citação destacada do perfil, livros que você está lendo e já leu, avaliações (com os
+          sentimentos), os sentimentos marcados nas páginas, resenhas, notas, comentários, quem você
+          segue e quem segue você, e suas estatísticas de leitura. O que você faz nas estantes
+          (começar, marcar página, terminar, avaliar) também aparece no feed
           &ldquo;Comunidade&rdquo;, que mostra a atividade de todos os leitores. Seu email e os
           dados técnicos nunca são públicos.
         </p>

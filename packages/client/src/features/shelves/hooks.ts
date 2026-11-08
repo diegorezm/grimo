@@ -66,7 +66,13 @@ export function useUpdateShelfEntry() {
       startedAt,
       finishedAt,
       ...patch
-    }: UpdateShelfEntryInput & { id: string; note?: UpdateNoteInput; pageFeelings?: Feeling[] }) =>
+    }: UpdateShelfEntryInput & {
+      id: string;
+      note?: UpdateNoteInput;
+      pageFeelings?: Feeling[];
+      /** False: finish (or move) the book without a feed post. */
+      publish?: boolean;
+    }) =>
       convex.mutation(api.shelves.update, {
         id: id as Id<"shelfEntries">,
         ...patch,

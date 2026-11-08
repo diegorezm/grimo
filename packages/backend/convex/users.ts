@@ -98,8 +98,31 @@ export const completeSetup = mutation({
 
 /** Profile fields + the current year's reading goal. Used by the seed too. */
 export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch: unknown) {
-  const { name, bio, favoriteGenres, yearlyGoal } = parse(updateProfileSchema, patch);
+  const {
+    name,
+    bio,
+    favoriteGenres,
+    yearlyGoal,
+    pronouns,
+    profileColor,
+    profileSong,
+    favoriteBookIds,
+    featuredQuoteId,
+    profileShows,
+  } = parse(updateProfileSchema, patch);
   const fields: Partial<Doc<"users">> = {};
+  // A cleared field (null) is stored as absent: undefined in a patch removes it.
+  if (pronouns !== undefined) fields.pronouns = pronouns ?? undefined;
+  if (profileColor !== undefined) fields.profileColor = profileColor ?? undefined;
+  if (profileSong !== undefined) fields.profileSong = profileSong ?? undefined;
+  if (profileShows !== undefined) fields.profileShows = profileShows;
+  if (favoriteBookIds !== undefined) {
+    fields.favoriteBookIds = await existingBooks(ctx, favoriteBookIds);
+  }
+  if (featuredQuoteId !== undefined) {
+    fields.featuredQuoteId =
+      featuredQuoteId === null ? undefined : await ownQuote(ctx, user, featuredQuoteId);
+  }
   if (name !== undefined) {
     fields.name = name;
     fields.searchText = `${name} ${user.username}`;
@@ -124,12 +147,43 @@ export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch:
   }
 }
 
+/** Favorite books must exist (ids come from the client). */
+async function existingBooks(ctx: MutationCtx, ids: string[]): Promise<Id<"books">[]> {
+  return Promise.all(
+    ids.map(async (raw) => {
+      const id = ctx.db.normalizeId("books", raw);
+      if (!id || !(await ctx.db.get(id))) throw notFound("Livro");
+      return id;
+    }),
+  );
+}
+
+/** Only one of the reader's own quotes can be highlighted. */
+async function ownQuote(ctx: MutationCtx, user: Doc<"users">, raw: string) {
+  const id = ctx.db.normalizeId("posts", raw);
+  const post = id ? await ctx.db.get(id) : null;
+  if (!id || !post || post.authorId !== user._id || post.kind !== "quote") {
+    throw notFound("Citação");
+  }
+  return id;
+}
+
 export const updateMe = mutation({
   args: {
     name: v.optional(v.string()),
     bio: v.optional(v.union(v.string(), v.null())),
     favoriteGenres: v.optional(v.array(v.string())),
     yearlyGoal: v.optional(v.union(v.number(), v.null())),
+    pronouns: v.optional(v.union(v.string(), v.null())),
+    profileColor: v.optional(v.union(v.string(), v.null())),
+    profileSong: v.optional(
+      v.union(v.object({ title: v.string(), artist: v.string(), url: v.string() }), v.null()),
+    ),
+    favoriteBookIds: v.optional(v.array(v.string())),
+    featuredQuoteId: v.optional(v.union(v.string(), v.null())),
+    profileShows: v.optional(
+      v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
+    ),
   },
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);

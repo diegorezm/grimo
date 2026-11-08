@@ -1,5 +1,6 @@
 import {
   bookInputOf,
+  toast,
   useAddToShelf,
   useBook,
   useRemoveFromShelf,
@@ -8,11 +9,14 @@ import {
 import {
   editionPages,
   type Feeling,
+  feelingsSavedMessage,
   formatRating,
+  ratingSavedMessage,
   readingPercent,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
+  shelfMoveMessage,
   starShares,
   timeAgo,
 } from "@grimo/core";
@@ -269,10 +273,39 @@ function ShelfPicker({ book, entry }: { book: Detail["book"]; entry: Detail["ent
   const update = useUpdateShelfEntry();
   const busy = addToShelf.isPending || update.isPending;
 
+  const openFinish = () =>
+    router.push({ pathname: "/finish/[id]", params: { id: book.openLibraryId } });
+
   function pick(status: ShelfStatus) {
-    if (entry) return update.mutate({ id: entry.id, status });
-    const input = bookInputOf(book);
-    addToShelf.mutate({ book: input, status });
+    if (entry?.status === status) return;
+    // Finishing a book is a moment: the sheet asks for the date, the rating and the feelings.
+    if (status === "read" && entry) return openFinish();
+    if (entry) {
+      const previous = entry.status;
+      const move = (to: ShelfStatus) =>
+        update.mutate(
+          { id: entry.id, status: to },
+          { onError: (error) => toast.failed(error, () => move(to)) },
+        );
+      move(status);
+      toast.saved(shelfMoveMessage(book.title, status), {
+        label: "Desfazer",
+        run: () => move(previous),
+      });
+      return;
+    }
+    const add = () =>
+      addToShelf.mutate(
+        { book: bookInputOf(book), status },
+        {
+          onSuccess: () => {
+            if (status === "read") return openFinish();
+            toast.saved(shelfMoveMessage(book.title, status));
+          },
+          onError: (error) => toast.failed(error, add),
+        },
+      );
+    add();
   }
 
   return (
@@ -316,23 +349,31 @@ function RatingCard({
   suggested: Feeling[];
 }) {
   const update = useUpdateShelfEntry();
+  const rate = (value: number | null) =>
+    update.mutate(
+      { id: entryId, rating: value },
+      {
+        onSuccess: () => toast.saved(ratingSavedMessage(value)),
+        onError: (error) => toast.failed(error, () => rate(value)),
+      },
+    );
+  const feel = (next: Feeling[]) =>
+    update.mutate(
+      { id: entryId, feelings: next },
+      {
+        onSuccess: () => toast.saved(feelingsSavedMessage(next)),
+        onError: (error) => toast.failed(error, () => feel(next)),
+      },
+    );
   return (
     <Card>
       <View style={styles.centerCard}>
         <Text variant="label" color="textMuted">
           Sua nota{rating !== null ? ` · ${formatRating(rating)}` : ""}
         </Text>
-        <Stars
-          value={rating}
-          size={30}
-          onChange={(value) => update.mutate({ id: entryId, rating: value })}
-        />
+        <Stars value={rating} size={32} onChange={rate} />
       </View>
-      <FeelingPicker
-        value={feelings}
-        suggested={suggested}
-        onChange={(next) => update.mutate({ id: entryId, feelings: next })}
-      />
+      <FeelingPicker value={feelings} suggested={suggested} onChange={feel} />
     </Card>
   );
 }
@@ -454,7 +495,14 @@ function RemoveFromShelf({ entryId, title }: { entryId: string; title: string })
       `${title} sai das suas estantes, com o histórico de páginas. Suas resenhas continuam.`,
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Tirar", style: "destructive", onPress: () => remove.mutate(entryId) },
+        {
+          text: "Tirar",
+          style: "destructive",
+          onPress: () => {
+            remove.mutate(entryId, { onError: (error) => toast.failed(error) });
+            toast.saved(`${title} saiu da sua estante`);
+          },
+        },
       ],
     );
   }

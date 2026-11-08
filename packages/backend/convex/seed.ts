@@ -182,6 +182,30 @@ export const populate = internalMutation({
         );
       }
       postIds.set(reader.username, ids);
+
+      // The demo account shows the profile personalization: song, favorites and a quote.
+      if (readerIndex === 0) {
+        const favorites = reader.shelves
+          .filter((shelf) => shelf.status === "read")
+          .flatMap((shelf) => {
+            const bookId = bookIds.get(shelf.book);
+            return bookId ? [bookId] : [];
+          })
+          .slice(0, 4);
+        const quoteIndex = reader.posts.findIndex((post) => post.kind === "quote");
+        await updateProfile(ctx, await fresh(user._id), {
+          pronouns: "ele/dele",
+          profileColor: "lilac",
+          profileSong: {
+            title: "Clair de Lune",
+            artist: "Debussy",
+            url: "https://open.spotify.com/track/6kkwzB6hXLIONkEk9JciA6",
+          },
+          favoriteBookIds: favorites,
+          featuredQuoteId: quoteIndex >= 0 ? ids[quoteIndex] : null,
+          profileShows: { goal: true, reading: true, streak: true },
+        });
+      }
     }
 
     // Others like and comment on the main reader's posts; the main reader likes back.

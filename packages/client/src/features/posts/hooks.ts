@@ -16,6 +16,15 @@ export function usePost(id: string) {
   return useQuery(postQuery(id));
 }
 
+/** Your own quotes (to highlight one on your profile). */
+export function myQuotesQuery() {
+  return convexQuery(api.posts.myQuotes, {}, "required");
+}
+
+export function useMyQuotes() {
+  return useQuery(myQuotesQuery());
+}
+
 export function useCreatePost() {
   const { convex } = useConvexCache();
   return useMutation({

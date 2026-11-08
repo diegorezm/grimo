@@ -269,3 +269,24 @@ export const readingScenePalettes = {
   window: warmDusk,
   sunset: warmDusk,
 };
+
+/**
+ * Profile cover colors (`PROFILE_COLORS` in `@grimo/core`), per scheme. `ink` is the text on
+ * top of the cover.
+ */
+export const profileCovers = {
+  light: {
+    lilac: { bg: palette.lilacMist, ink: palette.ink },
+    rose: { bg: palette.blush, ink: palette.ink },
+    gold: { bg: "#FBF0CF", ink: palette.ink },
+    sage: { bg: "#E1F2E9", ink: palette.ink },
+    plum: { bg: palette.ink, ink: palette.cream },
+  },
+  dark: {
+    lilac: { bg: "#3A3045", ink: palette.nightInk },
+    rose: { bg: "#4A2E3A", ink: palette.nightInk },
+    gold: { bg: "#4A3F24", ink: palette.nightInk },
+    sage: { bg: "#2B4238", ink: palette.nightInk },
+    plum: { bg: palette.nightBar, ink: palette.nightInk },
+  },
+} as const;

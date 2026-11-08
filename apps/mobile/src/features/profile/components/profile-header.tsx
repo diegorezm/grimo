@@ -1,79 +1,173 @@
 import type { ConnectionKind, Profile } from "@grimo/client";
 import { GENRE_LABELS, type Genre } from "@grimo/core";
 import { Image } from "expo-image";
-import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import type { ReactNode } from "react";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
-import { radius, spacing } from "@/constants/theme";
+import { profileCovers, radius, spacing } from "@/constants/theme";
+import { BookCover } from "@/features/books";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
 
-/** Profile hero: avatar in an accent ring, name, bio, follow counts and favorite genres. */
 /**
- * `editable`: your own profile, where tapping the avatar changes the photo. `onPressCount`: the
- * follower counts open the lists.
+ * Profile hero: the cover in the reader's color, photo, name, @ and pronouns, bio, genres, the
+ * "trilha da leitura", counts, the four "livros de cabeceira" and the highlighted quote.
+ * `editable`: your own profile (tapping the photo changes it). `actions`: the button beside the
+ * photo (Editar perfil, Seguir). `corner`: top-right buttons on the cover (ajustes, ⋯).
  */
 export function ProfileHeader({
   profile,
   editable,
   onPressCount,
+  actions,
+  corner,
 }: {
   profile: Profile;
   editable?: boolean;
   onPressCount?: (kind: ConnectionKind) => void;
+  actions?: ReactNode;
+  corner?: ReactNode;
 }) {
   const theme = useTheme();
+  const scheme = useColorScheme() === "dark" ? "dark" : "light";
+  const cover = profileCovers[scheme][profile.profileColor];
+  const role =
+    profile.role === "admin" ? "ADMIN" : profile.role === "moderator" ? "MODERADOR" : null;
+  const handle = [profile.username && `@${profile.username}`, profile.pronouns, role]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <View style={styles.root}>
-      {editable ? (
-        <AvatarPicker image={profile.image} name={profile.name} />
-      ) : (
-        <View style={[styles.ring, { borderColor: theme.accent }]}>
-          {profile.image ? (
-            <Image source={profile.image} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.initial, { backgroundColor: theme.surfaceMuted }]}>
-              <Text variant="display">{profile.name.slice(0, 1)}</Text>
-            </View>
+      <View style={[styles.cover, { backgroundColor: cover.bg }]}>
+        <View style={styles.corner}>{corner}</View>
+      </View>
+      <View style={styles.body}>
+        <View style={styles.avatarRow}>
+          <View style={[styles.avatarRing, { borderColor: theme.background }]}>
+            {editable ? (
+              <AvatarPicker image={profile.image} name={profile.name} />
+            ) : profile.image ? (
+              <Image source={profile.image} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.initial, { backgroundColor: theme.glowA }]}>
+                <Text variant="display">{profile.name.slice(0, 1)}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.actions}>{actions}</View>
+        </View>
+
+        <View style={styles.names}>
+          <Text variant="display">{profile.name}</Text>
+          {handle !== "" && (
+            <Text variant="label" color="textMuted">
+              {handle}
+            </Text>
           )}
         </View>
-      )}
-      <Text variant="display" style={styles.center}>
-        {profile.name}
-      </Text>
-      {profile.username && (
-        <Text variant="label" color="textMuted">
-          @{profile.username}
-          {profile.role === "admin"
-            ? " · ADMIN"
-            : profile.role === "moderator"
-              ? " · MODERADOR"
-              : ""}
-        </Text>
-      )}
-      {profile.bio && (
-        <Text color="textMuted" style={[styles.center, styles.bio]}>
-          {profile.bio}
-        </Text>
-      )}
-      <View style={[styles.counts, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-        <Count
-          value={profile.followers}
-          label="seguidores"
-          onPress={onPressCount && (() => onPressCount("followers"))}
-        />
-        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-        <Count
-          value={profile.following}
-          label="seguindo"
-          onPress={onPressCount && (() => onPressCount("following"))}
-        />
+        {profile.bio && <Text>{profile.bio}</Text>}
+        {profile.favoriteGenres.length > 0 && (
+          <View style={styles.chips}>
+            {profile.favoriteGenres.map((genre) => (
+              <View key={genre} style={[styles.chip, { backgroundColor: theme.surfaceMuted }]}>
+                <Text variant="small">{GENRE_LABELS[genre as Genre] ?? genre}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {profile.profileSong && <SongCard song={profile.profileSong} />}
+
+        <View style={[styles.counts, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
+          <Count value={profile.bookCount} label="livros" />
+          <Count
+            value={profile.followers}
+            label="seguidores"
+            onPress={onPressCount && (() => onPressCount("followers"))}
+          />
+          <Count
+            value={profile.following}
+            label="seguindo"
+            onPress={onPressCount && (() => onPressCount("following"))}
+          />
+        </View>
+
+        {profile.favoriteBooks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.between}>
+              <Text variant="heading">Livros de cabeceira</Text>
+              <Text variant="small" color="textMuted">
+                os favoritos
+              </Text>
+            </View>
+            <View style={styles.favorites}>
+              {profile.favoriteBooks.map((book) => (
+                <Pressable
+                  key={book.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={book.title}
+                  onPress={() =>
+                    router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })
+                  }
+                  style={({ pressed }) => [styles.favorite, { opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <BookCover src={book.coverUrl} title={book.title} width={78} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {profile.featuredQuote && (
+          <View style={[styles.quote, { backgroundColor: theme.note }]}>
+            <Text variant="label" color="textMuted">
+              Frase marcada
+            </Text>
+            <Text style={styles.quoteText}>“{profile.featuredQuote.body}”</Text>
+            {profile.featuredQuote.bookTitle && (
+              <Text variant="small" color="textMuted">
+                {profile.featuredQuote.bookTitle}
+                {profile.featuredQuote.page ? `, pág. ${profile.featuredQuote.page}` : ""}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
-      {profile.favoriteGenres.length > 0 && (
-        <Text variant="small" color="textMuted" style={styles.center}>
-          {profile.favoriteGenres.map((g) => GENRE_LABELS[g as Genre] ?? g).join(" · ")}
-        </Text>
-      )}
     </View>
+  );
+}
+
+/** "Trilha da leitura": opens the song in its own app (nothing is embedded). */
+function SongCard({ song }: { song: NonNullable<Profile["profileSong"]> }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Ouvir ${song.title}, de ${song.artist}${song.service ? `, no ${song.service}` : ""}`}
+      onPress={() => Linking.openURL(song.url)}
+      style={({ pressed }) => [
+        styles.song,
+        { backgroundColor: theme.surface, borderColor: theme.edge, opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      <View style={[styles.songMark, { backgroundColor: theme.inverse }]}>
+        <Text style={{ color: theme.inverseForeground }}>♪</Text>
+      </View>
+      <View style={styles.grow}>
+        <Text variant="label" color="textMuted">
+          Trilha da leitura
+        </Text>
+        <Text numberOfLines={1} style={styles.songTitle}>
+          {song.title} · {song.artist}
+        </Text>
+      </View>
+      <Text variant="label" color="accent">
+        {song.service ? `Ouvir no ${song.service}` : "Ouvir"}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -89,29 +183,69 @@ function Count({ value, label, onPress }: { value: number; label: string; onPres
       <Text variant="number" style={styles.number}>
         {value}
       </Text>
-      <Text variant="label" color="textMuted">
+      <Text variant="small" color="textMuted">
         {label}
       </Text>
     </Pressable>
   );
 }
 
+const AVATAR = 88;
+
 const styles = StyleSheet.create({
-  root: { alignItems: "center", gap: spacing[2] },
-  ring: { borderWidth: 3, borderRadius: radius.full, padding: 3 },
-  avatar: { width: 88, height: 88, borderRadius: radius.full },
+  root: { marginHorizontal: -spacing[4], marginTop: -spacing[4] },
+  cover: { height: 132 },
+  corner: {
+    position: "absolute",
+    top: spacing[3],
+    right: spacing[3],
+    flexDirection: "row",
+    gap: spacing[2],
+  },
+  body: { paddingHorizontal: spacing[4], gap: spacing[3] },
+  avatarRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginTop: -(AVATAR / 2),
+  },
+  avatarRing: { borderWidth: 4, borderRadius: radius.full },
+  avatar: { width: AVATAR, height: AVATAR, borderRadius: radius.full },
   initial: { alignItems: "center", justifyContent: "center" },
-  center: { textAlign: "center" },
-  bio: { fontStyle: "italic" },
+  actions: { flexDirection: "row", gap: spacing[2], paddingBottom: spacing[1] },
+  names: { gap: spacing[1] },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  chip: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
+  song: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[3],
+    minHeight: 56,
+  },
+  songMark: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  songTitle: { fontWeight: "700" },
+  grow: { flex: 1 },
   counts: {
     flexDirection: "row",
-    alignSelf: "stretch",
     borderWidth: 1,
     borderRadius: radius.lg,
     paddingVertical: spacing[3],
-    marginTop: spacing[2],
   },
   count: { flex: 1, alignItems: "center" },
-  number: { fontSize: 22 },
-  divider: { width: 1 },
+  number: { fontSize: 22, lineHeight: 28 },
+  section: { gap: spacing[3] },
+  between: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  favorites: { flexDirection: "row", gap: spacing[2] },
+  favorite: { flex: 1, alignItems: "center" },
+  quote: { borderRadius: radius.lg, padding: spacing[4], gap: spacing[1] },
+  quoteText: { fontStyle: "italic", fontSize: 17, lineHeight: 24 },
 });

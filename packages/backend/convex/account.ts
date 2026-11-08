@@ -135,6 +135,14 @@ export const exportData = query({
         image: viewer.image,
         bio: viewer.bio,
         favoriteGenres: viewer.favoriteGenres,
+        pronouns: viewer.pronouns ?? null,
+        profileColor: viewer.profileColor ?? null,
+        profileSong: viewer.profileSong ?? null,
+        favoriteBooks: await Promise.all((viewer.favoriteBookIds ?? []).map((id) => bookTitle(id))),
+        featuredQuote: viewer.featuredQuoteId
+          ? ((await ctx.db.get(viewer.featuredQuoteId))?.body ?? null)
+          : null,
+        profileShows: viewer.profileShows ?? null,
       },
       moderation: {
         role: viewer.role ?? null,
@@ -274,6 +282,12 @@ export async function onAccountDeleted(ctx: MutationCtx, authId: string) {
     image: null,
     bio: null,
     searchText: "",
+    pronouns: undefined,
+    profileColor: undefined,
+    profileSong: undefined,
+    favoriteBookIds: undefined,
+    featuredQuoteId: undefined,
+    profileShows: undefined,
   });
   await ctx.scheduler.runAfter(0, internal.account.purge, { userId: user._id, step: 0 });
 }

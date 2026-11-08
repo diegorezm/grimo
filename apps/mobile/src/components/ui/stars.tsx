@@ -6,12 +6,14 @@ import { Text } from "./text";
 /** One star: gold, half gold or empty. */
 function Star({ fill, size }: { fill: StarFill; size: number }) {
   const theme = useTheme();
+  // The glyph is taller than the body text line (22): without its own line height it is cut.
+  const glyph = { fontSize: size, lineHeight: Math.ceil(size * 1.25) };
   return (
     <View>
-      <Text style={{ fontSize: size, color: theme.border }}>★</Text>
+      <Text style={[glyph, { color: theme.border }]}>★</Text>
       {fill !== "empty" && (
         <View style={[styles.fill, { width: fill === "half" ? "50%" : "100%" }]}>
-          <Text numberOfLines={1} style={{ fontSize: size, color: theme.gold }}>
+          <Text numberOfLines={1} style={[glyph, { color: theme.gold }]}>
             ★
           </Text>
         </View>

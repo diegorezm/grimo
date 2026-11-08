@@ -269,3 +269,27 @@ export const activityPost = mutation({
     return { post: { id: await updatePost(ctx, viewer._id, activityId) } };
   },
 });
+
+/** Your own quotes, newest first: to pick the one highlighted on your profile. */
+export const myQuotes = query({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await requireViewer(ctx);
+    const quotes = await ctx.db
+      .query("posts")
+      .withIndex("by_author", (q) => q.eq("authorId", viewer._id))
+      .order("desc")
+      .filter((q) => q.eq(q.field("kind"), "quote"))
+      .take(50);
+    return {
+      items: await Promise.all(
+        quotes.map(async (post) => ({
+          id: post._id,
+          body: post.body,
+          page: post.page ?? null,
+          bookTitle: post.bookId ? ((await ctx.db.get(post.bookId))?.title ?? null) : null,
+        })),
+      ),
+    };
+  },
+});

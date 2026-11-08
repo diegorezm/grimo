@@ -91,6 +91,20 @@ export default defineSchema({
     avatarStorageId: v.optional(v.id("_storage")),
     bio: v.union(v.string(), v.null()),
     favoriteGenres: v.array(v.string()),
+    /** Profile personalization (`@grimo/core` profile/personalize). All optional. */
+    pronouns: v.optional(v.string()),
+    /** One of `PROFILE_COLORS`: the profile cover. */
+    profileColor: v.optional(v.string()),
+    /** "Trilha da leitura": a link the apps open (never an embedded player). */
+    profileSong: v.optional(v.object({ title: v.string(), artist: v.string(), url: v.string() })),
+    /** "Livros de cabeceira", in order (at most `MAX_FAVORITE_BOOKS`). */
+    favoriteBookIds: v.optional(v.array(v.id("books"))),
+    /** One of the reader's own quotes, highlighted on the profile. */
+    featuredQuoteId: v.optional(v.id("posts")),
+    /** Which reading cards the profile shows (absent: `DEFAULT_PROFILE_SHOWS`). */
+    profileShows: v.optional(
+      v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
+    ),
     /** Denormalized counters, kept by the follow/shelf mutations. */
     followers: v.number(),
     following: v.number(),

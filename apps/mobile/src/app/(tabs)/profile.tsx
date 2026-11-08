@@ -1,51 +1,43 @@
-import { useMe } from "@grimo/client";
+import { type Profile, useMe, useReader, useStreak } from "@grimo/client";
 import { router } from "expo-router";
-import { Button, Screen, Text } from "@/components/ui";
-import { ReaderLists } from "@/features/lists";
-import { AppearancePicker, ProfileHeader } from "@/features/profile";
-import { MonthlyCard, YearStats } from "@/features/stats";
-import { useAppCache, useAuthClient } from "@/providers/app-providers";
+import { Button, Screen } from "@/components/ui";
+import { ProfileHeader, ProfileHighlights, ProfileTabs, RoundButton } from "@/features/profile";
 
+/**
+ * Your profile, as others see it (plus the photo picker and your streak). Settings live behind
+ * the gear: appearance, account and sign out.
+ */
 export default function ProfileScreen() {
-  const me = useMe();
-  const authClient = useAuthClient();
-  const appCache = useAppCache();
+  const me = useMe().data;
+  return <Screen>{me && <MyProfile me={me} />}</Screen>;
+}
 
-  async function signOut() {
-    await appCache.clearForSignOut();
-    await authClient.signOut();
-  }
-
+function MyProfile({ me }: { me: Profile }) {
+  const page = useReader(me.username).data;
+  const streak = useStreak().data;
   return (
-    <Screen>
-      {me.data && (
-        <ProfileHeader
-          profile={me.data}
-          editable
-          onPressCount={(kind) =>
-            router.push({
-              pathname: "/u/[username]/[kind]",
-              params: { username: me.data!.username, kind },
-            })
-          }
-        />
+    <>
+      <ProfileHeader
+        profile={me}
+        editable
+        onPressCount={(kind) =>
+          router.push({ pathname: "/u/[username]/[kind]", params: { username: me.username, kind } })
+        }
+        corner={<RoundButton label="Ajustes" glyph="⚙" onPress={() => router.push("/settings")} />}
+        actions={
+          <Button
+            variant="secondary"
+            title="Editar perfil"
+            onPress={() => router.push("/profile-edit")}
+          />
+        }
+      />
+      {page && (
+        <>
+          <ProfileHighlights page={page} streak={streak?.days ?? null} />
+          <ProfileTabs page={page} username={me.username} isMe />
+        </>
       )}
-      <Button
-        variant="secondary"
-        title="Editar perfil"
-        onPress={() => router.push("/profile-edit")}
-      />
-      <YearStats />
-      {me.data?.username && <ReaderLists username={me.data.username} isMe />}
-      <Text variant="heading">Card do mês</Text>
-      <MonthlyCard />
-      <AppearancePicker />
-      <Button
-        variant="secondary"
-        title="Conta e privacidade"
-        onPress={() => router.push("/account")}
-      />
-      <Button variant="ghost" title="Sair" onPress={signOut} />
-    </Screen>
+    </>
   );
 }
