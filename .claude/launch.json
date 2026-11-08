@@ -18,6 +18,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@grimo/web", "dev", "--port", "5180", "--strictPort"],
       "port": 5180
+    },
+    {
+      "name": "web-npx",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "pnpm@12.5.1", "--filter", "@grimo/web", "dev"],
+      "port": 5173
     }
   ]
 }

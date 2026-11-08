@@ -8,7 +8,7 @@
         {
           "image-name": "sparkle.svg",
           "name": "sparkle",
-          "position": { "scale": 0.7, "translation-in-points": [0, 0] }
+          "position": { "scale": 3.6, "translation-in-points": [0, 0] }
         }
       ],
       "shadow": { "kind": "neutral", "opacity": 0.4 },
@@ -19,7 +19,7 @@
         {
           "image-name": "pages.svg",
           "name": "pages",
-          "position": { "scale": 0.7, "translation-in-points": [0, 0] }
+          "position": { "scale": 3.6, "translation-in-points": [0, 0] }
         }
       ],
       "shadow": { "kind": "neutral", "opacity": 0.5 },
@@ -30,7 +30,7 @@
         {
           "image-name": "cover.svg",
           "name": "cover",
-          "position": { "scale": 0.7, "translation-in-points": [0, 0] }
+          "position": { "scale": 3.6, "translation-in-points": [0, 0] }
         }
       ],
       "shadow": { "kind": "neutral", "opacity": 0.5 }

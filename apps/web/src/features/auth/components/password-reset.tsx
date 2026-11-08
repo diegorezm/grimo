@@ -18,7 +18,7 @@ function Page({
   children: ReactNode;
 }) {
   return (
-    <main className="relative grid min-h-dvh place-items-center bg-surface px-4 py-16">
+    <main className="relative grid min-h-dvh place-items-center bg-background px-4 py-16">
       <ThemeToggle className="absolute top-5 right-5" />
       <div className="mx-auto w-full max-w-sm">
         <Logo className="mb-6 h-16" />

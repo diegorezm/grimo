@@ -46,18 +46,22 @@ export function SignInForm() {
   if (forgot) return <ForgotPasswordForm onBack={() => setForgot(false)} />;
 
   return (
-    <Card>
-      <Image
-        accessibilityIgnoresInvertColors
-        source={
-          dark ? require("@/assets/images/logo-dark.png") : require("@/assets/images/logo.png")
-        }
-        style={styles.logo}
-      />
-      <Text variant="display">Bora ler?</Text>
-      <Text color="textMuted">
-        Entre com seu email. Se ainda não tiver conta, a gente cria na hora.
-      </Text>
+    <Card style={styles.card}>
+      <View style={styles.header}>
+        <Image
+          accessibilityIgnoresInvertColors
+          source={
+            dark ? require("@/assets/images/logo-dark.png") : require("@/assets/images/logo.png")
+          }
+          style={styles.logo}
+        />
+        <Text variant="display" style={styles.center}>
+          Bora ler?
+        </Text>
+        <Text color="textMuted" style={styles.center}>
+          Entre com seu email. Se ainda não tiver conta, a gente cria na hora.
+        </Text>
+      </View>
       <GoogleButton />
       <Text variant="label" color="textMuted" style={styles.divider}>
         ou com email
@@ -72,11 +76,14 @@ export function SignInForm() {
           onChangeText={set("email")}
         />
         <Input
-          placeholder="Senha (8+ caracteres se a conta for nova)"
+          placeholder="Senha"
           secureTextEntry
           value={form.password}
           onChangeText={set("password")}
         />
+        <Text variant="small" color="textMuted">
+          Conta nova? A senha precisa de 8 caracteres ou mais.
+        </Text>
       </View>
       {error && <Text color="danger">{error}</Text>}
       {newAccountEmail ? (
@@ -115,5 +122,8 @@ export function SignInForm() {
 const styles = StyleSheet.create({
   fields: { gap: spacing[2] },
   divider: { textAlign: "center" },
+  center: { textAlign: "center" },
+  card: { width: "100%", maxWidth: 440, alignSelf: "center" },
+  header: { alignItems: "center", gap: spacing[2], marginBottom: spacing[1] },
   logo: { width: 72, height: 72 },
 });

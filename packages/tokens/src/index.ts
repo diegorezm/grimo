@@ -6,12 +6,12 @@
  */
 
 /**
- * "Diário" palette: a reading journal on a warm desk. Cream pages, plum ink, hairline ruled
+ * "Diário" palette: a reading journal on a white desk. Cream pages, plum ink, hairline ruled
  * lines, rose → lavender as the accent pair and gold for sparkles / progress. Night mode is
  * the same journal by lamplight: deep plum desk, raised pages, softened accents.
  */
 const palette = {
-  desk: "#F3E9E1",
+  desk: "#FFFFFF",
   page: "#FFFBF5",
   pageEdge: "#E8D8D6",
   ink: "#3A2E3F",
