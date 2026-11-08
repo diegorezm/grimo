@@ -1,20 +1,19 @@
 import { type ConnectionKind, type Profile, useReaderShelves } from "@grimo/client";
-import { compactCount, GENRE_LABELS, type Genre } from "@grimo/core";
+import { compactCount } from "@grimo/core";
 import { Image } from "expo-image";
-import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
 import { profileCovers, radius, spacing } from "@/constants/theme";
-import { BookCover } from "@/features/books";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
 import { SongCard } from "./song-card";
 
 /**
- * Profile hero: the cover in the reader's color, photo, name, @ and pronouns, bio, genres, the
- * "trilha da leitura", counts, the four "livros de cabeceira" and the highlighted quote.
+ * Profile hero: the cover in the reader's color, photo, name, @ and pronouns, bio, the counts
+ * (lidos, páginas, seguidores, seguindo) and the "trilha da leitura". The rest of the profile
+ * lives in its tabs (Estantes, Destaques…).
  * `editable`: your own profile (tapping the photo changes it). `actions`: the button beside the
  * photo (Editar perfil, Seguir). `corner`: top-right buttons on the cover (ajustes, ⋯).
  */
@@ -72,17 +71,6 @@ export function ProfileHeader({
           )}
         </View>
         {profile.bio && <Text>{profile.bio}</Text>}
-        {profile.favoriteGenres.length > 0 && (
-          <View style={styles.chips}>
-            {profile.favoriteGenres.map((genre) => (
-              <View key={genre} style={[styles.chip, { backgroundColor: theme.surfaceMuted }]}>
-                <Text variant="small">{GENRE_LABELS[genre as Genre] ?? genre}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {profile.profileSong && <SongCard song={profile.profileSong} />}
 
         <View style={[styles.counts, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
           <Count
@@ -102,46 +90,7 @@ export function ProfileHeader({
           />
         </View>
 
-        {profile.favoriteBooks.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.between}>
-              <Text variant="heading">Livros de cabeceira</Text>
-              <Text variant="small" color="textMuted">
-                os favoritos
-              </Text>
-            </View>
-            <View style={styles.favorites}>
-              {profile.favoriteBooks.map((book) => (
-                <Pressable
-                  key={book.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={book.title}
-                  onPress={() =>
-                    router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })
-                  }
-                  style={({ pressed }) => [styles.favorite, { opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <BookCover src={book.coverUrl} title={book.title} width={78} />
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {profile.featuredQuote && (
-          <View style={[styles.quote, { backgroundColor: theme.note }]}>
-            <Text variant="label" color="textMuted">
-              Frase marcada
-            </Text>
-            <Text style={styles.quoteText}>“{profile.featuredQuote.body}”</Text>
-            {profile.featuredQuote.bookTitle && (
-              <Text variant="small" color="textMuted">
-                {profile.featuredQuote.bookTitle}
-                {profile.featuredQuote.page ? `, pág. ${profile.featuredQuote.page}` : ""}
-              </Text>
-            )}
-          </View>
-        )}
+        {profile.profileSong && <SongCard song={profile.profileSong} />}
       </View>
     </View>
   );
@@ -190,8 +139,6 @@ const styles = StyleSheet.create({
   initial: { alignItems: "center", justifyContent: "center" },
   actions: { flexDirection: "row", gap: spacing[2], paddingBottom: spacing[1] },
   names: { gap: spacing[1] },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  chip: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
   counts: {
     flexDirection: "row",
     borderWidth: 1,
@@ -200,10 +147,4 @@ const styles = StyleSheet.create({
   },
   count: { flex: 1, alignItems: "center" },
   number: { fontSize: 20, lineHeight: 26 },
-  section: { gap: spacing[3] },
-  between: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
-  favorites: { flexDirection: "row", gap: spacing[2] },
-  favorite: { flex: 1, alignItems: "center" },
-  quote: { borderRadius: radius.lg, padding: spacing[4], gap: spacing[1] },
-  quoteText: { fontStyle: "italic", fontSize: 17, lineHeight: 24 },
 });

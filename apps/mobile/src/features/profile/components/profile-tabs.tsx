@@ -1,16 +1,18 @@
 import { type ReaderPage, useReaderActivity } from "@grimo/client";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { FeedItem } from "@/features/feed";
 import { ReaderLists } from "@/features/lists";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { useTheme } from "@/hooks/use-theme";
+import { ProfileFeatured } from "./profile-highlights";
 import { ProfileShelves } from "./profile-shelves";
 
 const TABS = [
   { id: "shelves", label: "Estantes" },
+  { id: "featured", label: "Destaques" },
   { id: "activity", label: "Atividade" },
   { id: "lists", label: "Listas" },
   { id: "year", label: "Ano" },
@@ -25,16 +27,25 @@ export function ProfileTabs({
   page,
   username,
   isMe,
+  streak,
 }: {
   page: ReaderPage;
   username: string;
   isMe: boolean;
+  /** Your own streak (private), for Destaques. */
+  streak?: number | null;
 }) {
   const theme = useTheme();
   const [tab, setTab] = useState<Tab>("shelves");
   return (
     <View style={styles.root}>
-      <View style={[styles.bar, { borderColor: theme.edge }]} accessibilityRole="tablist">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.bar, { borderColor: theme.edge }]}
+        contentContainerStyle={styles.barContent}
+        accessibilityRole="tablist"
+      >
         {TABS.map((item) => {
           const active = item.id === tab;
           return (
@@ -51,9 +62,10 @@ export function ProfileTabs({
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
       {tab === "activity" && <Activity username={username} />}
       {tab === "shelves" && <ProfileShelves username={username} />}
+      {tab === "featured" && <ProfileFeatured page={page} streak={streak} />}
       {tab === "lists" && <ReaderLists username={username} isMe={isMe} />}
       {tab === "year" && (
         <>
@@ -94,10 +106,12 @@ function Activity({ username }: { username: string }) {
 
 const styles = StyleSheet.create({
   root: { gap: spacing[4] },
-  bar: { flexDirection: "row", borderBottomWidth: 1 },
+  bar: { borderBottomWidth: 1, flexGrow: 0 },
+  barContent: { flexGrow: 1 },
   tab: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
+    paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
     borderBottomWidth: 2,
     borderColor: "transparent",

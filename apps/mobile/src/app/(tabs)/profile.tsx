@@ -1,7 +1,7 @@
 import { type Profile, useMe, useReader, useStreak } from "@grimo/client";
 import { router } from "expo-router";
 import { Button, Screen } from "@/components/ui";
-import { ProfileHeader, ProfileHighlights, ProfileTabs, RoundButton } from "@/features/profile";
+import { ProfileHeader, ProfileReadingNow, ProfileTabs, RoundButton } from "@/features/profile";
 
 /**
  * Your profile, as others see it (plus the photo picker and your streak). Settings live behind
@@ -34,8 +34,8 @@ function MyProfile({ me }: { me: Profile }) {
       />
       {page && (
         <>
-          <ProfileHighlights page={page} streak={streak?.days ?? null} />
-          <ProfileTabs page={page} username={me.username} isMe />
+          <ProfileReadingNow page={page} />
+          <ProfileTabs page={page} username={me.username} isMe streak={streak?.days ?? null} />
         </>
       )}
     </>

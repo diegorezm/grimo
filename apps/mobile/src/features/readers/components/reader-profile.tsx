@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button, Screen, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { showReaderActions } from "@/features/moderation";
-import { ProfileHeader, ProfileHighlights, ProfileTabs, RoundButton } from "@/features/profile";
+import { ProfileHeader, ProfileReadingNow, ProfileTabs, RoundButton } from "@/features/profile";
 import { useTheme } from "@/hooks/use-theme";
 import { FollowButton } from "./follow-button";
 
@@ -86,7 +86,7 @@ function Page({ page, username }: { page: ReaderPage; username: string }) {
         </>
       ) : (
         <>
-          <ProfileHighlights page={page} />
+          <ProfileReadingNow page={page} />
           <ProfileTabs page={page} username={username} isMe={false} />
         </>
       )}
