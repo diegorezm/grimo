@@ -15,6 +15,8 @@ import {
   matchesShelfFilter,
   SHELF_LABELS,
   SHELF_STATUSES,
+  SHELF_VIEW_LABELS,
+  SHELF_VIEWS,
   shelfGenres,
 } from "@grimo/core";
 import { router } from "expo-router";
@@ -22,11 +24,12 @@ import { type ReactNode, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Chip, SelectButton, SelectSheet, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
-import { BookCover, useShelfNaming } from "@/features/books";
+import { useShelfNaming } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
+import { useShelfViewStore } from "@/lib/shelf-view";
+import { ShelfBooks } from "./shelf-books";
 import { ShelfSelectBar } from "./shelf-select-bar";
 
-const TILE = 100;
 /** The selector's value for "Todos os meus livros". */
 const ALL = "all";
 
@@ -48,6 +51,7 @@ export function ShelfBoard() {
   const counts = countByShelf(inShelf.map(({ entry }) => entry));
   const genres = shelfGenres(inShelf);
   const picking = shelves.find((item) => item.id === pickingFor) ?? null;
+  const { view, setView } = useShelfViewStore();
   const [sheet, setSheet] = useState<"shelf" | "filters" | null>(null);
   const activeFilters = filter.statuses.length + filter.genres.length;
 
@@ -182,9 +186,17 @@ export function ShelfBoard() {
       </SelectSheet>
 
       <View style={styles.between}>
-        <Text variant="label" color="textMuted">
-          {items.length} {items.length === 1 ? "livro" : "livros"}
-        </Text>
+        <View style={styles.bar}>
+          {SHELF_VIEWS.map((option) => (
+            <Chip
+              key={option}
+              label={SHELF_VIEW_LABELS[option]}
+              active={view === option}
+              onPress={() => setView(option)}
+              accessibilityLabel={`Ver como ${SHELF_VIEW_LABELS[option]}`}
+            />
+          ))}
+        </View>
         {items.length > 0 && !picking && (
           <Button
             variant="ghost"
@@ -225,49 +237,17 @@ export function ShelfBoard() {
         <Text color="textMuted">Nenhum livro com esses filtros.</Text>
       )}
 
-      <View style={styles.grid}>
-        {items.map(({ entry, book }) => {
-          const picked = selected.includes(entry.id);
-          return (
-            <Pressable
-              key={entry.id}
-              accessibilityRole={selecting ? "checkbox" : "button"}
-              accessibilityState={selecting ? { checked: picked } : undefined}
-              accessibilityLabel={book.title}
-              onPress={() =>
-                selecting
-                  ? store.toggleSelected(entry.id)
-                  : router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })
-              }
-              style={({ pressed }) => [styles.tile, { opacity: pressed ? 0.7 : 1 }]}
-            >
-              <View>
-                <BookCover src={book.coverUrl} title={book.title} width={TILE} />
-                {selecting && (
-                  <View
-                    style={[
-                      styles.check,
-                      {
-                        backgroundColor: picked ? theme.accent : theme.glass,
-                        borderColor: picked ? theme.accent : theme.glassBorder,
-                      },
-                    ]}
-                  >
-                    {picked && (
-                      <Text variant="label" color="accentForeground">
-                        ✓
-                      </Text>
-                    )}
-                  </View>
-                )}
-              </View>
-              <Text variant="small" numberOfLines={2}>
-                {book.title}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <ShelfBooks
+        items={items}
+        view={view}
+        selecting={selecting}
+        selected={selected}
+        onPress={({ entry, book }) =>
+          selecting
+            ? store.toggleSelected(entry.id)
+            : router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })
+        }
+      />
 
       {selecting && (
         <ShelfSelectBar
@@ -382,22 +362,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   empty: { gap: spacing[3], alignItems: "flex-start" },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing[4],
-    justifyContent: "space-between",
-  },
-  tile: { width: TILE, gap: spacing[1] },
-  check: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 26,
-    height: 26,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });
