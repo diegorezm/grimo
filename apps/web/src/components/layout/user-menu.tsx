@@ -5,10 +5,12 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import {
   ChevronDownIcon,
+  LockIcon,
   LogOutIcon,
   PencilIcon,
   ShelvesIcon,
   ShieldIcon,
+  SlidersIcon,
   UserIcon,
 } from "@/components/ui/icons";
 import { useSignOut } from "@/lib/sign-out";
@@ -95,10 +97,18 @@ export function UserMenu({ me }: { me: Me }) {
             Minhas estantes
           </MenuLink>
           <hr className="my-1 border-border" />
-          <MenuLink to="/settings/preferences" onPick={() => setOpen(false)}>
+          <MenuLink
+            to="/settings/preferences"
+            icon={<SlidersIcon className="size-5" />}
+            onPick={() => setOpen(false)}
+          >
             Preferências
           </MenuLink>
-          <MenuLink to="/settings/account" onPick={() => setOpen(false)}>
+          <MenuLink
+            to="/settings/account"
+            icon={<LockIcon className="size-5" />}
+            onPick={() => setOpen(false)}
+          >
             Conta e privacidade
           </MenuLink>
           {me.isStaff && (
