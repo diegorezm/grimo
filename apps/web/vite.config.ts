@@ -117,7 +117,8 @@ export default defineConfig(({ mode }) => {
   return {
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
     define: { "import.meta.env.VITE_CONVEX_URL": JSON.stringify(convexUrl) },
-    server: { port: 5173, host: true },
+    // LAN access is opt-in (`pnpm --filter @grimo/web dev --host`).
+    server: { port: 5173 },
     plugins: [
       tanstackRouter({ target: "react", autoCodeSplitting: true }),
       react(),
