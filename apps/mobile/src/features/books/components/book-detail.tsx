@@ -40,6 +40,7 @@ import { radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookCover } from "./book-cover";
+import { EntryTags } from "./entry-tags";
 import { FriendsWant } from "./friends-want";
 import { OpenReads } from "./open-reads";
 import { QuoteText } from "./quote-text";
@@ -106,6 +107,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
         </View>
 
         <ShelfPicker book={book} entry={entry} />
+        {entry && <EntryTags entryId={entry.id} />}
         {book.id && (
           <Button
             variant="ghost"

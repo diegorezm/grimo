@@ -28,6 +28,8 @@ export const entryView = (entry: Doc<"shelfEntries">) => ({
   finishedAt: entry.finishedAt,
   createdAt: entry._creationTime,
   updatedAt: entry.updatedAt,
+  /** The reader's own tags ("Tenho", "Kindle"). */
+  tagIds: (entry.tagIds ?? []) as string[],
 });
 
 export const bookView = (book: Doc<"books">) => ({

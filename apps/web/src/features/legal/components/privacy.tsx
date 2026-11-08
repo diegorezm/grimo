@@ -51,12 +51,14 @@ export function PrivacyPage() {
             recebe você se tocar em ouvir.
           </li>
           <li>
-            <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações (nota e
-            os sentimentos que o livro deixou), os sentimentos que você marca numa página enquanto
-            lê (seu diário de leitura), datas de início e fim, e as sessões de leitura que você
-            cronometra (quando começou, quando parou e em que página), para a ofensiva e o feed. Os
-            sentimentos são escolhidos numa lista fixa e servem para mostrar a sua leitura e somar,
-            sem identificar ninguém, como os leitores se sentiram com cada livro.
+            <strong>Leitura:</strong> livros nas suas estantes, os marcadores que você cria e põe
+            neles (como &ldquo;Tenho&rdquo; ou &ldquo;Kindle&rdquo;), as estantes que você salva
+            (filtros com nome), páginas marcadas, avaliações (nota e os sentimentos que o livro
+            deixou), os sentimentos que você marca numa página enquanto lê (seu diário de leitura),
+            datas de início e fim, e as sessões de leitura que você cronometra (quando começou,
+            quando parou e em que página), para a ofensiva e o feed. Os sentimentos são escolhidos
+            numa lista fixa e servem para mostrar a sua leitura e somar, sem identificar ninguém,
+            como os leitores se sentiram com cada livro.
           </li>
           <li>
             <strong>Listas:</strong> as listas de livros que você monta (nome, descrição, livros e a
@@ -132,10 +134,12 @@ export function PrivacyPage() {
           ver seu nome, @, foto, bio, pronomes, gêneros favoritos, a música, os livros de cabeceira
           e a citação destacada do perfil, livros que você está lendo e já leu, avaliações (com os
           sentimentos), os sentimentos marcados nas páginas, resenhas, notas, comentários, quem você
-          segue e quem segue você, e suas estatísticas de leitura. O que você faz nas estantes
-          (começar, marcar página, terminar, avaliar) também aparece no feed
-          &ldquo;Comunidade&rdquo;, que mostra a atividade de todos os leitores. Seu email e os
-          dados técnicos nunca são públicos.
+          segue e quem segue você, suas estatísticas de leitura e as estantes salvas que você
+          escolher mostrar no perfil (o nome delas e, dentro, só os livros que você está lendo e já
+          leu). Seus marcadores e as estantes que você deixar só para você não aparecem para
+          ninguém. O que você faz nas estantes (começar, marcar página, terminar, avaliar) também
+          aparece no feed &ldquo;Comunidade&rdquo;, que mostra a atividade de todos os leitores. Seu
+          email e os dados técnicos nunca são públicos.
         </p>
         <p>
           Num grupo do Juntos, os outros participantes veem seu progresso no livro e suas mensagens.

@@ -120,9 +120,30 @@ export const exportData = query({
     const username = async (id: Id<"users">) => (await ctx.db.get(id))?.username ?? null;
     const date = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
     const groupBook = async (id: Id<"groups">) => bookTitle((await ctx.db.get(id))?.bookId ?? null);
+    const [shelfTags, savedShelves] = await Promise.all([
+      ctx.db
+        .query("shelfTags")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("savedShelves")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    ]);
+    const tagName = new Map(shelfTags.map((tag) => [tag._id, tag.name]));
+    const tagNames = (ids: Id<"shelfTags">[] | undefined) =>
+      (ids ?? []).flatMap((id) => tagName.get(id) ?? []);
 
     return {
       exportedAt: new Date().toISOString(),
+      shelfTags: shelfTags.map((tag) => tag.name),
+      savedShelves: savedShelves.map((shelf) => ({
+        name: shelf.name,
+        statuses: shelf.filter.statuses,
+        genres: shelf.filter.genres,
+        tags: tagNames(shelf.filter.tagIds),
+        isPublic: shelf.isPublic,
+      })),
       account: {
         email: identity?.email ?? null,
         createdAt: date(viewer._creationTime),
@@ -168,6 +189,7 @@ export const exportData = query({
           editionPages: entry.pageCount ?? null,
           rating: entry.rating,
           feelings: entry.feelings ?? [],
+          tags: tagNames(entry.tagIds),
           startedAt: date(entry.startedAt),
           finishedAt: date(entry.finishedAt),
         })),
@@ -499,6 +521,17 @@ const steps: Step[] = [
     deleteAll(
       ctx,
       ctx.db.query("readingGoals").withIndex("by_user_year", (q) => q.eq("userId", userId)),
+    ),
+  // Personal tags and saved shelves (the shelf entries holding the tags are gone already).
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("savedShelves").withIndex("by_user", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("shelfTags").withIndex("by_user", (q) => q.eq("userId", userId)),
     ),
   async (ctx, userId) =>
     deleteAll(

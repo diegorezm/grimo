@@ -1,4 +1,4 @@
-import { useReaderShelves } from "@grimo/client";
+import { useProfileShelves, useReaderShelves } from "@grimo/client";
 import { yearRunLabel } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -22,9 +22,10 @@ interface ShelfCover {
  */
 export function ProfileShelves({ username }: { username: string }) {
   const shelves = useReaderShelves(username).data;
+  const saved = useProfileShelves(username).data?.items ?? [];
   if (!shelves) return null;
   const { reading, read } = shelves;
-  if (reading.count === 0 && read.count === 0) {
+  if (reading.count === 0 && read.count === 0 && saved.length === 0) {
     return <Text color="textMuted">Nenhum livro lido ou em leitura ainda.</Text>;
   }
   return (
@@ -46,6 +47,21 @@ export function ProfileShelves({ username }: { username: string }) {
           ))}
         </Shelf>
       )}
+      {saved.map((shelf) => (
+        <Shelf
+          key={shelf.id}
+          title={shelf.isPublic ? shelf.name : `${shelf.name} · só você`}
+          count={shelf.count}
+        >
+          {shelf.covers.length > 0 ? (
+            <Run tone="accent" items={shelf.covers} />
+          ) : (
+            <Text variant="small" color="textMuted">
+              Nenhum livro neste filtro ainda.
+            </Text>
+          )}
+        </Shelf>
+      ))}
     </View>
   );
 }
@@ -87,7 +103,7 @@ function Run({
   tone,
   items,
 }: {
-  label: string;
+  label?: string;
   tone: "accent" | "accentStart";
   items: ShelfCover[];
 }) {
@@ -95,12 +111,16 @@ function Run({
   const color = theme[tone];
   return (
     <View style={styles.run}>
-      <View style={[styles.label, { backgroundColor: theme.surfaceMuted }]}>
-        <Text variant="label" style={{ color: theme.text }}>
-          {label}
-        </Text>
-      </View>
-      <View style={[styles.line, { backgroundColor: color }]} />
+      {label && (
+        <>
+          <View style={[styles.label, { backgroundColor: theme.surfaceMuted }]}>
+            <Text variant="label" style={{ color: theme.text }}>
+              {label}
+            </Text>
+          </View>
+          <View style={[styles.line, { backgroundColor: color }]} />
+        </>
+      )}
       <View style={styles.covers}>
         {items.map((item) => (
           <Pressable

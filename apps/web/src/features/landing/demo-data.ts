@@ -145,6 +145,7 @@ const SHELF: ShelfItem[] = ENTRIES.map((entry) => {
       finishedAt: entry.status === "read" ? at : null,
       createdAt: at - 10 * DAY,
       updatedAt: at,
+      tagIds: [],
     },
     book: bookView(book),
   };

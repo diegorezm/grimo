@@ -214,12 +214,38 @@ export default defineSchema({
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
     updatedAt: v.number(),
+    /** The reader's own tags on this book ("Tenho", "Kindle"): filters of the shelf. */
+    tagIds: v.optional(v.array(v.id("shelfTags"))),
   })
     .index("by_user_book", ["userId", "bookId"])
     .index("by_user_updated", ["userId", "updatedAt"])
     .index("by_user_status_updated", ["userId", "status", "updatedAt"])
     .index("by_user_status_finished", ["userId", "status", "finishedAt"])
     .index("by_book", ["bookId"]),
+
+  /** A reader's personal tag for their books ("Tenho", "Kindle", "Emprestei"). */
+  shelfTags: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  /**
+   * A filter of the reader's shelf saved with a name ("Minha estante física" = tag Tenho). It
+   * holds no books: it shows whatever matches, so it stays up to date by itself.
+   */
+  savedShelves: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    filter: v.object({
+      statuses: v.array(shelfStatus),
+      genres: v.array(v.string()),
+      tagIds: v.array(v.id("shelfTags")),
+    }),
+    /** Shown on the profile to everyone (without "Quero ler"); false: only the reader. */
+    isPublic: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   /** Append-only progress log: source of truth for "pages read". */
   readingLogs: defineTable({

@@ -2,6 +2,7 @@ export { Avatar } from "./avatar";
 export { AvatarStack } from "./avatar-stack";
 export { Button } from "./button";
 export { Card } from "./card";
+export { Chip } from "./chip";
 export { FeelingPicker, FeelingTags } from "./feelings";
 export { Glass } from "./glass";
 export { Input } from "./input";
