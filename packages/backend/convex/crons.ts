@@ -10,4 +10,11 @@ crons.daily(
   internal.books.purgeExpiredCaches,
 );
 
+// Closed reports keep the reported text for 180 days (docs/legal/ropa.md).
+crons.daily(
+  "erase old report text",
+  { hourUTC: 6, minuteUTC: 30 },
+  internal.moderation.eraseOldReportText,
+);
+
 export default crons;
