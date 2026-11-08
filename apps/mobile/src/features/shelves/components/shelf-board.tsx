@@ -349,7 +349,6 @@ function ViewOption({
       <View style={styles.drawing}>
         {shapes.map((shape, i) => (
           <View
-            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed drawing
             key={i}
             style={{ width: shape.w, height: shape.h, backgroundColor: shape.c, borderRadius: 2 }}
           />
