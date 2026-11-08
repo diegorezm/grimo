@@ -1,4 +1,3 @@
-import type { ShelfItem } from "@grimo/client";
 import { coverUrl, type ShelfView, spineLook } from "@grimo/core";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -6,6 +5,18 @@ import { Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
+
+/** What a book on the shelf needs: your own shelf rows and a profile's shelf both fit. */
+export interface ShelfBookItem {
+  entry: { id: string };
+  book: {
+    title: string;
+    coverUrl: string | null;
+    openLibraryId: string;
+    pageCount?: number | null;
+  };
+}
+type ShelfItem = ShelfBookItem;
 
 /** Covers per shelf in the "Capas" view. */
 const PER_SHELF = 3;

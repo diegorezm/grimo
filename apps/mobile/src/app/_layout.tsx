@@ -66,6 +66,7 @@ function RootNavigator() {
         <Stack.Screen name="post/[id]" />
         <Stack.Screen name="u/[username]/index" />
         <Stack.Screen name="u/[username]/[kind]" />
+        <Stack.Screen name="shelf/[username]/[shelf]" />
         <Stack.Screen name="account" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="profile-edit" />

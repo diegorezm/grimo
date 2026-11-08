@@ -38,6 +38,17 @@ export function useProfileShelves(username: string) {
   return useQuery(profileShelvesQuery(username));
 }
 
+/** One whole shelf of a reader ("reading", "read" or a shelf id), opened from their profile. */
+export function profileShelfQuery(username: string, shelf: string) {
+  return convexQuery(api.bookshelves.profileShelf, { username, shelf }, "optional");
+}
+
+export function useProfileShelf(username: string, shelf: string) {
+  return useQuery(profileShelfQuery(username, shelf));
+}
+
+export type FullShelf = FunctionReturnType<typeof api.bookshelves.profileShelf>;
+
 export function useCreateShelf() {
   const { convex } = useConvexCache();
   return useMutation({

@@ -1,17 +1,19 @@
 import {
   copyName,
+  groupByYearRead,
   MAX_BULK_BOOKS,
   MAX_SHELVES,
   MAX_SHELVES_PER_BOOK,
   PUBLIC_SHELF_STATUSES,
   type ShelfStatus,
   shelfNameSchema,
+  yearOf,
 } from "@grimo/core";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { appError, notFound, parse } from "./model/errors";
-import { getViewer, readerByUsername, requireViewer } from "./model/readers";
+import { getViewer, readerByUsername, requireViewer, timeZoneOf } from "./model/readers";
 import { hasBlocked } from "./model/safety";
 import { withBooks } from "./model/shelves";
 
@@ -262,6 +264,72 @@ export const profile = query({
           })),
         };
       }),
+    };
+  },
+});
+
+/** Books a full shelf shows at most (its newest). */
+const FULL_SHELF = 500;
+
+/**
+ * One whole shelf of a reader, opened from their profile: "reading", "read" (in runs by the
+ * year each book was finished) or a shelf they made. Same rules as the profile: others see
+ * public shelves only, and in them only books read or being read.
+ */
+export const profileShelf = query({
+  args: { username: v.string(), shelf: v.string() },
+  handler: async (ctx, { username, shelf }) => {
+    const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
+    if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
+    const isOwner = viewer?._id === reader._id;
+    const entries = await entriesOf(ctx, reader._id);
+
+    let name: string;
+    let isPublic = true;
+    let picked: Doc<"shelfEntries">[];
+    if (shelf === "reading" || shelf === "read") {
+      name = shelf === "reading" ? "Lendo" : "Lidos";
+      picked = entries.filter((entry) => entry.status === shelf);
+    } else {
+      const id = ctx.db.normalizeId("shelfTags", shelf);
+      const made = id ? await ctx.db.get(id) : null;
+      if (!made || made.userId !== reader._id || (!isOwner && !made.isPublic)) {
+        throw notFound("Estante");
+      }
+      name = made.name;
+      isPublic = made.isPublic ?? false;
+      picked = entries.filter(
+        (entry) =>
+          entry.tagIds?.includes(made._id) &&
+          (isOwner || (PUBLIC_SHELF_STATUSES as readonly ShelfStatus[]).includes(entry.status)),
+      );
+    }
+    if (shelf === "read") {
+      picked.sort((a, b) => (b.finishedAt ?? -1) - (a.finishedAt ?? -1));
+    }
+    const rows = await withBooks(ctx, picked.slice(0, FULL_SHELF), viewer?._id ?? null);
+    const items = rows.map(({ entry, book }) => ({
+      entry: { id: entry.id, finishedAt: entry.finishedAt },
+      book: {
+        title: book.title,
+        coverUrl: book.coverUrl,
+        openLibraryId: book.openLibraryId,
+        pageCount: book.pageCount,
+      },
+    }));
+    const timeZone = timeZoneOf(reader);
+    return {
+      name,
+      isPublic,
+      count: picked.length,
+      owner: { username: reader.username, name: reader.name },
+      runs:
+        shelf === "read"
+          ? groupByYearRead(
+              items.map((item) => ({ ...item, finishedAt: item.entry.finishedAt })),
+              (date) => yearOf(date, timeZone),
+            )
+          : [{ year: null, items }],
     };
   },
 });

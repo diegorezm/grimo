@@ -145,3 +145,42 @@ describe("shelves the reader makes", () => {
     expect(await t.run((ctx) => ctx.db.query("shelfTags").collect())).toEqual([]);
   });
 });
+
+describe("a whole shelf from the profile", () => {
+  it("opens Lidos, Lendo or a public shelf, and hides private ones and Quero ler from others", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const read = await shelve(rafa, 1);
+    const wanted = await shelve(rafa, 2, "want_to_read");
+    const { id: fisica } = await rafa.as.mutation(api.bookshelves.create, {
+      name: "Física",
+      isPublic: true,
+      entryIds: [read, wanted],
+    });
+    const { id: secreta } = await rafa.as.mutation(api.bookshelves.create, {
+      name: "Secreta",
+      isPublic: false,
+      entryIds: [read],
+    });
+
+    const lidos = await bia.as.query(api.bookshelves.profileShelf, {
+      username: "rafa",
+      shelf: "read",
+    });
+    expect(lidos).toMatchObject({ name: "Lidos", count: 1 });
+    const theirs = await bia.as.query(api.bookshelves.profileShelf, {
+      username: "rafa",
+      shelf: fisica,
+    });
+    expect(theirs.count).toBe(1);
+    const mine = await rafa.as.query(api.bookshelves.profileShelf, {
+      username: "rafa",
+      shelf: fisica,
+    });
+    expect(mine.count).toBe(2);
+    await expect(
+      bia.as.query(api.bookshelves.profileShelf, { username: "rafa", shelf: secreta }),
+    ).rejects.toThrow(/Estante/);
+  });
+});

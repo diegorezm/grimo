@@ -1,8 +1,13 @@
-import { type ReaderPage, useReaderActivity } from "@grimo/client";
+import {
+  type ReaderPage,
+  useProfileShelves,
+  useReaderActivity,
+  useReaderShelves,
+} from "@grimo/client";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "@/components/ui";
-import { spacing } from "@/constants/theme";
+import { radius, spacing } from "@/constants/theme";
 import { FeedItem } from "@/features/feed";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { useTheme } from "@/hooks/use-theme";
@@ -18,8 +23,8 @@ const TABS = [
 type Tab = (typeof TABS)[number]["id"];
 
 /**
- * The bottom of a profile, one part at a time: the shelves as rows of covers, what the reader
- * posted, and the year (with the monthly card on your own profile).
+ * The bottom of a profile, one part at a time: the shelves (previews that open the whole shelf),
+ * the highlights, what the reader posted, and the year (with the monthly card on your own).
  */
 export function ProfileTabs({
   page,
@@ -35,6 +40,13 @@ export function ProfileTabs({
 }) {
   const theme = useTheme();
   const [tab, setTab] = useState<Tab>("shelves");
+  const reader = useReaderShelves(username).data;
+  const made = useProfileShelves(username).data?.items ?? [];
+  // Lendo and Lidos (when they have books) and the shelves the reader made.
+  const shelfCount =
+    (reader && reader.reading.count > 0 ? 1 : 0) +
+    (reader && reader.read.count > 0 ? 1 : 0) +
+    made.length;
   return (
     <View style={styles.root}>
       <ScrollView
@@ -54,9 +66,16 @@ export function ProfileTabs({
               onPress={() => setTab(item.id)}
               style={[styles.tab, active && { borderColor: theme.text }]}
             >
-              <Text variant="label" color={active ? "text" : "textMuted"}>
-                {item.label}
-              </Text>
+              <View style={styles.tabLabel}>
+                <Text variant="label" color={active ? "text" : "textMuted"}>
+                  {item.label}
+                </Text>
+                {item.id === "shelves" && shelfCount > 0 && (
+                  <View style={[styles.count, { backgroundColor: theme.surfaceMuted }]}>
+                    <Text variant="small">{shelfCount}</Text>
+                  </View>
+                )}
+              </View>
             </Pressable>
           );
         })}
@@ -102,6 +121,8 @@ function Activity({ username }: { username: string }) {
 }
 
 const styles = StyleSheet.create({
+  tabLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  count: { borderRadius: radius.full, paddingHorizontal: 7, paddingVertical: 1 },
   root: { gap: spacing[4] },
   bar: { borderBottomWidth: 1, flexGrow: 0 },
   barContent: { flexGrow: 1 },

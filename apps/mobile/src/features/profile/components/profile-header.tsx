@@ -11,11 +11,10 @@ import { AvatarPicker } from "./avatar-picker";
 import { SongCard } from "./song-card";
 
 /**
- * Profile hero: the cover in the reader's color, photo, name, @ and pronouns, bio, the counts
- * (lidos, páginas, seguidores, seguindo) and the "trilha da leitura". The rest of the profile
- * lives in its tabs (Estantes, Destaques…).
- * `editable`: your own profile (tapping the photo changes it). `actions`: the button beside the
- * photo (Editar perfil, Seguir). `corner`: top-right buttons on the cover (ajustes, ⋯).
+ * Profile top, like a magazine: photo with name, @ and pronouns beside it, the bio, the
+ * highlighted quote (quiet, a quote mark and italics), the numbers in one line and the
+ * "trilha da leitura". `corner`: buttons at the top right (compartilhar, editar, ⋯).
+ * `actions`: beside the name (Seguir). `editable`: tapping the photo changes it.
  */
 export function ProfileHeader({
   profile,
@@ -34,24 +33,25 @@ export function ProfileHeader({
   // Same query as the Estantes tab (cached once): books read and their pages.
   const shelves = useReaderShelves(profile.username).data;
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
-  const cover = profileCovers[scheme][profile.profileColor];
+  // The reader's color now rings the photo.
+  const ring = profileCovers[scheme][profile.profileColor].bg;
   const role =
     profile.role === "admin" ? "ADMIN" : profile.role === "moderator" ? "MODERADOR" : null;
   const handle = [profile.username && `@${profile.username}`, profile.pronouns, role]
     .filter(Boolean)
     .join(" · ");
+  const quote = profile.featuredQuote;
 
   return (
     <View style={styles.root}>
-      <View style={[styles.cover, { backgroundColor: cover.bg }]}>
-        <View style={styles.corner}>{corner}</View>
-      </View>
-      <View style={styles.body}>
-        <View style={styles.avatarRow}>
-          <View style={[styles.avatarRing, { borderColor: theme.background }]}>
-            {editable ? (
-              <AvatarPicker image={profile.image} name={profile.name} />
-            ) : profile.image ? (
+      {corner && <View style={styles.corner}>{corner}</View>}
+
+      <View style={styles.identity}>
+        {editable ? (
+          <AvatarPicker image={profile.image} name={profile.name} />
+        ) : (
+          <View style={[styles.ring, { borderColor: ring }]}>
+            {profile.image ? (
               <Image source={profile.image} style={styles.avatar} />
             ) : (
               <View style={[styles.avatar, styles.initial, { backgroundColor: theme.glowA }]}>
@@ -59,92 +59,103 @@ export function ProfileHeader({
               </View>
             )}
           </View>
-          <View style={styles.actions}>{actions}</View>
-        </View>
-
+        )}
         <View style={styles.names}>
-          <Text variant="display">{profile.name}</Text>
+          <Text variant="display" numberOfLines={2}>
+            {profile.name}
+          </Text>
           {handle !== "" && (
             <Text variant="label" color="textMuted">
               {handle}
             </Text>
           )}
+          {actions}
         </View>
-        {profile.bio && <Text>{profile.bio}</Text>}
-
-        <View style={[styles.counts, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-          <Count
-            value={shelves ? compactCount(shelves.read.count) : "–"}
-            label={shelves?.read.count === 1 ? "lido" : "lidos"}
-          />
-          <Count value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
-          <Count
-            value={compactCount(profile.followers)}
-            label="seguidores"
-            onPress={onPressCount && (() => onPressCount("followers"))}
-          />
-          <Count
-            value={compactCount(profile.following)}
-            label="seguindo"
-            onPress={onPressCount && (() => onPressCount("following"))}
-          />
-        </View>
-
-        {profile.profileSong && <SongCard song={profile.profileSong} />}
       </View>
+
+      {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
+
+      {quote && (
+        <View style={styles.quote}>
+          <Text style={[styles.quoteMark, { color: theme.ornament }]} accessibilityElementsHidden>
+            “
+          </Text>
+          <View style={styles.grow}>
+            <Text style={styles.quoteText}>{quote.body}</Text>
+            {quote.bookTitle && (
+              <Text variant="small" color="textMuted">
+                {quote.bookTitle}
+                {quote.page ? `, pág. ${quote.page}` : ""}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      <View style={styles.numbers}>
+        <Stat value={shelves ? compactCount(shelves.read.count) : "–"} label="lidos" />
+        <Dot />
+        <Stat value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
+        <Dot />
+        <Stat
+          value={compactCount(profile.followers)}
+          label="seguidores"
+          onPress={onPressCount && (() => onPressCount("followers"))}
+        />
+        <Dot />
+        <Stat
+          value={compactCount(profile.following)}
+          label="seguindo"
+          onPress={onPressCount && (() => onPressCount("following"))}
+        />
+      </View>
+
+      {profile.profileSong && <SongCard song={profile.profileSong} />}
     </View>
   );
 }
 
-function Count({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
+function Dot() {
+  return (
+    <Text color="textMuted" style={styles.dot}>
+      ·
+    </Text>
+  );
+}
+
+function Stat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={`${value} ${label}`}
       disabled={!onPress}
       onPress={onPress}
-      style={({ pressed }) => [styles.count, { opacity: pressed ? 0.6 : 1 }]}
+      hitSlop={6}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
     >
-      <Text variant="number" style={styles.number}>
-        {value}
-      </Text>
-      <Text variant="small" color="textMuted">
-        {label}
+      <Text color="textMuted">
+        <Text style={styles.bold}>{value}</Text> {label}
       </Text>
     </Pressable>
   );
 }
 
-const AVATAR = 88;
+const AVATAR = 80;
 
 const styles = StyleSheet.create({
-  root: { marginHorizontal: -spacing[4], marginTop: -spacing[4] },
-  cover: { height: 132 },
-  corner: {
-    position: "absolute",
-    top: spacing[3],
-    right: spacing[3],
-    flexDirection: "row",
-    gap: spacing[2],
-  },
-  body: { paddingHorizontal: spacing[4], gap: spacing[3] },
-  avatarRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    marginTop: -(AVATAR / 2),
-  },
-  avatarRing: { borderWidth: 4, borderRadius: radius.full },
+  root: { gap: spacing[4] },
+  corner: { flexDirection: "row", justifyContent: "flex-end", gap: spacing[2] },
+  identity: { flexDirection: "row", alignItems: "center", gap: spacing[4] },
+  ring: { borderWidth: 3, borderRadius: radius.full, padding: 2 },
   avatar: { width: AVATAR, height: AVATAR, borderRadius: radius.full },
   initial: { alignItems: "center", justifyContent: "center" },
-  actions: { flexDirection: "row", gap: spacing[2], paddingBottom: spacing[1] },
-  names: { gap: spacing[1] },
-  counts: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingVertical: spacing[3],
-  },
-  count: { flex: 1, alignItems: "center" },
-  number: { fontSize: 20, lineHeight: 26 },
+  names: { flex: 1, gap: spacing[1], alignItems: "flex-start" },
+  bio: { fontSize: 15, lineHeight: 22 },
+  quote: { flexDirection: "row", gap: spacing[2] },
+  quoteMark: { fontSize: 36, lineHeight: 36, fontStyle: "italic" },
+  grow: { flex: 1, gap: 2, paddingTop: 2 },
+  quoteText: { fontStyle: "italic", fontSize: 16, lineHeight: 22 },
+  numbers: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", rowGap: 4 },
+  dot: { marginHorizontal: 6 },
+  bold: { fontWeight: "700" },
 });

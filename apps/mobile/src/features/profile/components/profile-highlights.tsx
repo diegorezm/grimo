@@ -21,31 +21,29 @@ export function ProfileReadingNow({ page }: { page: ReaderPage }) {
       accessibilityRole="button"
       onPress={() => router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })}
     >
-      <Card>
-        <Text variant="label" color="textMuted">
-          Lendo agora{more > 0 ? ` · e mais ${more}` : ""}
-        </Text>
-        <View style={styles.reading}>
-          <BookCover src={book.coverUrl} title={book.title} width={48} />
-          <View style={styles.grow}>
-            <Text variant="heading" numberOfLines={2}>
-              {book.title}
-            </Text>
-            <Text variant="small" color="textMuted" numberOfLines={1}>
-              {book.authors.join(", ")} · pág. {entry.currentPage}
-              {pages ? ` de ${pages}` : ""}
-            </Text>
-            {percent !== null && <ProgressBar percent={percent} />}
-          </View>
+      <View style={styles.reading}>
+        <BookCover src={book.coverUrl} title={book.title} width={48} />
+        <View style={styles.grow}>
+          <Text variant="label" color="textMuted">
+            Lendo agora{more > 0 ? ` · e mais ${more}` : ""}
+          </Text>
+          <Text variant="heading" numberOfLines={2}>
+            {book.title}
+          </Text>
+          <Text variant="small" color="textMuted" numberOfLines={1}>
+            {book.authors.join(", ")} · pág. {entry.currentPage}
+            {pages ? ` de ${pages}` : ""}
+          </Text>
+          {percent !== null && <ProgressBar percent={percent} />}
         </View>
-      </Card>
+      </View>
     </Pressable>
   );
 }
 
 /**
- * The "Destaques" tab: the four "livros de cabeceira", the highlighted quote, the year's goal
- * and the streak (each one the reader can hide), and the favorite genres.
+ * The "Destaques" tab: the four "livros de cabeceira", the year's goal and the streak (each
+ * one the reader can hide), and the favorite genres. The quote is at the top of the profile.
  */
 export function ProfileFeatured({
   page,
@@ -61,7 +59,6 @@ export function ProfileFeatured({
   const showStreak = profile.profileShows.streak && !!streak && streak > 0;
   const empty =
     profile.favoriteBooks.length === 0 &&
-    !profile.featuredQuote &&
     !goal &&
     !showStreak &&
     profile.favoriteGenres.length === 0;
@@ -92,21 +89,6 @@ export function ProfileFeatured({
               </Pressable>
             ))}
           </View>
-        </View>
-      )}
-
-      {profile.featuredQuote && (
-        <View style={[styles.quote, { backgroundColor: theme.note }]}>
-          <Text variant="label" color="textMuted">
-            Frase marcada
-          </Text>
-          <Text style={styles.quoteText}>“{profile.featuredQuote.body}”</Text>
-          {profile.featuredQuote.bookTitle && (
-            <Text variant="small" color="textMuted">
-              {profile.featuredQuote.bookTitle}
-              {profile.featuredQuote.page ? `, pág. ${profile.featuredQuote.page}` : ""}
-            </Text>
-          )}
         </View>
       )}
 
@@ -163,8 +145,6 @@ const styles = StyleSheet.create({
   grow: { flex: 1, gap: spacing[1] },
   favorites: { flexDirection: "row", gap: spacing[2] },
   favorite: { flex: 1, alignItems: "center" },
-  quote: { borderRadius: radius.lg, padding: spacing[4], gap: spacing[1] },
-  quoteText: { fontStyle: "italic", fontSize: 17, lineHeight: 24 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   chip: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
 });
