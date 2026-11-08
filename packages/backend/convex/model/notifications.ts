@@ -83,15 +83,6 @@ export async function notifyMentions(
   }
 }
 
-/** Notifications pointing at a post (all kinds), for when the post is deleted. */
-export async function deletePostNotifications(ctx: MutationCtx, postId: Id<"posts">) {
-  const rows = await ctx.db
-    .query("notifications")
-    .withIndex("by_post", (q) => q.eq("postId", postId))
-    .collect();
-  for (const row of rows) await ctx.db.delete(row._id);
-}
-
 /** Notifications pointing at a comment ("comentou", mentions in it), for when it is deleted. */
 export async function deleteCommentNotifications(ctx: MutationCtx, commentId: Id<"postComments">) {
   const rows = await ctx.db

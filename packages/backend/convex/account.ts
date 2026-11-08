@@ -5,6 +5,7 @@ import { internalMutation, type MutationCtx, query } from "./_generated/server";
 import { recordBookCounters } from "./model/bookStats";
 import { leaveGroup } from "./model/groups";
 import { deleteList } from "./model/lists";
+import { deletePost } from "./model/moderation";
 import { requireViewer } from "./model/readers";
 
 /**
@@ -361,24 +362,7 @@ const steps: Step[] = [
       .query("posts")
       .withIndex("by_author", (q) => q.eq("authorId", userId))
       .take(POST_BATCH);
-    for (const post of posts) {
-      const related = await Promise.all([
-        ctx.db
-          .query("postLikes")
-          .withIndex("by_post_user", (q) => q.eq("postId", post._id))
-          .collect(),
-        ctx.db
-          .query("postComments")
-          .withIndex("by_post", (q) => q.eq("postId", post._id))
-          .collect(),
-        ctx.db
-          .query("activities")
-          .withIndex("by_post", (q) => q.eq("postId", post._id))
-          .collect(),
-      ]);
-      for (const doc of related.flat()) await ctx.db.delete(doc._id);
-      await ctx.db.delete(post._id);
-    }
+    for (const post of posts) await deletePost(ctx, post);
     return posts.length === POST_BATCH;
   },
   async (ctx, userId) =>
