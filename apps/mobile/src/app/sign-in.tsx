@@ -3,7 +3,7 @@ import { SignInForm } from "@/features/auth";
 
 export default function SignInScreen() {
   return (
-    <Screen>
+    <Screen centered>
       <SignInForm />
     </Screen>
   );

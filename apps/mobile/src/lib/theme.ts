@@ -12,6 +12,12 @@ function apply(preference: ThemePreference) {
   Appearance.setColorScheme(preference === "system" ? "unspecified" : preference);
 }
 
+/** The app opens light; dark (or following the phone) is a choice in Aparência. */
+const DEFAULT_PREFERENCE: ThemePreference = "light";
+
+// Before the saved choice is read (SecureStore is async), so the first frame is already light.
+apply(DEFAULT_PREFERENCE);
+
 interface ThemeState {
   preference: ThemePreference;
   setPreference: (preference: ThemePreference) => void;
@@ -20,7 +26,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      preference: "system",
+      preference: DEFAULT_PREFERENCE,
       setPreference: (preference) => {
         apply(preference);
         set({ preference });
