@@ -168,6 +168,39 @@ export const resolve = internalMutation({
   },
 });
 
+/** Closed reports keep the copy of the reported text (and the reporter's details) this long. */
+const REPORT_TEXT_RETENTION = 180 * 24 * 60 * 60 * 1000;
+/** How far back the daily run looks past the retention (covers a few missed runs). */
+const RETENTION_WINDOW = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Data minimization (LGPD art. 16): closed reports past the retention lose the copied text and
+ * the details; who, what and the outcome stay as the record of the decision. Daily cron.
+ */
+export const eraseOldReportText = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - REPORT_TEXT_RETENTION;
+    for (const status of ["dismissed", "actioned"] as const) {
+      const rows = await ctx.db
+        .query("reports")
+        .withIndex("by_status_created", (q) =>
+          q
+            .eq("status", status)
+            .gt("createdAt", cutoff - RETENTION_WINDOW)
+            .lt("createdAt", cutoff),
+        )
+        .take(500);
+      for (const row of rows) {
+        if (row.snapshot !== null || row.details !== null) {
+          await ctx.db.patch(row._id, { snapshot: null, details: null });
+        }
+      }
+    }
+    return null;
+  },
+});
+
 /** Removes a reported post, comment or Juntos message (counters, feed and notifications too). */
 export const removeContent = internalMutation({
   args: { target: reportTarget, targetId: v.string() },

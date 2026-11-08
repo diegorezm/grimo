@@ -217,7 +217,8 @@ export function PrivacyPage() {
             Denúncias feitas sobre você ou seu conteúdo são mantidas como registro de moderação pelo
             tempo necessário para cumprir a lei ou defender direitos; as denúncias que você fez
             continuam existindo, mas sem identificar você. O histórico de moderação também fica, sem
-            vínculo com a sua conta.
+            vínculo com a sua conta. A cópia do conteúdo denunciado e os detalhes escritos na
+            denúncia são apagados 180 dias depois de ela ser resolvida.
           </li>
         </List>
       </Section>
