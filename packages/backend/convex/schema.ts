@@ -277,7 +277,10 @@ export default defineSchema({
     .index("by_user_started", ["userId", "startedAt"])
     .index("by_entry", ["shelfEntryId"]),
 
-  /** Lists curated by readers ("terror para começar"), public like the profile. */
+  /**
+   * Removed from the app (saved shelves and tags replace them). Kept only until
+   * `migrations.dropLists` has emptied them on every deployment; then both tables go.
+   */
   lists: defineTable({
     ownerId: v.id("users"),
     title: v.string(),

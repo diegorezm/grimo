@@ -3,6 +3,7 @@ import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { authComponent } from "./auth";
 import { countEntries } from "./model/bookStats";
+import { deleteList } from "./model/lists";
 
 /** Data migrations (`@convex-dev/migrations`). Run with `npx convex run migrations:run`. */
 export const migrations = new Migrations<DataModel>(components.migrations);
@@ -38,8 +39,21 @@ export const backfillEmailVerified = migrations.define({
   },
 });
 
+/**
+ * Lists were removed from the app (saved shelves and tags took their place): deletes every
+ * list with its books. After it ran on every deployment, `lists` and `listItems` can leave the
+ * schema.
+ */
+export const dropLists = migrations.define({
+  table: "lists",
+  migrateOne: async (ctx, list) => {
+    await deleteList(ctx, list);
+  },
+});
+
 /** Runs every pending migration, in order. `npx convex run migrations:runAll`. */
 export const runAll = migrations.runner([
   internal.migrations.backfillBookCounters,
   internal.migrations.backfillEmailVerified,
+  internal.migrations.dropLists,
 ]);

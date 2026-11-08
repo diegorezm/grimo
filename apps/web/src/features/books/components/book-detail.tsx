@@ -28,7 +28,6 @@ import { MentionText } from "@/components/ui/mention-text";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { Stars } from "@/components/ui/stars";
 import { cn } from "@/utils/cn";
-import { AddToList } from "./add-to-list";
 import { Book3D } from "./book-3d";
 import { BookQuotes } from "./book-quotes";
 import { EditionPages } from "./edition-pages";
@@ -154,7 +153,6 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
           <StartGroup book={bookInput} />
         )}
-        {detail.book.id && <AddToList book={bookInput} />}
       </div>
 
       <OpenReads openLibraryId={book.openLibraryId} />

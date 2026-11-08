@@ -18,7 +18,6 @@ import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as imports from "../imports.js";
 import type * as legal from "../legal.js";
-import type * as lists from "../lists.js";
 import type * as migrations from "../migrations.js";
 import type * as model_bookStats from "../model/bookStats.js";
 import type * as model_content from "../model/content.js";
@@ -68,7 +67,6 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   imports: typeof imports;
   legal: typeof legal;
-  lists: typeof lists;
   migrations: typeof migrations;
   "model/bookStats": typeof model_bookStats;
   "model/content": typeof model_content;

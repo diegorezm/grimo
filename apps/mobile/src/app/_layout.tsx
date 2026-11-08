@@ -76,7 +76,6 @@ function RootNavigator() {
         <Stack.Screen name="group-card/[id]" />
         <Stack.Screen name="book-card/[id]" />
         <Stack.Screen name="quote-card/[id]" />
-        <Stack.Screen name="list/[id]" />
         <Stack.Screen
           name="report"
           options={{
@@ -107,22 +106,6 @@ function RootNavigator() {
           options={{
             presentation: "formSheet",
             sheetAllowedDetents: [0.85],
-            sheetGrabberVisible: true,
-          }}
-        />
-        <Stack.Screen
-          name="new-list"
-          options={{
-            presentation: "formSheet",
-            sheetAllowedDetents: [0.6],
-            sheetGrabberVisible: true,
-          }}
-        />
-        <Stack.Screen
-          name="add-to-list/[id]"
-          options={{
-            presentation: "formSheet",
-            sheetAllowedDetents: [0.6, 0.9],
             sheetGrabberVisible: true,
           }}
         />

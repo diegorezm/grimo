@@ -108,16 +108,6 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
 
         <ShelfPicker book={book} entry={entry} />
         {entry && <EntryTags entryId={entry.id} />}
-        {book.id && (
-          <Button
-            variant="ghost"
-            title="Adicionar a uma lista"
-            onPress={() =>
-              router.push({ pathname: "/add-to-list/[id]", params: { id: openLibraryId } })
-            }
-          />
-        )}
-
         {entry?.status === "reading" && (
           <Card>
             <View style={styles.between}>

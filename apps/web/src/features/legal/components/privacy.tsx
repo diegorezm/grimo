@@ -61,10 +61,6 @@ export function PrivacyPage() {
             como os leitores se sentiram com cada livro.
           </li>
           <li>
-            <strong>Listas:</strong> as listas de livros que você monta (nome, descrição, livros e a
-            nota de cada um). Ficam públicas no seu perfil.
-          </li>
-          <li>
             <strong>Social:</strong> resenhas, notas, comentários, curtidas, quem você segue,
             bloqueios e denúncias que você faz, e as notificações do que outros leitores fizeram com
             você (seguiram, curtiram, comentaram ou mencionaram com @).

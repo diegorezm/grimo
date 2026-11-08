@@ -4,7 +4,6 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { FeedItem } from "@/features/feed";
-import { ReaderLists } from "@/features/lists";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { useTheme } from "@/hooks/use-theme";
 import { ProfileFeatured } from "./profile-highlights";
@@ -14,14 +13,13 @@ const TABS = [
   { id: "shelves", label: "Estantes" },
   { id: "featured", label: "Destaques" },
   { id: "activity", label: "Atividade" },
-  { id: "lists", label: "Listas" },
   { id: "year", label: "Ano" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
 /**
  * The bottom of a profile, one part at a time: the shelves as rows of covers, what the reader
- * posted, their lists, and the year (with the monthly card on your own profile).
+ * posted, and the year (with the monthly card on your own profile).
  */
 export function ProfileTabs({
   page,
@@ -66,7 +64,6 @@ export function ProfileTabs({
       {tab === "activity" && <Activity username={username} />}
       {tab === "shelves" && <ProfileShelves username={username} />}
       {tab === "featured" && <ProfileFeatured page={page} streak={streak} />}
-      {tab === "lists" && <ReaderLists username={username} isMe={isMe} />}
       {tab === "year" && (
         <>
           <YearStats overview={page.stats} />
