@@ -48,10 +48,11 @@ export function PrivacyPage() {
           <li>
             <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações (nota e
             os sentimentos que o livro deixou), os sentimentos que você marca numa página enquanto
-            lê (seu diário de leitura), datas de início e fim, e as sessões de leitura que você
-            cronometra (quando começou, quando parou e em que página), para a ofensiva e o feed. Os
-            sentimentos são escolhidos numa lista fixa e servem para mostrar a sua leitura e somar,
-            sem identificar ninguém, como os leitores se sentiram com cada livro.
+            lê (seu diário de leitura), datas de início e fim (também das leituras anteriores de um
+            livro que você relê), e as sessões de leitura que você cronometra (quando começou,
+            quando parou e em que página), para a ofensiva e o feed. Os sentimentos são escolhidos
+            numa lista fixa e servem para mostrar a sua leitura e somar, sem identificar ninguém,
+            como os leitores se sentiram com cada livro.
           </li>
           <li>
             <strong>Listas:</strong> as listas de livros que você monta (nome, descrição, livros e a

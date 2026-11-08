@@ -80,6 +80,17 @@ const sections = {
       finishedAt: date(entry.finishedAt),
     }),
   ),
+  pastReadings: section(
+    "pastReadings",
+    (ctx, userId) =>
+      ctx.db.query("pastReadings").withIndex("by_user_finished", (q) => q.eq("userId", userId)),
+    async (row, h) => ({
+      book: await h.bookTitle(row.bookId),
+      startedAt: date(row.startedAt),
+      finishedAt: date(row.finishedAt),
+      rating: row.rating,
+    }),
+  ),
   readingLog: section(
     "readingLogs",
     (ctx, userId) =>
@@ -505,6 +516,11 @@ const steps: Step[] = [
     for (const list of lists) await deleteList(ctx, list);
     return lists.length === LIST_BATCH;
   },
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("pastReadings").withIndex("by_user_finished", (q) => q.eq("userId", userId)),
+    ),
   // Shelf entries: the books they were on lose a reader (and a rating).
   async (ctx, userId) => {
     const entries = await ctx.db

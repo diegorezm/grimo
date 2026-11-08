@@ -80,17 +80,22 @@ export function useUpdateShelfEntry() {
         ...(rating !== undefined && { rating }),
         ...(feelings !== undefined && { feelings }),
       };
+      // A read book back to "Lendo" is a reread: it starts over from page 0 (planShelfTransition).
+      const apply = <E extends { status: string; currentPage: number }>(entry: E): E =>
+        status === "reading" && entry.status === "read" && currentPage === undefined
+          ? { ...entry, ...patch, currentPage: 0 }
+          : { ...entry, ...patch };
       // The book page shows the rating and feelings too: picking them can't wait for the server.
       const rollbackBook = await patchQueries<BookResult>(bookPages, (data) =>
         data.detail?.entry?.id === id
-          ? { ...data, detail: { ...data.detail, entry: { ...data.detail.entry, ...patch } } }
+          ? { ...data, detail: { ...data.detail, entry: apply(data.detail.entry) } }
           : data,
       );
       const rollbackShelves = await patchQueries<ShelfList>(shelves, (data) => ({
         ...data,
         items: data.items.map((item) => {
           if (item.entry.id !== id) return item;
-          const entry = { ...item.entry, ...patch };
+          const entry = apply(item.entry);
           // Cleared: only the server knows the book's own pages (the row shows the edition's).
           if (pageCount === undefined || pageCount === null) {
             return { ...item, entry: pageCount === null ? { ...entry, pageCount } : entry };
