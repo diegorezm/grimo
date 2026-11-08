@@ -9,14 +9,13 @@ import { clearCacheForSignIn } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/login")({
-  // Where to go after signing in (e.g. the profile a shared link pointed to). Same-site paths only.
+  // Where to go after signing in (e.g. the profile a shared link pointed to). Same-site paths only
+  // (`//host` and `/\host` are other sites to a browser).
   validateSearch: (search: Record<string, unknown>): { redirect?: string; ott?: string } => ({
     // One-time token from a Google sign-in (the auth provider exchanges it for the session).
     ott: typeof search.ott === "string" ? search.ott : undefined,
     redirect:
-      typeof search.redirect === "string" &&
-      search.redirect.startsWith("/") &&
-      !search.redirect.startsWith("//")
+      typeof search.redirect === "string" && /^\/(?![/\\])/.test(search.redirect)
         ? search.redirect
         : undefined,
   }),
