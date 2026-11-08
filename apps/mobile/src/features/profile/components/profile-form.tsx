@@ -4,7 +4,6 @@ import {
   type SongPreview,
   toast,
   useMyQuotes,
-  useShelf,
   useSongPreview,
   useUpdateMe,
 } from "@grimo/client";
@@ -13,7 +12,6 @@ import {
   GENRE_LABELS,
   GENRES,
   type Genre,
-  MAX_FAVORITE_BOOKS,
   musicService,
   PROFILE_COLOR_LABELS,
   PROFILE_COLORS,
@@ -23,10 +21,9 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { Pressable, StyleSheet, Switch, View } from "react-native";
 import { Button, Input, Screen, Text } from "@/components/ui";
 import { profileCovers, radius, spacing } from "@/constants/theme";
-import { BookCover } from "@/features/books";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
@@ -42,14 +39,13 @@ const SHOWS: { key: keyof ProfileShows; label: string }[] = [
 
 /**
  * Edit how your profile looks: cover color, photo, name, pronouns, bio, the "trilha da leitura",
- * the four "livros de cabeceira", a highlighted quote, genres and which reading cards show.
+ * a highlighted quote, genres and which reading cards show.
  * The @ stays as it is.
  */
 export function ProfileForm({ profile }: { profile: Profile }) {
   const theme = useTheme();
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const updateMe = useUpdateMe();
-  const read = useShelf("read").data?.items ?? [];
   const quotes = useMyQuotes().data?.items ?? [];
 
   const [color, setColor] = useState<ProfileColor>(profile.profileColor);
@@ -61,7 +57,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     artist: profile.profileSong?.artist ?? "",
     url: profile.profileSong?.url ?? "",
   });
-  const [favorites, setFavorites] = useState(profile.favoriteBooks);
   const [quoteId, setQuoteId] = useState(profile.featuredQuote?.id ?? null);
   const [genres, setGenres] = useState<Genre[]>(profile.favoriteGenres as Genre[]);
   const [shows, setShows] = useState(profile.profileShows);
@@ -111,16 +106,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     );
   }
 
-  function toggleFavorite(book: Profile["favoriteBooks"][number]) {
-    setFavorites((current) =>
-      current.some((item) => item.id === book.id)
-        ? current.filter((item) => item.id !== book.id)
-        : current.length < MAX_FAVORITE_BOOKS
-          ? [...current, book]
-          : current,
-    );
-  }
-
   function save() {
     // The name and artist come from the link: one that couldn't be read can't be saved yet.
     if (songTouched && (song.title.trim() === "" || song.artist.trim() === "")) {
@@ -136,7 +121,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       pronouns,
       profileColor: color,
       profileSong: songTouched ? song : null,
-      favoriteBookIds: favorites.map((book) => book.id),
       featuredQuoteId: quoteId,
       favoriteGenres: genres,
       profileShows: shows,
@@ -271,56 +255,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               setSong({ title: "", artist: "", url: "" });
             }}
           />
-        )}
-      </Field>
-
-      <Field label={`Livros de cabeceira · ${favorites.length}/${MAX_FAVORITE_BOOKS}`}>
-        <Text variant="small" color="textMuted">
-          Escolha entre os seus Lidos, na ordem em que vão aparecer.
-        </Text>
-        {read.length === 0 ? (
-          <Text color="textMuted">Marque livros como lidos para escolher os favoritos.</Text>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.books}
-          >
-            {read.map(({ book }) => {
-              const position = favorites.findIndex((item) => item.id === book.id);
-              const selected = position >= 0;
-              return (
-                <Pressable
-                  key={book.id}
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={book.title}
-                  accessibilityState={{ checked: selected }}
-                  onPress={() =>
-                    toggleFavorite({
-                      id: book.id,
-                      openLibraryId: book.openLibraryId,
-                      title: book.title,
-                      authors: book.authors,
-                      coverUrl: book.coverUrl,
-                    })
-                  }
-                  style={[
-                    styles.pick,
-                    { opacity: selected || favorites.length < MAX_FAVORITE_BOOKS ? 1 : 0.4 },
-                  ]}
-                >
-                  <BookCover src={book.coverUrl} title={book.title} width={64} />
-                  {selected && (
-                    <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-                      <Text variant="label" color="accentForeground">
-                        {position + 1}
-                      </Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
         )}
       </Field>
 
@@ -461,18 +395,6 @@ const styles = StyleSheet.create({
   swatch: { width: 44, height: 44, borderRadius: radius.full },
   bio: { minHeight: 96, textAlignVertical: "top" },
   grow: { flex: 1 },
-  books: { gap: spacing[2] },
-  pick: { position: "relative" },
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    minWidth: 24,
-    height: 24,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   choice: { borderWidth: 1, borderRadius: radius.md, padding: spacing[3], gap: spacing[1] },
   italic: { fontStyle: "italic" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },

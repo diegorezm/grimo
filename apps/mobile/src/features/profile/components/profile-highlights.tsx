@@ -42,7 +42,7 @@ export function ProfileReadingNow({ page }: { page: ReaderPage }) {
 }
 
 /**
- * The "Destaques" tab: the four "livros de cabeceira", the year's goal and the streak (each
+ * The "Destaques" tab: the year's goal and the streak (each
  * one the reader can hide), and the favorite genres. The quote is at the top of the profile.
  */
 export function ProfileFeatured({
@@ -57,41 +57,11 @@ export function ProfileFeatured({
   const { profile, stats } = page;
   const goal = profile.profileShows.goal ? stats.goal : null;
   const showStreak = profile.profileShows.streak && !!streak && streak > 0;
-  const empty =
-    profile.favoriteBooks.length === 0 &&
-    !goal &&
-    !showStreak &&
-    profile.favoriteGenres.length === 0;
+  const empty = !goal && !showStreak && profile.favoriteGenres.length === 0;
   if (empty) return <Text color="textMuted">Nada em destaque ainda.</Text>;
 
   return (
     <View style={styles.root}>
-      {profile.favoriteBooks.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.between}>
-            <Text variant="heading">Livros de cabeceira</Text>
-            <Text variant="small" color="textMuted">
-              os favoritos
-            </Text>
-          </View>
-          <View style={styles.favorites}>
-            {profile.favoriteBooks.map((book) => (
-              <Pressable
-                key={book.id}
-                accessibilityRole="button"
-                accessibilityLabel={book.title}
-                onPress={() =>
-                  router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })
-                }
-                style={({ pressed }) => [styles.favorite, { opacity: pressed ? 0.7 : 1 }]}
-              >
-                <BookCover src={book.coverUrl} title={book.title} width={78} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
-
       {(goal || showStreak) && (
         <Card>
           {goal && (
@@ -143,8 +113,6 @@ const styles = StyleSheet.create({
   between: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
   reading: { flexDirection: "row", gap: spacing[3], alignItems: "center" },
   grow: { flex: 1, gap: spacing[1] },
-  favorites: { flexDirection: "row", gap: spacing[2] },
-  favorite: { flex: 1, alignItems: "center" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   chip: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
 });

@@ -1,15 +1,14 @@
 import { useProfileShelves, useReaderShelves } from "@grimo/client";
-import { coverUrl, spineLook } from "@grimo/core";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
+import { BookCover } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
 
-/** Spines in a preview are drawn smaller than on the shelf screen. */
-const SCALE = { width: 0.42, height: 0.26 };
-const PREVIEW_BOOKS = 14;
+/** Covers in a preview: small, side by side on a plank. */
+const COVER = 58;
+const PREVIEW_BOOKS = 8;
 
 interface PreviewBook {
   entryId: string;
@@ -19,7 +18,7 @@ interface PreviewBook {
 
 /**
  * The profile's Estantes tab: Lendo, Lidos and the shelves the reader made, each a preview of
- * spines with its count. Tapping one opens the whole shelf.
+ * covers with its count. Tapping one opens the whole shelf.
  */
 export function ProfileShelves({ username }: { username: string }) {
   const shelves = useReaderShelves(username).data;
@@ -103,34 +102,10 @@ function Preview({
         </Text>
       ) : (
         <View>
-          <View style={styles.spines}>
-            {books.map((book) => {
-              const look = spineLook(book.title, null);
-              return (
-                <View
-                  key={book.entryId}
-                  style={[
-                    styles.spine,
-                    {
-                      width: Math.round(look.width * SCALE.width),
-                      height: Math.round(look.height * SCALE.height),
-                      backgroundColor: theme.surfaceMuted,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  {book.coverUrl && (
-                    <Image
-                      source={coverUrl(book.coverUrl, "S")}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="cover"
-                      contentPosition="left"
-                      accessibilityIgnoresInvertColors
-                    />
-                  )}
-                </View>
-              );
-            })}
+          <View style={styles.covers}>
+            {books.map((book) => (
+              <BookCover key={book.entryId} src={book.coverUrl} title={book.title} width={COVER} />
+            ))}
           </View>
           <View style={[styles.plank, { backgroundColor: theme.edge }]} />
         </View>
@@ -144,12 +119,6 @@ const styles = StyleSheet.create({
   preview: { gap: spacing[2] },
   between: { flexDirection: "row", alignItems: "baseline", gap: spacing[2] },
   grow: { flex: 1 },
-  spines: { flexDirection: "row", alignItems: "flex-end", gap: 2, overflow: "hidden" },
-  spine: {
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
+  covers: { flexDirection: "row", gap: spacing[2], overflow: "hidden", paddingBottom: 2 },
   plank: { height: 8, borderRadius: radius.sm / 2 },
 });
