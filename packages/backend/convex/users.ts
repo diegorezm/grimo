@@ -180,25 +180,34 @@ export const removeAvatar = mutation({
   },
 });
 
+/** Read books looked at for a profile's favorites (the most recently finished ones). */
+const PROFILE_READ_POOL = 300;
+
 /** The books shown on a profile: reading now, favorites (best rated reads) and the total. */
 async function profileBooks(ctx: QueryCtx, user: Doc<"users">, viewerId: Id<"users"> | null) {
-  const entries = await ctx.db
-    .query("shelfEntries")
-    .withIndex("by_user_updated", (q) => q.eq("userId", user._id))
-    .order("desc")
-    .collect();
-  const rows = await withBooks(
-    ctx,
-    entries.filter((entry) => entry.status === "reading" || entry.status === "read"),
-    viewerId,
-  );
+  const [readingEntries, readEntries] = await Promise.all([
+    ctx.db
+      .query("shelfEntries")
+      .withIndex("by_user_status_updated", (q) => q.eq("userId", user._id).eq("status", "reading"))
+      .order("desc")
+      .take(50),
+    ctx.db
+      .query("shelfEntries")
+      .withIndex("by_user_status_finished", (q) => q.eq("userId", user._id).eq("status", "read"))
+      .order("desc")
+      .take(PROFILE_READ_POOL),
+  ]);
+  const rows = await withBooks(ctx, [...readingEntries, ...readEntries], viewerId);
   const reading = rows.filter(({ entry }) => entry.status === "reading");
   const favorites = rows
     .filter(({ entry }) => entry.status === "read" && entry.rating)
     .sort((a, b) => (b.entry.rating ?? 0) - (a.entry.rating ?? 0))
     .slice(0, 10);
-  const covers = rows.flatMap(({ book }) => (book.coverUrl ? [book.coverUrl] : [])).slice(0, 24);
-  return { reading, favorites, covers, total: entries.length };
+  const covers = [...rows]
+    .sort((a, b) => b.entry.updatedAt - a.entry.updatedAt)
+    .flatMap(({ book }) => (book.coverUrl ? [book.coverUrl] : []))
+    .slice(0, 24);
+  return { reading, favorites, covers, total: user.bookCount };
 }
 
 /** A reader's public page. Works signed out, so profile links can be shared anywhere. */

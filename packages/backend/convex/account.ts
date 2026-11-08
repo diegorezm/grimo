@@ -1,128 +1,268 @@
+import type { NamedTableInfo, OrderedQuery } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { internalMutation, type MutationCtx, query } from "./_generated/server";
+import type { DataModel, Doc, Id, TableNames } from "./_generated/dataModel";
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
 import { recordBookCounters } from "./model/bookStats";
 import { leaveGroup } from "./model/groups";
 import { deleteList } from "./model/lists";
+import { deletePost } from "./model/moderation";
 import { requireViewer } from "./model/readers";
 
-/**
- * Everything Grimo keeps about the signed-in reader, as plain JSON (LGPD art. 18: access and
- * portability). The apps save it as a file. Reads every row of the reader: fine at today's sizes.
- */
-export const exportData = query({
+type Rows<T extends TableNames> = OrderedQuery<NamedTableInfo<DataModel, T>>;
+
+/** Rows per export page: small enough for one query's read limits, lookups included. */
+const EXPORT_PAGE = 500;
+/** Books written out per list (only bounds a pathological list). */
+const LIST_ITEMS_MAX = 2000;
+
+const date = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
+
+/** Lookups shared by one export page (each title and @ is read once). */
+function exportHelpers(ctx: QueryCtx) {
+  const books = new Map<Id<"books">, Doc<"books"> | null>();
+  const bookTitle = async (id: Id<"books"> | null) => {
+    if (!id) return null;
+    if (!books.has(id)) books.set(id, await ctx.db.get(id));
+    return books.get(id)?.title ?? null;
+  };
+  const username = async (id: Id<"users">) => (await ctx.db.get(id))?.username ?? null;
+  const groupBook = async (id: Id<"groups">) => bookTitle((await ctx.db.get(id))?.bookId ?? null);
+  return { ctx, bookTitle, username, groupBook };
+}
+type Helpers = ReturnType<typeof exportHelpers>;
+
+function section<T extends TableNames, R>(
+  _table: T,
+  rows: (ctx: QueryCtx, userId: Id<"users">) => Rows<T>,
+  view: (row: Doc<T>, helpers: Helpers) => Promise<R> | R,
+) {
+  return { rows, view };
+}
+
+/** Each list in the export: the reader's rows of one table and how each is written out. */
+const sections = {
+  moderatorInvites: section(
+    "moderatorInvites",
+    (ctx, userId) =>
+      ctx.db.query("moderatorInvites").withIndex("by_user_status", (q) => q.eq("userId", userId)),
+    (invite) => ({
+      status: invite.status,
+      invitedAt: date(invite.createdAt),
+      expiresAt: date(invite.expiresAt),
+      respondedAt: date(invite.respondedAt),
+    }),
+  ),
+  readingGoals: section(
+    "readingGoals",
+    (ctx, userId) =>
+      ctx.db.query("readingGoals").withIndex("by_user_year", (q) => q.eq("userId", userId)),
+    (goal) => ({ year: goal.year, target: goal.target }),
+  ),
+  shelf: section(
+    "shelfEntries",
+    (ctx, userId) =>
+      ctx.db.query("shelfEntries").withIndex("by_user_updated", (q) => q.eq("userId", userId)),
+    async (entry, h) => ({
+      book: await h.bookTitle(entry.bookId),
+      status: entry.status,
+      currentPage: entry.currentPage,
+      editionPages: entry.pageCount ?? null,
+      rating: entry.rating,
+      feelings: entry.feelings ?? [],
+      startedAt: date(entry.startedAt),
+      finishedAt: date(entry.finishedAt),
+    }),
+  ),
+  readingLog: section(
+    "readingLogs",
+    (ctx, userId) =>
+      ctx.db.query("readingLogs").withIndex("by_user_created", (q) => q.eq("userId", userId)),
+    async (log, h) => ({
+      book: await h.bookTitle((await h.ctx.db.get(log.shelfEntryId))?.bookId ?? null),
+      page: log.page,
+      pagesRead: log.pagesRead,
+      feelings: log.feelings ?? [],
+      at: date(log.createdAt),
+    }),
+  ),
+  lists: section(
+    "lists",
+    (ctx, userId) =>
+      ctx.db.query("lists").withIndex("by_owner_updated", (q) => q.eq("ownerId", userId)),
+    async (list, h) => ({
+      title: list.title,
+      description: list.description,
+      createdAt: date(list.createdAt),
+      books: await Promise.all(
+        (
+          await h.ctx.db
+            .query("listItems")
+            .withIndex("by_list_added", (q) => q.eq("listId", list._id))
+            .take(LIST_ITEMS_MAX)
+        ).map(async (item) => ({ book: await h.bookTitle(item.bookId), note: item.note })),
+      ),
+    }),
+  ),
+  readingSessions: section(
+    "readingSessions",
+    (ctx, userId) =>
+      ctx.db.query("readingSessions").withIndex("by_user_started", (q) => q.eq("userId", userId)),
+    async (session, h) => ({
+      book: await h.bookTitle(session.bookId),
+      startedAt: date(session.startedAt),
+      endedAt: date(session.endedAt),
+      startPage: session.startPage,
+      endPage: session.endPage,
+    }),
+  ),
+  posts: section(
+    "posts",
+    (ctx, userId) => ctx.db.query("posts").withIndex("by_author", (q) => q.eq("authorId", userId)),
+    async (post, h) => ({
+      kind: post.kind,
+      book: await h.bookTitle(post.bookId),
+      rating: post.rating,
+      body: post.body,
+      hasSpoilers: post.hasSpoilers,
+      page: post.page ?? null,
+      createdAt: date(post._creationTime),
+    }),
+  ),
+  comments: section(
+    "postComments",
+    (ctx, userId) =>
+      ctx.db.query("postComments").withIndex("by_author", (q) => q.eq("authorId", userId)),
+    (comment) => ({
+      postId: comment.postId,
+      body: comment.body,
+      createdAt: date(comment._creationTime),
+    }),
+  ),
+  likedPosts: section(
+    "postLikes",
+    (ctx, userId) => ctx.db.query("postLikes").withIndex("by_user", (q) => q.eq("userId", userId)),
+    (like) => like.postId,
+  ),
+  following: section(
+    "follows",
+    (ctx, userId) =>
+      ctx.db.query("follows").withIndex("by_follower", (q) => q.eq("followerId", userId)),
+    (row, h) => h.username(row.followingId),
+  ),
+  followers: section(
+    "follows",
+    (ctx, userId) =>
+      ctx.db.query("follows").withIndex("by_following", (q) => q.eq("followingId", userId)),
+    (row, h) => h.username(row.followerId),
+  ),
+  blocked: section(
+    "blocks",
+    (ctx, userId) =>
+      ctx.db.query("blocks").withIndex("by_blocker_blocked", (q) => q.eq("blockerId", userId)),
+    (row, h) => h.username(row.blockedId),
+  ),
+  notifications: section(
+    "notifications",
+    (ctx, userId) =>
+      ctx.db.query("notifications").withIndex("by_user_created", (q) => q.eq("userId", userId)),
+    async (row, h) => ({
+      kind: row.kind,
+      from: await h.username(row.actorId),
+      postId: row.postId,
+      at: date(row.createdAt),
+      readAt: date(row.readAt),
+    }),
+  ),
+  readingGroups: section(
+    "groupMembers",
+    (ctx, userId) =>
+      ctx.db.query("groupMembers").withIndex("by_user", (q) => q.eq("userId", userId)),
+    async (row, h) => ({
+      groupId: row.groupId,
+      book: await h.groupBook(row.groupId),
+      joinedAt: date(row.joinedAt),
+    }),
+  ),
+  groupMessages: section(
+    "groupMessages",
+    (ctx, userId) =>
+      ctx.db.query("groupMessages").withIndex("by_author", (q) => q.eq("authorId", userId)),
+    async (row, h) => ({
+      groupId: row.groupId,
+      book: await h.groupBook(row.groupId),
+      body: row.body,
+      atPercent: row.percent,
+      at: date(row.createdAt),
+    }),
+  ),
+  booksAdded: section(
+    "books",
+    (ctx, userId) =>
+      ctx.db.query("books").withIndex("by_createdBy", (q) => q.eq("createdBy", userId)),
+    (book) => ({ title: book.title, authors: book.authors, review: book.reviewStatus ?? null }),
+  ),
+  imports: section(
+    "imports",
+    (ctx, userId) =>
+      ctx.db.query("imports").withIndex("by_user_created", (q) => q.eq("userId", userId)),
+    (row) => ({
+      source: row.source,
+      at: date(row.createdAt),
+      total: row.total,
+      added: row.added,
+      notFound: row.notFound,
+    }),
+  ),
+  legalAcceptances: section(
+    "legalAcceptances",
+    (ctx, userId) =>
+      ctx.db.query("legalAcceptances").withIndex("by_user_document", (q) => q.eq("userId", userId)),
+    (row) => ({
+      document: row.document,
+      version: row.version,
+      acceptedAt: date(row.acceptedAt),
+      source: row.source,
+    }),
+  ),
+};
+
+type SectionName = keyof typeof sections;
+type SectionRows = { [K in SectionName]: Awaited<ReturnType<(typeof sections)[K]["view"]>>[] };
+type AnySection = {
+  rows: (ctx: QueryCtx, userId: Id<"users">) => Rows<TableNames>;
+  view: (row: Doc<TableNames>, helpers: Helpers) => unknown;
+};
+
+/** One page of one export section, as the signed-in reader. */
+export const exportPage = internalQuery({
+  args: { section: v.string(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    if (!(args.section in sections)) throw new Error(`Unknown export section: ${args.section}`);
+    const spec = sections[args.section as SectionName] as unknown as AnySection;
+    const page = await spec
+      .rows(ctx, viewer._id)
+      .paginate({ numItems: EXPORT_PAGE, cursor: args.cursor });
+    const helpers = exportHelpers(ctx);
+    const items: unknown[] = await Promise.all(page.page.map((row) => spec.view(row, helpers)));
+    return { items, isDone: page.isDone, cursor: page.continueCursor };
+  },
+});
+
+/** The reader's own document: account and profile. */
+export const exportProfile = internalQuery({
   args: {},
   handler: async (ctx) => {
     const viewer = await requireViewer(ctx);
-    const userId = viewer._id;
     const identity = await ctx.auth.getUserIdentity();
-    const [
-      goals,
-      entries,
-      logs,
-      sessions,
-      lists,
-      posts,
-      comments,
-      likes,
-      following,
-      followers,
-      blocks,
-      consents,
-      notifications,
-      memberships,
-      groupMessages,
-      imports,
-      booksAdded,
-      moderatorInvites,
-    ] = await Promise.all([
-      ctx.db
-        .query("readingGoals")
-        .withIndex("by_user_year", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("shelfEntries")
-        .withIndex("by_user_updated", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("readingLogs")
-        .withIndex("by_user_created", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("readingSessions")
-        .withIndex("by_user_started", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("lists")
-        .withIndex("by_owner_updated", (q) => q.eq("ownerId", userId))
-        .collect(),
-      ctx.db
-        .query("posts")
-        .withIndex("by_author", (q) => q.eq("authorId", userId))
-        .collect(),
-      ctx.db
-        .query("postComments")
-        .withIndex("by_author", (q) => q.eq("authorId", userId))
-        .collect(),
-      ctx.db
-        .query("postLikes")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("follows")
-        .withIndex("by_follower", (q) => q.eq("followerId", userId))
-        .collect(),
-      ctx.db
-        .query("follows")
-        .withIndex("by_following", (q) => q.eq("followingId", userId))
-        .collect(),
-      ctx.db
-        .query("blocks")
-        .withIndex("by_blocker_blocked", (q) => q.eq("blockerId", userId))
-        .collect(),
-      ctx.db
-        .query("legalAcceptances")
-        .withIndex("by_user_document", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("notifications")
-        .withIndex("by_user_created", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("groupMembers")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("groupMessages")
-        .withIndex("by_author", (q) => q.eq("authorId", userId))
-        .collect(),
-      ctx.db
-        .query("imports")
-        .withIndex("by_user_created", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("books")
-        .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
-        .collect(),
-      ctx.db
-        .query("moderatorInvites")
-        .withIndex("by_user_status", (q) => q.eq("userId", userId))
-        .collect(),
-    ]);
-
-    const books = new Map<Id<"books">, Doc<"books"> | null>();
-    const bookTitle = async (id: Id<"books"> | null) => {
-      if (!id) return null;
-      if (!books.has(id)) books.set(id, await ctx.db.get(id));
-      return books.get(id)?.title ?? null;
-    };
-    const username = async (id: Id<"users">) => (await ctx.db.get(id))?.username ?? null;
-    const date = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
-    const groupBook = async (id: Id<"groups">) => bookTitle((await ctx.db.get(id))?.bookId ?? null);
-
     return {
-      exportedAt: new Date().toISOString(),
       account: {
         email: identity?.email ?? null,
         createdAt: date(viewer._creationTime),
@@ -136,124 +276,56 @@ export const exportData = query({
         bio: viewer.bio,
         favoriteGenres: viewer.favoriteGenres,
       },
-      moderation: {
-        role: viewer.role ?? null,
-        invites: moderatorInvites.map((invite) => ({
-          status: invite.status,
-          invitedAt: date(invite.createdAt),
-          expiresAt: date(invite.expiresAt),
-          respondedAt: date(invite.respondedAt),
-        })),
-      },
-      readingGoals: goals.map((goal) => ({ year: goal.year, target: goal.target })),
-      shelf: await Promise.all(
-        entries.map(async (entry) => ({
-          book: await bookTitle(entry.bookId),
-          status: entry.status,
-          currentPage: entry.currentPage,
-          editionPages: entry.pageCount ?? null,
-          rating: entry.rating,
-          feelings: entry.feelings ?? [],
-          startedAt: date(entry.startedAt),
-          finishedAt: date(entry.finishedAt),
-        })),
-      ),
-      readingLog: await Promise.all(
-        logs.map(async (log) => ({
-          book: await bookTitle((await ctx.db.get(log.shelfEntryId))?.bookId ?? null),
-          page: log.page,
-          pagesRead: log.pagesRead,
-          feelings: log.feelings ?? [],
-          at: date(log.createdAt),
-        })),
-      ),
-      lists: await Promise.all(
-        lists.map(async (list) => ({
-          title: list.title,
-          description: list.description,
-          createdAt: date(list.createdAt),
-          books: await Promise.all(
-            (
-              await ctx.db
-                .query("listItems")
-                .withIndex("by_list_added", (q) => q.eq("listId", list._id))
-                .collect()
-            ).map(async (item) => ({ book: await bookTitle(item.bookId), note: item.note })),
-          ),
-        })),
-      ),
-      readingSessions: await Promise.all(
-        sessions.map(async (session) => ({
-          book: await bookTitle(session.bookId),
-          startedAt: date(session.startedAt),
-          endedAt: date(session.endedAt),
-          startPage: session.startPage,
-          endPage: session.endPage,
-        })),
-      ),
-      posts: await Promise.all(
-        posts.map(async (post) => ({
-          kind: post.kind,
-          book: await bookTitle(post.bookId),
-          rating: post.rating,
-          body: post.body,
-          hasSpoilers: post.hasSpoilers,
-          page: post.page ?? null,
-          createdAt: date(post._creationTime),
-        })),
-      ),
-      comments: comments.map((comment) => ({
-        postId: comment.postId,
-        body: comment.body,
-        createdAt: date(comment._creationTime),
-      })),
-      likedPosts: likes.map((like) => like.postId),
-      following: await Promise.all(following.map((row) => username(row.followingId))),
-      followers: await Promise.all(followers.map((row) => username(row.followerId))),
-      blocked: await Promise.all(blocks.map((row) => username(row.blockedId))),
-      notifications: await Promise.all(
-        notifications.map(async (row) => ({
-          kind: row.kind,
-          from: await username(row.actorId),
-          postId: row.postId,
-          at: date(row.createdAt),
-          readAt: date(row.readAt),
-        })),
-      ),
-      readingGroups: await Promise.all(
-        memberships.map(async (row) => ({
-          groupId: row.groupId,
-          book: await groupBook(row.groupId),
-          joinedAt: date(row.joinedAt),
-        })),
-      ),
-      groupMessages: await Promise.all(
-        groupMessages.map(async (row) => ({
-          groupId: row.groupId,
-          book: await groupBook(row.groupId),
-          body: row.body,
-          atPercent: row.percent,
-          at: date(row.createdAt),
-        })),
-      ),
-      booksAdded: booksAdded.map((book) => ({
-        title: book.title,
-        authors: book.authors,
-        review: book.reviewStatus ?? null,
-      })),
-      imports: imports.map((row) => ({
-        source: row.source,
-        at: date(row.createdAt),
-        total: row.total,
-        added: row.added,
-        notFound: row.notFound,
-      })),
-      legalAcceptances: consents.map((row) => ({
-        document: row.document,
-        version: row.version,
-        acceptedAt: date(row.acceptedAt),
-        source: row.source,
-      })),
+      role: viewer.role ?? null,
+    };
+  },
+});
+
+type ExportHead = {
+  account: { email: string | null; createdAt: string | null; timeZone: string | null };
+  profile: {
+    name: string;
+    username: string;
+    image: string | null;
+    bio: string | null;
+    favoriteGenres: string[];
+  };
+  role: Doc<"users">["role"] | null;
+};
+
+/**
+ * Everything Grimo keeps about the signed-in reader, as plain JSON (LGPD art. 18: access and
+ * portability). The apps save it as a file. Read page by page, so long histories fit.
+ */
+export const exportData = action({
+  args: {},
+  handler: async (ctx) => {
+    const head: ExportHead & { account: { ageConfirmedAt: string | null } } = await ctx.runQuery(
+      internal.account.exportProfile,
+      {},
+    );
+    const lists: Partial<Record<SectionName, unknown[]>> = {};
+    for (const name of Object.keys(sections) as SectionName[]) {
+      const items: unknown[] = [];
+      let cursor: string | null = null;
+      for (;;) {
+        const page: { items: unknown[]; isDone: boolean; cursor: string } = await ctx.runQuery(
+          internal.account.exportPage,
+          { section: name, cursor },
+        );
+        items.push(...page.items);
+        if (page.isDone) break;
+        cursor = page.cursor;
+      }
+      lists[name] = items;
+    }
+    const { moderatorInvites, ...rest } = lists as SectionRows;
+    return {
+      exportedAt: new Date().toISOString(),
+      account: head.account,
+      profile: head.profile,
+      moderation: { role: head.role, invites: moderatorInvites },
+      ...rest,
     };
   },
 });
@@ -361,24 +433,7 @@ const steps: Step[] = [
       .query("posts")
       .withIndex("by_author", (q) => q.eq("authorId", userId))
       .take(POST_BATCH);
-    for (const post of posts) {
-      const related = await Promise.all([
-        ctx.db
-          .query("postLikes")
-          .withIndex("by_post_user", (q) => q.eq("postId", post._id))
-          .collect(),
-        ctx.db
-          .query("postComments")
-          .withIndex("by_post", (q) => q.eq("postId", post._id))
-          .collect(),
-        ctx.db
-          .query("activities")
-          .withIndex("by_post", (q) => q.eq("postId", post._id))
-          .collect(),
-      ]);
-      for (const doc of related.flat()) await ctx.db.delete(doc._id);
-      await ctx.db.delete(post._id);
-    }
+    for (const post of posts) await deletePost(ctx, post);
     return posts.length === POST_BATCH;
   },
   async (ctx, userId) =>

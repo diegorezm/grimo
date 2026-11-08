@@ -77,7 +77,7 @@ describe("hand-added books", () => {
       rafa.as.mutation(api.books.addManual, { ...manual, title: " ", authors: [] }),
     ).rejects.toThrow(/título/);
     await rafa.as.mutation(api.books.addManual, manual);
-    const data = await rafa.as.query(api.account.exportData, {});
+    const data = await rafa.as.action(api.account.exportData, {});
     expect(data.booksAdded).toMatchObject([{ title: "Contos da Vila", review: "pending" }]);
 
     await t.run((ctx) => ctx.db.patch(rafa.id, { deletedAt: Date.now() }));
