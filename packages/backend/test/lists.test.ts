@@ -98,7 +98,7 @@ describe("lists", () => {
 
     const { id: kept } = await bia.as.mutation(api.lists.create, { title: "Favoritos" });
     await bia.as.mutation(api.lists.addBook, { listId: kept, book: book("OL1W", "It") });
-    const data = await bia.as.query(api.account.exportData, {});
+    const data = await bia.as.action(api.account.exportData, {});
     expect(data.lists).toMatchObject([{ title: "Favoritos", books: [{ book: "It" }] }]);
     await t.run((ctx) => ctx.db.patch(bia.id, { deletedAt: Date.now() }));
     await t.mutation(internal.account.purge, { userId: bia.id, step: 0 });
