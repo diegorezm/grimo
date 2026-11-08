@@ -17,25 +17,26 @@ import {
   SHELF_STATUSES,
   SHELF_VIEW_LABELS,
   SHELF_VIEWS,
+  type ShelfView,
   shelfGenres,
 } from "@grimo/core";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Button, Chip, SelectButton, SelectSheet, Text } from "@/components/ui";
+import Svg, { Path } from "react-native-svg";
+import { Button, Chip, SelectSheet, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useShelfNaming } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
 import { useShelfViewStore } from "@/lib/shelf-view";
 import { ShelfBooks } from "./shelf-books";
-import { ShelfSelectBar } from "./shelf-select-bar";
 
 /** The selector's value for "Todos os meus livros". */
 const ALL = "all";
 
 /**
- * Estantes: "Todos os meus livros" and the shelves you made ("Física", "Kindle"), each filtered
- * by status and genre. "Selecionar" acts on several books; ⋯ acts on the whole shelf.
+ * Estantes: the shelf's name is the title and opens the shelf picker; beside it, filters (and
+ * how to show the books) and ⋯ for the whole shelf. Holding a book starts selecting.
  */
 export function ShelfBoard() {
   const theme = useTheme();
@@ -54,45 +55,78 @@ export function ShelfBoard() {
   const { view, setView } = useShelfViewStore();
   const [sheet, setSheet] = useState<"shelf" | "filters" | null>(null);
   const activeFilters = filter.statuses.length + filter.genres.length;
+  const allPicked = items.length > 0 && items.every((row) => selected.includes(row.entry.id));
+  const books = `${inShelf.length} ${inShelf.length === 1 ? "livro" : "livros"}`;
 
   return (
-    <View style={styles.root}>
-      <View style={styles.bar}>
-        <SelectButton
-          label={`${shelf ? shelf.name : "Todos os meus livros"} · ${inShelf.length}`}
-          accessibilityLabel="Trocar de estante"
-          onPress={() => setSheet("shelf")}
-        />
-        {shelf && !picking && (
-          <ShelfMenu
-            shelf={shelf}
-            onRename={() => naming.askRename(shelf)}
-            onDuplicate={() =>
-              naming.askDuplicate(shelf, (id) => {
-                store.openShelf(id);
-                store.setSelecting(true);
-              })
-            }
+    <View style={[styles.root, selecting && styles.roomForBar]}>
+      {selecting ? (
+        <View style={styles.selectionBar}>
+          <Button
+            variant="ghost"
+            title="Cancelar"
+            onPress={() => (picking ? store.openShelf(picking.id) : store.setSelecting(false))}
           />
-        )}
-        <Button
-          variant={activeFilters > 0 ? "primary" : "secondary"}
-          title={activeFilters > 0 ? `Filtros · ${activeFilters}` : "Filtros"}
-          onPress={() => setSheet("filters")}
-        />
-      </View>
-      {picking ? (
+          <Text variant="heading" style={styles.center}>
+            {selected.length} {selected.length === 1 ? "escolhido" : "escolhidos"}
+          </Text>
+          <Button
+            variant="ghost"
+            title={allPicked ? "Nenhum" : "Todos"}
+            onPress={() => store.selectAll(allPicked ? [] : items.map((row) => row.entry.id))}
+          />
+        </View>
+      ) : (
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Estante ${shelf ? shelf.name : "Todos os meus livros"}. Trocar de estante`}
+            onPress={() => setSheet("shelf")}
+            style={({ pressed }) => [styles.title, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Text variant="label" color="textMuted">
+              Estante
+            </Text>
+            <Text variant="display" numberOfLines={2}>
+              {shelf ? shelf.name : "Todos os meus livros"}
+              <Text variant="heading" color="accent">
+                {"  ▾"}
+              </Text>
+            </Text>
+            <Text variant="small" color="textMuted">
+              {shelf
+                ? `${books} · ${shelf.isPublic ? "aparece no seu perfil" : "só você vê"}`
+                : books}
+            </Text>
+          </Pressable>
+          <IconButton
+            label={activeFilters > 0 ? `Filtros, ${activeFilters} ativos` : "Filtros e exibição"}
+            badge={activeFilters}
+            onPress={() => setSheet("filters")}
+          >
+            <Path d="M4 6h16M7 12h10M10 18h4" />
+          </IconButton>
+          {shelf && (
+            <ShelfMenu
+              shelf={shelf}
+              onRename={() => naming.askRename(shelf)}
+              onDuplicate={() =>
+                naming.askDuplicate(shelf, (id) => {
+                  store.openShelf(id);
+                  store.setSelecting(true);
+                })
+              }
+            />
+          )}
+        </View>
+      )}
+
+      {picking && (
         <Text color="textMuted">
           Escolha os livros para a estante {picking.name} e toque em Adicionar.
         </Text>
-      ) : (
-        shelf && (
-          <Text variant="small" color="textMuted">
-            {shelf.isPublic ? "Aparece no seu perfil" : "Só você vê esta estante"}
-          </Text>
-        )
       )}
-      {activeFilters > 0 && (
+      {!selecting && activeFilters > 0 && (
         <Row>
           {filter.statuses.map((status) => (
             <Chip
@@ -142,19 +176,28 @@ export function ShelfBoard() {
       />
       <SelectSheet
         visible={sheet === "filters"}
-        title="Filtros"
+        title="Filtros e exibição"
         onClose={() => setSheet(null)}
         footer={
-          <View style={styles.bar}>
+          <View style={styles.footer}>
             <Button variant="ghost" title="Limpar" onPress={store.clearFilter} />
             <Button title={`Ver ${items.length} livros`} onPress={() => setSheet(null)} />
           </View>
         }
       >
-        <View style={styles.filterGroup}>
-          <Text variant="label" color="textMuted">
-            Situação
-          </Text>
+        <Group label="Mostrar como">
+          <View style={styles.views}>
+            {SHELF_VIEWS.map((option) => (
+              <ViewOption
+                key={option}
+                view={option}
+                active={view === option}
+                onPress={() => setView(option)}
+              />
+            ))}
+          </View>
+        </Group>
+        <Group label="Situação">
           <View style={styles.wrap}>
             {SHELF_STATUSES.map((status) => (
               <Chip
@@ -165,12 +208,9 @@ export function ShelfBoard() {
               />
             ))}
           </View>
-        </View>
+        </Group>
         {genres.length > 0 && (
-          <View style={styles.filterGroup}>
-            <Text variant="label" color="textMuted">
-              Gênero
-            </Text>
+          <Group label="Gênero">
             <View style={styles.wrap}>
               {genres.map((genre) => (
                 <Chip
@@ -181,47 +221,9 @@ export function ShelfBoard() {
                 />
               ))}
             </View>
-          </View>
+          </Group>
         )}
       </SelectSheet>
-
-      <View style={styles.between}>
-        <View style={styles.bar}>
-          {SHELF_VIEWS.map((option) => (
-            <Chip
-              key={option}
-              label={SHELF_VIEW_LABELS[option]}
-              active={view === option}
-              onPress={() => setView(option)}
-              accessibilityLabel={`Ver como ${SHELF_VIEW_LABELS[option]}`}
-            />
-          ))}
-        </View>
-        {items.length > 0 && !picking && (
-          <Button
-            variant="ghost"
-            title={selecting ? "Cancelar" : "Selecionar"}
-            onPress={() => store.setSelecting(!selecting)}
-          />
-        )}
-      </View>
-      {selecting && items.length > 0 && (
-        <Button
-          variant="secondary"
-          title={
-            items.every((row) => selected.includes(row.entry.id))
-              ? "Desmarcar todos"
-              : `Selecionar todos (${items.length})`
-          }
-          onPress={() =>
-            store.selectAll(
-              items.every((row) => selected.includes(row.entry.id))
-                ? []
-                : items.map((row) => row.entry.id),
-            )
-          }
-        />
-      )}
 
       {all.isPending && <ActivityIndicator color={theme.accent} />}
       {!all.isPending && rows.length === 0 && (
@@ -236,6 +238,11 @@ export function ShelfBoard() {
       {inShelf.length > 0 && items.length === 0 && (
         <Text color="textMuted">Nenhum livro com esses filtros.</Text>
       )}
+      {!selecting && items.length > 1 && (
+        <Text variant="small" color="textMuted">
+          Segure um livro para escolher vários.
+        </Text>
+      )}
 
       <ShelfBooks
         items={items}
@@ -247,21 +254,109 @@ export function ShelfBoard() {
             ? store.toggleSelected(entry.id)
             : router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } })
         }
+        onLongPress={({ entry }) =>
+          selecting ? store.toggleSelected(entry.id) : store.startSelecting(entry.id)
+        }
       />
-
-      {selecting && (
-        <ShelfSelectBar
-          current={shelf}
-          picking={picking}
-          onNewShelf={(entryIds) =>
-            naming.askNew(entryIds, (id) => {
-              store.openShelf(id);
-            })
-          }
-        />
-      )}
       {naming.dialog}
     </View>
+  );
+}
+
+/** A round icon button beside the shelf's title, with an optional count. */
+function IconButton({
+  label,
+  badge = 0,
+  onPress,
+  children,
+}: {
+  label: string;
+  badge?: number;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [
+        styles.icon,
+        { borderColor: theme.border, backgroundColor: theme.surface, opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      <Svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={theme.text}
+        strokeWidth={2}
+        strokeLinecap="round"
+      >
+        {children}
+      </Svg>
+      {badge > 0 && (
+        <View style={[styles.badge, { backgroundColor: theme.accent }]}>
+          <Text variant="small" color="accentForeground" style={styles.badgeText}>
+            {badge}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/** "Mostrar como": a small drawing of each view. */
+function ViewOption({
+  view,
+  active,
+  onPress,
+}: {
+  view: ShelfView;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const shapes =
+    view === "spines"
+      ? [
+          { w: 8, h: 36, c: theme.inverse },
+          { w: 6, h: 30, c: theme.accentStart },
+          { w: 10, h: 40, c: theme.accent },
+          { w: 7, h: 33, c: theme.ornament },
+        ]
+      : [
+          { w: 24, h: 36, c: theme.accentStart },
+          { w: 24, h: 36, c: theme.accent },
+        ];
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={[
+        styles.viewOption,
+        {
+          borderColor: active ? theme.accent : theme.border,
+          borderWidth: active ? 2 : 1,
+          backgroundColor: active ? theme.glowB : theme.surface,
+        },
+      ]}
+    >
+      <View style={styles.drawing}>
+        {shapes.map((shape, i) => (
+          <View
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed drawing
+            key={i}
+            style={{ width: shape.w, height: shape.h, backgroundColor: shape.c, borderRadius: 2 }}
+          />
+        ))}
+      </View>
+      <Text style={active && styles.bold}>{SHELF_VIEW_LABELS[view]}</Text>
+    </Pressable>
   );
 }
 
@@ -275,7 +370,6 @@ function ShelfMenu({
   onRename: () => void;
   onDuplicate: () => void;
 }) {
-  const theme = useTheme();
   const setPublic = useSetShelfPublic();
   const remove = useRemoveShelf();
   const create = useCreateShelf();
@@ -322,15 +416,20 @@ function ShelfMenu({
   }
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Opções da estante ${shelf.name}`}
-      onPress={menu}
-      hitSlop={8}
-      style={[styles.more, { borderColor: theme.border, backgroundColor: theme.surface }]}
-    >
-      <Text variant="heading">⋯</Text>
-    </Pressable>
+    <IconButton label={`Opções da estante ${shelf.name}`} onPress={menu}>
+      <Path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth={3} />
+    </IconButton>
+  );
+}
+
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <View style={styles.group}>
+      <Text variant="label" color="textMuted">
+        {label}
+      </Text>
+      {children}
+    </View>
   );
 }
 
@@ -347,19 +446,46 @@ function Row({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  root: { gap: spacing[3] },
-  row: { gap: spacing[2], alignItems: "center" },
-  between: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  bar: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  filterGroup: { gap: spacing[2], paddingTop: spacing[2] },
-  more: {
-    width: 40,
-    height: 40,
+  root: { gap: spacing[4] },
+  /** Room under the books for the floating selection bar. */
+  roomForBar: { paddingBottom: 140 },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: spacing[2] },
+  title: { flex: 1, gap: 2 },
+  selectionBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  center: { flex: 1, textAlign: "center" },
+  icon: {
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: { fontSize: 11, lineHeight: 14 },
+  row: { gap: spacing[2], alignItems: "center" },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  group: { gap: spacing[2], paddingTop: spacing[3] },
+  views: { flexDirection: "row", gap: spacing[2] },
+  viewOption: {
+    flex: 1,
+    alignItems: "center",
+    gap: spacing[2],
+    padding: spacing[3],
+    borderRadius: radius.lg,
+  },
+  drawing: { flexDirection: "row", alignItems: "flex-end", gap: 3, height: 40 },
+  bold: { fontWeight: "700" },
+  footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   empty: { gap: spacing[3], alignItems: "flex-start" },
 });

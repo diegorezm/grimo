@@ -151,6 +151,8 @@ interface ShelfScreenState {
   /** "Escolher livros" for an empty shelf: picking from every book to add to this one. */
   pickingFor: string | null;
   setSelecting: (selecting: boolean) => void;
+  /** Holding a book: select mode, with that book already picked. */
+  startSelecting: (entryId: string) => void;
   pickBooksFor: (shelfId: string) => void;
   toggleSelected: (entryId: string) => void;
   selectAll: (entryIds: string[]) => void;
@@ -175,6 +177,7 @@ export const useShelfScreenStore = create<ShelfScreenState>((set) => ({
   selected: [],
   pickingFor: null,
   setSelecting: (selecting) => set({ selecting, selected: [], pickingFor: null }),
+  startSelecting: (entryId) => set({ selecting: true, selected: [entryId] }),
   pickBooksFor: (shelfId) =>
     set({ shelfId: null, filter: NO_FILTER, selecting: true, selected: [], pickingFor: shelfId }),
   toggleSelected: (entryId) =>

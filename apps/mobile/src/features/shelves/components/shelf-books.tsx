@@ -19,6 +19,8 @@ interface Props {
   selecting: boolean;
   selected: string[];
   onPress: (item: ShelfItem) => void;
+  /** Holding a book (starts select mode). */
+  onLongPress?: (item: ShelfItem) => void;
 }
 
 /**
@@ -46,7 +48,14 @@ function Plank({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CoverShelves({ items, selecting, selected, onPress, inner }: Props & { inner: number }) {
+function CoverShelves({
+  items,
+  selecting,
+  selected,
+  onPress,
+  onLongPress,
+  inner,
+}: Props & { inner: number }) {
   const cover = Math.floor((inner - spacing[3] * (PER_SHELF - 1)) / PER_SHELF);
   const rows: ShelfItem[][] = [];
   for (let i = 0; i < items.length; i += PER_SHELF) rows.push(items.slice(i, i + PER_SHELF));
@@ -56,7 +65,11 @@ function CoverShelves({ items, selecting, selected, onPress, inner }: Props & { 
         <Plank key={row[0]!.entry.id}>
           <View style={[styles.row, { gap: spacing[3] }]}>
             {row.map((item) => (
-              <Book key={item.entry.id} item={item} {...{ selecting, selected, onPress }}>
+              <Book
+                key={item.entry.id}
+                item={item}
+                {...{ selecting, selected, onPress, onLongPress }}
+              >
                 <BookCover src={item.book.coverUrl} title={item.book.title} width={cover} />
               </Book>
             ))}
@@ -67,7 +80,14 @@ function CoverShelves({ items, selecting, selected, onPress, inner }: Props & { 
   );
 }
 
-function SpineShelves({ items, selecting, selected, onPress, inner }: Props & { inner: number }) {
+function SpineShelves({
+  items,
+  selecting,
+  selected,
+  onPress,
+  onLongPress,
+  inner,
+}: Props & { inner: number }) {
   const theme = useTheme();
   const tones = [
     { bg: theme.surfaceMuted, fg: theme.text },
@@ -97,7 +117,11 @@ function SpineShelves({ items, selecting, selected, onPress, inner }: Props & { 
             {row.map(({ item, w, h, variant }) => {
               const tone = tones[variant % tones.length]!;
               return (
-                <Book key={item.entry.id} item={item} {...{ selecting, selected, onPress }}>
+                <Book
+                  key={item.entry.id}
+                  item={item}
+                  {...{ selecting, selected, onPress, onLongPress }}
+                >
                   <View
                     style={[
                       styles.spine,
@@ -142,12 +166,14 @@ function Book({
   selecting,
   selected,
   onPress,
+  onLongPress,
   children,
 }: {
   item: ShelfItem;
   selecting: boolean;
   selected: string[];
   onPress: (item: ShelfItem) => void;
+  onLongPress?: (item: ShelfItem) => void;
   children: React.ReactNode;
 }) {
   const theme = useTheme();
@@ -158,6 +184,8 @@ function Book({
       accessibilityState={selecting ? { checked: picked } : undefined}
       accessibilityLabel={item.book.title}
       onPress={() => onPress(item)}
+      onLongPress={onLongPress && (() => onLongPress(item))}
+      delayLongPress={350}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       {children}

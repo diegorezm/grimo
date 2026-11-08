@@ -7,33 +7,34 @@ import {
   useShelfScreenStore,
 } from "@grimo/client";
 import { MAX_BULK_BOOKS } from "@grimo/core";
-import { Alert, StyleSheet, View } from "react-native";
+import type { ReactNode } from "react";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 import { Button, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
+import { useShelfNaming } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
 
 const books = (n: number) => `${n} ${n === 1 ? "livro" : "livros"}`;
 
 /**
- * What to do with the picked books: add them to a shelf, move them, take them off this shelf,
- * or make a new shelf with them. While picking for an empty shelf, just "Adicionar".
+ * Select mode's actions, floating above the tab bar: add the picked books to a shelf, move
+ * them, take them off this shelf, or make a new shelf with them. While picking for an empty
+ * shelf, just "Adicionar a …". Rendered by the screen, outside its scroll.
  */
-export function ShelfSelectBar({
-  current,
-  picking,
-  onNewShelf,
-}: {
-  /** The shelf on screen (null: every book). */
-  current: MyShelf | null;
-  /** Picking books for this (empty) shelf. */
-  picking: MyShelf | null;
-  onNewShelf: (entryIds: string[]) => void;
-}) {
+export function ShelfSelectBar() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const shelves = useMyShelves().data?.items ?? [];
   const setBooks = useSetShelfBooks();
   const move = useMoveBooks();
-  const { selected, setSelecting, openShelf } = useShelfScreenStore();
+  const naming = useShelfNaming();
+  const { selecting, selected, shelfId, pickingFor, setSelecting, openShelf } =
+    useShelfScreenStore();
+  if (!selecting) return null;
+  const current = shelves.find((shelf) => shelf.id === shelfId) ?? null;
+  const picking = shelves.find((shelf) => shelf.id === pickingFor) ?? null;
 
   function ready() {
     if (selected.length === 0) {
@@ -61,6 +62,11 @@ export function ShelfSelectBar({
     then?.();
   }
 
+  function newShelf() {
+    if (!ready()) return;
+    naming.askNew([...selected], (id) => openShelf(id));
+  }
+
   /** "Adicionar a…" / "Mover para…": pick the shelf, or make a new one. */
   function chooseShelf(action: "add" | "move") {
     if (!ready()) return;
@@ -82,7 +88,7 @@ export function ShelfSelectBar({
           setSelecting(false);
         },
       })),
-      { text: "Nova estante…", onPress: () => onNewShelf([...selected]) },
+      { text: "Nova estante…", onPress: newShelf },
       { text: "Cancelar", style: "cancel" as const },
     ]);
   }
@@ -102,38 +108,95 @@ export function ShelfSelectBar({
   }
 
   return (
-    <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-      <Text variant="label">
-        {selected.length} {selected.length === 1 ? "escolhido" : "escolhidos"}
-      </Text>
+    <View
+      style={[
+        styles.bar,
+        {
+          bottom: insets.bottom + 64,
+          backgroundColor: theme.surface,
+          borderColor: theme.edge,
+          shadowColor: theme.shadow,
+        },
+      ]}
+    >
       {picking ? (
-        <View style={styles.actions}>
-          <Button variant="ghost" title="Cancelar" onPress={() => openShelf(picking.id)} />
-          <Button
-            title={`Adicionar a ${picking.name}`}
-            onPress={() => ready() && add(picking, () => openShelf(picking.id))}
-          />
-        </View>
+        <Button
+          title={`Adicionar a ${picking.name}`}
+          onPress={() => ready() && add(picking, () => openShelf(picking.id))}
+        />
       ) : (
-        <View style={styles.grid}>
-          <Button title="Adicionar a…" onPress={() => chooseShelf("add")} />
+        <View style={styles.actions}>
+          <Action label="Adicionar a…" onPress={() => chooseShelf("add")}>
+            <Path d="M12 5v14M5 12h14" />
+          </Action>
           {current && (
-            <Button variant="secondary" title="Mover para…" onPress={() => chooseShelf("move")} />
+            <Action label="Mover para…" onPress={() => chooseShelf("move")}>
+              <Path d="M5 12h14M13 6l6 6-6 6" />
+            </Action>
           )}
-          {current && <Button variant="secondary" title="Tirar desta estante" onPress={takeOff} />}
-          <Button
-            variant="secondary"
-            title="Nova estante com estes"
-            onPress={() => ready() && onNewShelf([...selected])}
-          />
+          {current && (
+            <Action label="Tirar daqui" onPress={takeOff}>
+              <Path d="M5 12h14" />
+            </Action>
+          )}
+          <Action label="Nova estante" onPress={newShelf}>
+            <Path d="M4 7h16v12H4zM9 3h6v4" />
+          </Action>
         </View>
       )}
+      {naming.dialog}
     </View>
   );
 }
 
+function Action({
+  label,
+  onPress,
+  children,
+}: {
+  label: string;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.action, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Svg
+        width={22}
+        height={22}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={theme.text}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {children}
+      </Svg>
+      <Text variant="small" numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  bar: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[3] },
-  actions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing[2] },
-  grid: { gap: spacing[2] },
+  bar: {
+    position: "absolute",
+    left: spacing[4],
+    right: spacing[4],
+    borderWidth: 1,
+    borderRadius: radius.xl,
+    padding: spacing[2],
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  actions: { flexDirection: "row" },
+  action: { flex: 1, alignItems: "center", gap: spacing[1], paddingVertical: spacing[2] },
 });
