@@ -1,11 +1,11 @@
 import { type Profile, useMe, useReader, useStreak } from "@grimo/client";
 import { router } from "expo-router";
-import { Button, Screen } from "@/components/ui";
-import { ProfileHeader, ProfileReadingNow, ProfileTabs, RoundButton } from "@/features/profile";
+import { Screen } from "@/components/ui";
+import { CoverButton, ProfileHeader, ProfileReadingNow, ProfileTabs } from "@/features/profile";
 
 /**
- * Your profile, as others see it (plus the photo picker and your streak). Settings live behind
- * the gear: appearance, account and sign out.
+ * Your profile, as others see it (plus the photo picker and your streak). "Editar perfil" and
+ * "Ajustes" (appearance, account, sign out) sit quietly on the cover.
  */
 export default function ProfileScreen() {
   const me = useMe().data;
@@ -23,13 +23,11 @@ function MyProfile({ me }: { me: Profile }) {
         onPressCount={(kind) =>
           router.push({ pathname: "/u/[username]/[kind]", params: { username: me.username, kind } })
         }
-        corner={<RoundButton label="Ajustes" glyph="⚙" onPress={() => router.push("/settings")} />}
-        actions={
-          <Button
-            variant="secondary"
-            title="Editar perfil"
-            onPress={() => router.push("/profile-edit")}
-          />
+        corner={
+          <>
+            <CoverButton title="Editar perfil" onPress={() => router.push("/profile-edit")} />
+            <CoverButton title="Ajustes" onPress={() => router.push("/settings")} />
+          </>
         }
       />
       {page && (

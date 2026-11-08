@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button, Screen, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { showReaderActions } from "@/features/moderation";
-import { ProfileHeader, ProfileReadingNow, ProfileTabs, RoundButton } from "@/features/profile";
+import { CoverButton, ProfileHeader, ProfileReadingNow, ProfileTabs } from "@/features/profile";
 import { useTheme } from "@/hooks/use-theme";
 import { FollowButton } from "./follow-button";
 
@@ -47,10 +47,10 @@ function Page({ page, username }: { page: ReaderPage; username: string }) {
         onPressCount={openConnections}
         corner={
           <View style={styles.corner}>
-            <RoundButton label="Voltar" glyph="‹" onPress={() => router.back()} />
-            <RoundButton
-              label="Denunciar ou bloquear"
-              glyph="⋯"
+            <CoverButton title="‹ Voltar" onPress={() => router.back()} />
+            <CoverButton
+              title="⋯"
+              accessibilityLabel="Denunciar ou bloquear"
               onPress={() =>
                 showReaderActions({
                   reader: profile,
