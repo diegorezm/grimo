@@ -23,3 +23,13 @@ describe("groupByYearRead", () => {
     expect(yearRunLabel(null)).toBe("Sem data");
   });
 });
+
+describe("compactCount", () => {
+  it("shortens big counts the Brazilian way", async () => {
+    const { compactCount } = await import("./view");
+    expect(compactCount(950)).toBe("950");
+    expect(compactCount(9400)).toBe("9,4 mil");
+    expect(compactCount(12_480)).toBe("12 mil");
+    expect(compactCount(1_250_000)).toBe("1,2 mi");
+  });
+});

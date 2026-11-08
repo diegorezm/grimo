@@ -1,5 +1,6 @@
 import {
   avatarProblem,
+  editionPages,
   groupByYearRead,
   setupProfileSchema,
   timeZoneSchema,
@@ -522,6 +523,16 @@ export const setTimeZone = mutation({
   },
 });
 
+/** Pages of the books read, counting the reader's edition when they set one. */
+async function pagesOfBooksRead(ctx: QueryCtx, entries: Doc<"shelfEntries">[]) {
+  const pages = await Promise.all(
+    entries.map(async (entry) =>
+      editionPages(entry.pageCount, (await ctx.db.get(entry.bookId))?.pageCount ?? null),
+    ),
+  );
+  return pages.reduce<number>((total, count) => total + (count ?? 0), 0);
+}
+
 /** Covers per shelf on a profile: at most this many books each. */
 const SHELF_COVERS = 60;
 
@@ -544,9 +555,10 @@ export const shelves = query({
     const latestRead = [...read]
       .sort((a, b) => (b.finishedAt ?? -1) - (a.finishedAt ?? -1))
       .slice(0, SHELF_COVERS);
-    const [readingRows, readRows] = await Promise.all([
+    const [readingRows, readRows, pagesRead] = await Promise.all([
       withBooks(ctx, reading.slice(0, SHELF_COVERS), viewer?._id ?? null),
       withBooks(ctx, latestRead, viewer?._id ?? null),
+      pagesOfBooksRead(ctx, read),
     ]);
     const cover = ({ entry, book }: (typeof readRows)[number]) => ({
       entryId: entry.id,
@@ -561,6 +573,8 @@ export const shelves = query({
       reading: { count: reading.length, items: readingRows.map(cover) },
       read: {
         count: read.length,
+        /** Pages of every book read (each in the reader's edition): the profile's "páginas". */
+        pages: pagesRead,
         runs: groupByYearRead(readRows.map(cover), (date) => yearOf(date, timeZone)),
       },
     };

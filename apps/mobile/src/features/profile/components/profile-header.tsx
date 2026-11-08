@@ -1,5 +1,5 @@
-import type { ConnectionKind, Profile } from "@grimo/client";
-import { GENRE_LABELS, type Genre } from "@grimo/core";
+import { type ConnectionKind, type Profile, useReaderShelves } from "@grimo/client";
+import { compactCount, GENRE_LABELS, type Genre } from "@grimo/core";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
@@ -32,6 +32,8 @@ export function ProfileHeader({
   corner?: ReactNode;
 }) {
   const theme = useTheme();
+  // Same query as the Estantes tab (cached once): books read and their pages.
+  const shelves = useReaderShelves(profile.username).data;
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const cover = profileCovers[scheme][profile.profileColor];
   const role =
@@ -83,14 +85,18 @@ export function ProfileHeader({
         {profile.profileSong && <SongCard song={profile.profileSong} />}
 
         <View style={[styles.counts, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-          <Count value={profile.bookCount} label="livros" />
           <Count
-            value={profile.followers}
+            value={shelves ? compactCount(shelves.read.count) : "–"}
+            label={shelves?.read.count === 1 ? "lido" : "lidos"}
+          />
+          <Count value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
+          <Count
+            value={compactCount(profile.followers)}
             label="seguidores"
             onPress={onPressCount && (() => onPressCount("followers"))}
           />
           <Count
-            value={profile.following}
+            value={compactCount(profile.following)}
             label="seguindo"
             onPress={onPressCount && (() => onPressCount("following"))}
           />
@@ -141,7 +147,7 @@ export function ProfileHeader({
   );
 }
 
-function Count({ value, label, onPress }: { value: number; label: string; onPress?: () => void }) {
+function Count({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
@@ -193,7 +199,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   count: { flex: 1, alignItems: "center" },
-  number: { fontSize: 22, lineHeight: 28 },
+  number: { fontSize: 20, lineHeight: 26 },
   section: { gap: spacing[3] },
   between: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
   favorites: { flexDirection: "row", gap: spacing[2] },

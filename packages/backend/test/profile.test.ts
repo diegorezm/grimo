@@ -174,6 +174,8 @@ describe("profile shelves", () => {
     const shelves = await bia.as.query(api.users.shelves, { username: "rafa" });
     expect(shelves.reading).toMatchObject({ count: 1, items: [{ title: "Livro 3" }] });
     expect(shelves.read.count).toBe(2);
+    // Both books read have 600 pages.
+    expect(shelves.read.pages).toBe(1200);
     expect(shelves.read.runs.map((run) => [run.year, run.items.map((i) => i.title)])).toEqual([
       [2026, ["Livro 2"]],
       [2025, ["Livro 1"]],

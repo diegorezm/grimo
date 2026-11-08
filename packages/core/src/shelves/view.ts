@@ -37,3 +37,12 @@ export function groupByYearRead<T extends { finishedAt: number | null }>(
 /** "Lidos '26": the short year label of a run. */
 export const yearRunLabel = (year: number | null) =>
   year === null ? "Sem data" : `Lidos '${String(year).slice(-2)}`;
+
+/** A count that fits a profile stat: 950, "9,4 mil", "12 mil", "1,2 mi". */
+export function compactCount(value: number): string {
+  const short = (n: number, unit: string) =>
+    `${(Math.floor(n * 10) / 10).toLocaleString("pt-BR", { maximumFractionDigits: n < 10 ? 1 : 0 })} ${unit}`;
+  if (value >= 1_000_000) return short(value / 1_000_000, "mi");
+  if (value >= 1_000) return short(value / 1_000, "mil");
+  return String(value);
+}
