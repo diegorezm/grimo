@@ -3,7 +3,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { notifyMentions } from "./notifications";
 import { authorOf } from "./readers";
-import { blockedIds, isBookVisible, isHidden } from "./safety";
+import { blockedIds, canSeeReader, isBookVisible, isHidden } from "./safety";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -86,6 +86,8 @@ export async function activityView(
   ]);
   if (!actor || isHidden(actor)) return null;
   if (target && isHidden(target)) return null;
+  // A private reader's reading shows only to their followers.
+  if (!(await canSeeReader(ctx, viewerId, actor))) return null;
   // A hand-added book still in review shows only to whoever added it.
   if (book && !isBookVisible(book, viewerId)) return null;
   if (activity.postId && !post) return null;

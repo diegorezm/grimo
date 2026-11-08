@@ -200,15 +200,36 @@ const rank = (order: string[], id: string) => {
   return index === -1 ? order.length : index;
 };
 
-type FollowState = { id: string; isFollowing: boolean; followers: number };
+type FollowState = {
+  id: string;
+  isFollowing: boolean;
+  followers: number;
+  isPrivate?: boolean;
+  requested?: boolean;
+};
 
-/** Sets `isFollowing` (and the follower count) of `userId` wherever it appears in `data`. */
+/**
+ * What a follow tap does: a private reader gets a request (no follower yet), anyone else a
+ * follow; unfollowing also withdraws a request.
+ */
+export function followOutcome(
+  state: { isFollowing: boolean; isPrivate?: boolean },
+  follow: boolean,
+) {
+  if (!follow) return { isFollowing: false, requested: false, delta: state.isFollowing ? -1 : 0 };
+  if (state.isFollowing) return { isFollowing: true, requested: false, delta: 0 };
+  if (state.isPrivate) return { isFollowing: false, requested: true, delta: 0 };
+  return { isFollowing: true, requested: false, delta: 1 };
+}
+
+/** Sets `isFollowing` / `requested` (and the follower count) of `userId` wherever it appears. */
 function patchFollow(data: unknown, userId: string, follow: boolean): unknown {
   if (!data || typeof data !== "object") return data;
-  const patch = <T extends FollowState>(reader: T): T =>
-    reader.id === userId && reader.isFollowing !== follow
-      ? { ...reader, isFollowing: follow, followers: reader.followers + (follow ? 1 : -1) }
-      : reader;
+  const patch = <T extends FollowState>(reader: T): T => {
+    if (reader.id !== userId) return reader;
+    const { isFollowing, requested, delta } = followOutcome(reader, follow);
+    return { ...reader, isFollowing, requested, followers: reader.followers + delta };
+  };
 
   if ("items" in data && Array.isArray(data.items)) {
     return {
@@ -220,11 +241,16 @@ function patchFollow(data: unknown, userId: string, follow: boolean): unknown {
   }
   if ("profile" in data && "isFollowing" in data) {
     const page = data as ReaderPage;
-    if (page.profile.id !== userId || page.isFollowing === follow) return page;
+    if (page.profile.id !== userId) return page;
+    const { isFollowing, requested, delta } = followOutcome(
+      { isFollowing: page.isFollowing, isPrivate: page.profile.isPrivate },
+      follow,
+    );
     return {
       ...page,
-      isFollowing: follow,
-      profile: { ...page.profile, followers: page.profile.followers + (follow ? 1 : -1) },
+      isFollowing,
+      requested,
+      profile: { ...page.profile, followers: page.profile.followers + delta },
     };
   }
   return data;
@@ -265,6 +291,42 @@ export function useToggleFollow() {
         notifications();
       };
     },
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** Private profile on or off ("só seguidores veem minhas leituras"). */
+export function useSetPrivate() {
+  const { convex } = useConvexCache();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (isPrivate: boolean) => convex.mutation(api.users.setPrivate, { isPrivate }),
+    onMutate: (isPrivate) => {
+      const key = meQuery().queryKey;
+      const before = queryClient.getQueryData<Me>(key);
+      if (before) queryClient.setQueryData<Me>(key, { ...before, isPrivate });
+      return () => queryClient.setQueryData(key, before);
+    },
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** "Aceitar" / "Recusar" on a request to follow you (from the notifications). */
+export function useAnswerFollowRequest() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: ({ userId, accept }: { userId: string; accept: boolean }) =>
+      convex.mutation(api.users.answerFollowRequest, { userId: userId as Id<"users">, accept }),
+    onMutate: ({ userId }) =>
+      patchQueries<NotificationPage>([convexQueryPrefix(api.notifications.list)], (data) => ({
+        ...data,
+        items: data.items.map((item) =>
+          item.kind === "follow_request" && item.actor.id === userId
+            ? { ...item, requestPending: false }
+            : item,
+        ),
+      })),
     onError: (_error, _input, rollback) => rollback?.(),
   });
 }

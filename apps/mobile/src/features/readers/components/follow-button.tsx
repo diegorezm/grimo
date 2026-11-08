@@ -6,21 +6,33 @@ export function FollowButton({
   userId,
   isFollowing,
   followsYou,
+  requested,
   compact,
 }: {
   userId: string;
   isFollowing: boolean;
   followsYou?: boolean;
+  /** Asked to follow a private reader, not answered yet: a tap withdraws it. */
+  requested?: boolean;
   compact?: boolean;
 }) {
   const toggleFollow = useToggleFollow();
-  const title = isFollowing ? "Seguindo" : followsYou ? "Seguir de volta" : "Seguir";
+  const on = isFollowing || Boolean(requested);
+  const title = isFollowing
+    ? "Seguindo"
+    : requested
+      ? "Solicitado"
+      : followsYou
+        ? "Seguir de volta"
+        : "Seguir";
   return (
     <Button
       title={title}
-      variant={isFollowing ? "secondary" : "primary"}
-      accessibilityLabel={isFollowing ? "Deixar de seguir" : title}
-      onPress={() => toggleFollow.mutate({ userId, follow: !isFollowing })}
+      variant={on ? "secondary" : "primary"}
+      accessibilityLabel={
+        isFollowing ? "Deixar de seguir" : requested ? "Cancelar o pedido para seguir" : title
+      }
+      onPress={() => toggleFollow.mutate({ userId, follow: !on })}
       style={compact ? { paddingHorizontal: 14, paddingVertical: 8 } : undefined}
     />
   );

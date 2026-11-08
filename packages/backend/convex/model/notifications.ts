@@ -32,7 +32,7 @@ export async function notify(ctx: MutationCtx, target: Target, now = Date.now())
   const user = await ctx.db.get(target.userId);
   if (!user || isHidden(user)) return;
   if (await isBlockedBetween(ctx, target.userId, target.actorId)) return;
-  if (target.kind === "like" || target.kind === "follow") {
+  if (target.kind === "like" || target.kind === "follow" || target.kind === "follow_request") {
     if ((await existing(ctx, target)).length > 0) return;
   }
   await ctx.db.insert("notifications", {

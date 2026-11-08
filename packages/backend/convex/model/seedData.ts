@@ -258,6 +258,8 @@ export interface ReaderSeed {
   bio: string;
   genres: string[];
   goal: number;
+  /** Private profile: the main account (who doesn't follow them) sees only the header. */
+  isPrivate?: boolean;
   shelves: ShelfSeed[];
   posts: PostSeed[];
 }
@@ -400,6 +402,7 @@ export const readers: ReaderSeed[] = [
     bio: "Literatura brasileira e latino-americana. Sublinho tudo.",
     genres: ["literary_fiction", "classics", "poetry"],
     goal: 18,
+    isPrivate: true,
     shelves: [
       { book: "horaDaEstrela", status: "read", rating: 5, finished: "01-28" },
       { book: "tortoArado", status: "read", rating: 5, finished: "05-05" },

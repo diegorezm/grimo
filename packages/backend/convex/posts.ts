@@ -9,7 +9,13 @@ import { deleteComment, deletePost, deletePostChildren } from "./model/moderatio
 import { notify, notifyMentions, unnotify } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
-import { blockedIds, isBlockedBetween, isBookVisible, isHidden } from "./model/safety";
+import {
+  blockedIds,
+  canSeeReader,
+  isBlockedBetween,
+  isBookVisible,
+  isHidden,
+} from "./model/safety";
 import { updateShelfEntry } from "./model/shelves";
 import { postKind } from "./schema";
 
@@ -151,6 +157,7 @@ export const get = query({
     const olderComments = comments.length > COMMENT_LIMIT;
     const latest = comments.slice(0, COMMENT_LIMIT).reverse();
     if (!author || isHidden(author) || blocked.has(author._id)) throw notFound("Post");
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, author))) throw notFound("Post");
     // An update shows what happened ("está lendo · p. 120 de 300") above the note.
     const activity =
       post.kind === "update"
