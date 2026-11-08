@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Guia para agentes trabalhando neste repositório. Leia inteiro antes de mudar código.
-Contexto de produto e setup estão no [README.md](README.md).
+Contexto de produto no [README.md](README.md); stack, estrutura, setup completo e deploy em [Setup e deploy](#setup-e-deploy).
 
 ## Mapa rápido
 
@@ -221,3 +221,93 @@ Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+## Setup e deploy
+
+### Stack
+
+| Camada       | Tecnologia                                                                         |
+| ------------ | ---------------------------------------------------------------------------------- |
+| Monorepo     | pnpm workspaces + Turborepo                                                        |
+| Backend      | Convex: banco, funções, tempo real e arquivos                                      |
+| Autenticação | Better Auth no Convex (email/senha, Google, Apple)                                 |
+| Web          | React 19 + Vite + TanStack Router/Query + Tailwind v4 (SPA estática)               |
+| Mobile       | Expo (SDK 58) + Expo Router                                                        |
+| Cache        | TanStack Query persistido (localStorage / MMKV), alimentado pelas subscriptions do Convex |
+| Validação    | Zod (schemas compartilhados entre backend, web e mobile)                           |
+| Lint/format  | Biome                                                                              |
+
+### Estrutura
+
+```
+apps/
+  web/       App web (Vite + React), SPA estática (Cloudflare static assets ou qualquer host)
+  mobile/    App mobile (Expo)
+packages/
+  backend/   Convex: schema, queries/mutations/actions, auth (Better Auth), seed e testes
+  core/      Domínio puro: schemas Zod, constantes, regras. Sem React.
+  client/    Ponte Convex ↔ TanStack Query, cache persistido e hooks (`useFeed`, `useShelf`…)
+  tokens/    Design tokens → Tailwind (web) e StyleSheet (mobile)
+  tsconfig/  Configs base de TypeScript
+```
+
+### Primeira vez
+
+Pré-requisitos: Node 22+, pnpm 12+. Mobile: development build ou emulador.
+
+```bash
+pnpm install
+pnpm dev:backend        # cria o deployment Convex (login, ou local sem conta) e fica rodando
+cd packages/backend
+npx convex env set SITE_URL http://localhost:5173
+npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
+```
+
+A web acha o deployment sozinha (lê `packages/backend/.env.local`, escrito pelo `convex dev`);
+para apontar para outro, use `VITE_CONVEX_URL` (veja `apps/web/.env.example`). Contas do seed
+(`rafa`, `bia.lima`, `caio`, `lu.prado`, `theo`, `@grimo.test`) usam a senha `grimo-demo`.
+
+### Variáveis opcionais do deployment
+
+- **Google**: OAuth Client ("Web application") com redirect
+  `<CONVEX_SITE_URL>/api/auth/callback/google` (local: `http://127.0.0.1:3211/...`), depois
+  `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. Sem elas o botão aparece desabilitado.
+- **Apple** (exigido pela App Store quando há Google): `APPLE_CLIENT_ID` (Services ID),
+  `APPLE_CLIENT_SECRET` (JWT da chave da Apple), `APPLE_BUNDLE_ID`; redirect
+  `<CONVEX_SITE_URL>/api/auth/callback/apple`.
+- **Email (Resend)**: `RESEND_API_KEY` e `EMAIL_FROM` (ex.: `Grimo <ola@seudominio.com>`, domínio
+  verificado). Com elas os emails saem e o **email confirmado passa a ser exigido** para comentar,
+  postar, curtir e seguir (`requireVerifiedViewer`). Sem elas nada é exigido e o link vai só para
+  o log (`npx convex logs`). Depois de ligar, rode `npx convex run migrations:runAll` uma vez.
+
+### Mobile
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env.local  # EXPO_PUBLIC_CONVEX_URL
+pnpm dev:mobile
+```
+
+Deployment local: no celular físico use o IP da máquina (ex. `http://192.168.0.10:3210`); no
+emulador Android, `http://10.0.2.2:3210`.
+
+### Scripts
+
+| Comando                | O que faz                                              |
+| ---------------------- | ------------------------------------------------------ |
+| `pnpm dev`             | Convex (`convex dev`) + web                            |
+| `pnpm dev:backend`     | Só o Convex (aplica schema/funções a cada mudança)     |
+| `pnpm dev:mobile`      | Expo                                                   |
+| `pnpm check`           | Lint + typecheck + testes                              |
+| `pnpm seed`            | Dados de exemplo no deployment de dev                  |
+| `pnpm tokens:generate` | Regenera o `theme.css` do Tailwind a partir dos tokens |
+| `pnpm deploy`          | Deploy do Convex (produção) e da web (Cloudflare)      |
+
+### Deploy
+
+1. Convex: `pnpm --filter @grimo/backend exec convex deploy`. Em produção, defina `SITE_URL`
+   (origem da web, ex. `https://grimo.app`), `BETTER_AUTH_SECRET` e as opcionais acima.
+2. Web: `VITE_CONVEX_URL=https://<prod>.convex.cloud VITE_SITE_URL=https://grimo.app pnpm --filter @grimo/web build`
+   (`VITE_SITE_URL` gera canonical, `sitemap.xml`, `og:image` e JSON-LD; envie o sitemap no Google
+   Search Console), depois `pnpm --filter @grimo/web deploy` (`apps/web/wrangler.jsonc`) ou
+   qualquer host estático com fallback de SPA para `index.html`.
+3. Mobile: `EXPO_PUBLIC_CONVEX_URL` do deployment de produção no build do EAS.
