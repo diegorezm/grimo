@@ -45,9 +45,10 @@ export function PrivacyPage() {
             <strong>Perfil:</strong> foto, bio, gêneros favoritos, meta de leitura e o fuso horário
             do seu aparelho (para contar seus meses e anos de leitura). Se você quiser, também:
             pronomes, cor da capa, a música do perfil (nome, artista e o link que você colar), os
-            livros de cabeceira, a citação destacada e quais cartões de leitura aparecem. A música é
-            só um link: o Grimo não toca nem carrega nada do serviço de música, que só recebe você
-            se tocar no link.
+            livros de cabeceira, a citação destacada e quais cartões de leitura aparecem. Para
+            mostrar a capa, o nome e o artista da música, o servidor do Grimo lê a página do link e
+            guarda uma cópia da capa; o seu aparelho não se conecta ao serviço de música, que só
+            recebe você se tocar em ouvir.
           </li>
           <li>
             <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações (nota e

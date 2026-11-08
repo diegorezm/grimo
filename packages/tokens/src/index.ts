@@ -290,3 +290,12 @@ export const profileCovers = {
     plum: { bg: palette.nightBar, ink: palette.nightInk },
   },
 } as const;
+
+/** Brand color of each music service, for the dot beside "Ouvir no …" on the profile song. */
+export const musicServiceColors: Record<string, string> = {
+  Spotify: "#1ED760",
+  "Apple Music": "#FA243C",
+  YouTube: "#FF0033",
+  "YouTube Music": "#FF0033",
+  Deezer: "#A238FF",
+};

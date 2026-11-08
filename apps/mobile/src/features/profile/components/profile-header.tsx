@@ -3,13 +3,14 @@ import { GENRE_LABELS, type Genre } from "@grimo/core";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
 import { profileCovers, radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
+import { SongCard } from "./song-card";
 
 /**
  * Profile hero: the cover in the reader's color, photo, name, @ and pronouns, bio, genres, the
@@ -140,37 +141,6 @@ export function ProfileHeader({
   );
 }
 
-/** "Trilha da leitura": opens the song in its own app (nothing is embedded). */
-function SongCard({ song }: { song: NonNullable<Profile["profileSong"]> }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={`Ouvir ${song.title}, de ${song.artist}${song.service ? `, no ${song.service}` : ""}`}
-      onPress={() => Linking.openURL(song.url)}
-      style={({ pressed }) => [
-        styles.song,
-        { backgroundColor: theme.surface, borderColor: theme.edge, opacity: pressed ? 0.7 : 1 },
-      ]}
-    >
-      <View style={[styles.songMark, { backgroundColor: theme.inverse }]}>
-        <Text style={{ color: theme.inverseForeground }}>♪</Text>
-      </View>
-      <View style={styles.grow}>
-        <Text variant="label" color="textMuted">
-          Trilha da leitura
-        </Text>
-        <Text numberOfLines={1} style={styles.songTitle}>
-          {song.title} · {song.artist}
-        </Text>
-      </View>
-      <Text variant="label" color="accent">
-        {song.service ? `Ouvir no ${song.service}` : "Ouvir"}
-      </Text>
-    </Pressable>
-  );
-}
-
 function Count({ value, label, onPress }: { value: number; label: string; onPress?: () => void }) {
   return (
     <Pressable
@@ -216,24 +186,6 @@ const styles = StyleSheet.create({
   names: { gap: spacing[1] },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   chip: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: spacing[1] },
-  song: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing[3],
-    minHeight: 56,
-  },
-  songMark: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  songTitle: { fontWeight: "700" },
-  grow: { flex: 1 },
   counts: {
     flexDirection: "row",
     borderWidth: 1,

@@ -95,8 +95,20 @@ export default defineSchema({
     pronouns: v.optional(v.string()),
     /** One of `PROFILE_COLORS`: the profile cover. */
     profileColor: v.optional(v.string()),
-    /** "Trilha da leitura": a link the apps open (never an embedded player). */
-    profileSong: v.optional(v.object({ title: v.string(), artist: v.string(), url: v.string() })),
+    /**
+     * "Trilha da leitura": a link the apps open (never an embedded player). The cover is copied
+     * into our storage (`songs.storeCover`), so opening a profile loads nothing from the music
+     * service; `color` is the card background taken from it.
+     */
+    profileSong: v.optional(
+      v.object({
+        title: v.string(),
+        artist: v.string(),
+        url: v.string(),
+        coverStorageId: v.optional(v.id("_storage")),
+        color: v.optional(v.string()),
+      }),
+    ),
     /** "Livros de cabeceira", in order (at most `MAX_FAVORITE_BOOKS`). */
     favoriteBookIds: v.optional(v.array(v.id("books"))),
     /** One of the reader's own quotes, highlighted on the profile. */

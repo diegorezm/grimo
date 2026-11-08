@@ -22,6 +22,7 @@
     "@grimo/core": "workspace:*",
     "better-auth": "catalog:",
     "convex": "catalog:",
+    "jpeg-js": "0.4.4",
     "zod": "catalog:"
   },
   "devDependencies": {

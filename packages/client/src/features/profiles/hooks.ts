@@ -108,6 +108,19 @@ export function useRemoveAvatar() {
 }
 
 /** Whether an @ is valid and free (yours counts as free). Skipped until it looks valid. */
+/**
+ * Reads a pasted music link (name, artist, cover as a data URL, card color). Fetched by the
+ * backend, so the app never loads the music service.
+ */
+export function useSongPreview() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: (url: string) => convex.action(api.songs.preview, { url }),
+  });
+}
+
+export type SongPreview = FunctionReturnType<typeof api.songs.preview>;
+
 export function useUsernameAvailable(username: string) {
   const value = username.trim().toLowerCase();
   return useQuery({

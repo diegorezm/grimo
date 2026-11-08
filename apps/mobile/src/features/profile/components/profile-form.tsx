@@ -1,9 +1,11 @@
 import {
   errorMessage,
   type Profile,
+  type SongPreview,
   toast,
   useMyQuotes,
   useShelf,
+  useSongPreview,
   useUpdateMe,
 } from "@grimo/client";
 import {
@@ -20,7 +22,7 @@ import {
   updateProfileSchema,
 } from "@grimo/core";
 import { router } from "expo-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { Button, Input, Screen, Text } from "@/components/ui";
 import { profileCovers, radius, spacing } from "@/constants/theme";
@@ -28,6 +30,7 @@ import { BookCover } from "@/features/books";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
+import { SongCard } from "./song-card";
 
 const MAX_GENRES = 5;
 
@@ -66,6 +69,35 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
   const songTouched = song.title !== "" || song.artist !== "" || song.url !== "";
   const service = musicService(song.url.trim());
+  const songPreview = useSongPreview();
+  // What the saved song looks like until a new link is read: its stored cover and color.
+  const [looks, setLooks] = useState<Pick<SongPreview, "cover" | "color"> | null>(
+    profile.profileSong
+      ? { cover: profile.profileSong.coverUrl, color: profile.profileSong.color }
+      : null,
+  );
+  const lastRead = useRef(profile.profileSong?.url ?? "");
+
+  // A pasted link is read (name, artist, cover) once the reader stops typing.
+  useEffect(() => {
+    const url = song.url.trim();
+    if (!service || url === lastRead.current) return;
+    const timer = setTimeout(() => {
+      lastRead.current = url;
+      setLooks(null);
+      songPreview.mutate(url, {
+        onSuccess: (preview) => {
+          setSong((current) => ({
+            url: current.url,
+            title: preview.title ?? current.title,
+            artist: preview.artist ?? current.artist,
+          }));
+          setLooks({ cover: preview.cover, color: preview.color });
+        },
+      });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [song.url, service, songPreview.mutate]);
 
   function toggleGenre(genre: Genre) {
     setGenres((current) =>
@@ -177,8 +209,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
       <Field label="Trilha da leitura">
         <Text variant="small" color="textMuted">
-          A música que combina com o que você lê. Cole o link do Spotify, Apple Music, YouTube ou
-          Deezer: o perfil abre a música no app dela.
+          Cole o link de uma música do Spotify, Apple Music, YouTube ou Deezer: o Grimo busca a
+          capa, o nome e o artista. No perfil, ela abre no app de música.
         </Text>
         <Input
           value={song.url}
@@ -188,9 +220,40 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           autoCorrect={false}
           keyboardType="url"
         />
-        {song.url.trim() !== "" && (
-          <Text variant="small" color={service ? "textMuted" : "danger"}>
-            {service ? `Link do ${service}` : "Esse link não é de um app de música aceito."}
+        {song.url.trim() !== "" && !service && (
+          <Text variant="small" color="danger">
+            Esse link não é de um app de música aceito.
+          </Text>
+        )}
+        {songPreview.isPending && (
+          <Text variant="small" color="textMuted">
+            Buscando a música…
+          </Text>
+        )}
+        {songPreview.isError && (
+          <Text variant="small" color="danger">
+            {errorMessage(songPreview.error)}
+          </Text>
+        )}
+        {service &&
+          song.title.trim() !== "" &&
+          song.artist.trim() !== "" &&
+          !songPreview.isPending && (
+            <SongCard
+              interactive={false}
+              song={{
+                title: song.title,
+                artist: song.artist,
+                url: song.url,
+                service,
+                coverUrl: looks?.cover ?? null,
+                color: looks?.color ?? null,
+              }}
+            />
+          )}
+        {songTouched && (
+          <Text variant="small" color="textMuted">
+            Nome ou artista errado? Corrija aqui:
           </Text>
         )}
         <View style={styles.pair}>
@@ -213,7 +276,11 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           <Button
             variant="ghost"
             title="Tirar a música"
-            onPress={() => setSong({ title: "", artist: "", url: "" })}
+            onPress={() => {
+              lastRead.current = "";
+              setLooks(null);
+              setSong({ title: "", artist: "", url: "" });
+            }}
           />
         )}
       </Field>

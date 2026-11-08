@@ -46,6 +46,7 @@ import type * as posts from "../posts.js";
 import type * as seed from "../seed.js";
 import type * as sessions from "../sessions.js";
 import type * as shelves from "../shelves.js";
+import type * as songs from "../songs.js";
 import type * as stats from "../stats.js";
 import type * as users from "../users.js";
 
@@ -94,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   sessions: typeof sessions;
   shelves: typeof shelves;
+  songs: typeof songs;
   stats: typeof stats;
   users: typeof users;
 }>;

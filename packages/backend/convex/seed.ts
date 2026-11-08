@@ -197,8 +197,8 @@ export const populate = internalMutation({
           pronouns: "ele/dele",
           profileColor: "lilac",
           profileSong: {
-            title: "Clair de Lune",
-            artist: "Debussy",
+            title: "Weightless",
+            artist: "Marconi Union",
             url: "https://open.spotify.com/track/6kkwzB6hXLIONkEk9JciA6",
           },
           favoriteBookIds: favorites,

@@ -137,7 +137,13 @@ export const exportData = query({
         favoriteGenres: viewer.favoriteGenres,
         pronouns: viewer.pronouns ?? null,
         profileColor: viewer.profileColor ?? null,
-        profileSong: viewer.profileSong ?? null,
+        profileSong: viewer.profileSong
+          ? {
+              title: viewer.profileSong.title,
+              artist: viewer.profileSong.artist,
+              url: viewer.profileSong.url,
+            }
+          : null,
         favoriteBooks: await Promise.all((viewer.favoriteBookIds ?? []).map((id) => bookTitle(id))),
         featuredQuote: viewer.featuredQuoteId
           ? ((await ctx.db.get(viewer.featuredQuoteId))?.body ?? null)
@@ -276,6 +282,7 @@ export async function onAccountDeleted(ctx: MutationCtx, authId: string) {
     .withIndex("by_authId", (q) => q.eq("authId", authId))
     .unique();
   if (!user || user.deletedAt) return;
+  if (user.profileSong?.coverStorageId) await ctx.storage.delete(user.profileSong.coverStorageId);
   await ctx.db.patch(user._id, {
     deletedAt: Date.now(),
     name: "Conta excluída",

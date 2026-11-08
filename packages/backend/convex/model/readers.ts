@@ -170,7 +170,16 @@ export async function profileOf(ctx: Ctx, user: Doc<"users">) {
       ? user.profileColor
       : DEFAULT_PROFILE_COLOR) as ProfileColor,
     profileSong: user.profileSong
-      ? { ...user.profileSong, service: musicService(user.profileSong.url) }
+      ? {
+          title: user.profileSong.title,
+          artist: user.profileSong.artist,
+          url: user.profileSong.url,
+          service: musicService(user.profileSong.url),
+          coverUrl: user.profileSong.coverStorageId
+            ? await ctx.storage.getUrl(user.profileSong.coverStorageId)
+            : null,
+          color: user.profileSong.color ?? null,
+        }
       : null,
     favoriteBooks,
     featuredQuote,

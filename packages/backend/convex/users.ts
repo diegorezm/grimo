@@ -7,6 +7,7 @@ import {
   yearOf,
 } from "@grimo/core";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { listActivities, recordActivity } from "./model/content";
@@ -114,7 +115,23 @@ export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch:
   // A cleared field (null) is stored as absent: undefined in a patch removes it.
   if (pronouns !== undefined) fields.pronouns = pronouns ?? undefined;
   if (profileColor !== undefined) fields.profileColor = profileColor ?? undefined;
-  if (profileSong !== undefined) fields.profileSong = profileSong ?? undefined;
+  if (profileSong !== undefined) {
+    const previous = user.profileSong;
+    const sameLink = previous && profileSong && previous.url === profileSong.url;
+    // Same link: the cover stays. New link or none: the old cover goes, and a new one is copied.
+    if (previous?.coverStorageId && !sameLink) await ctx.storage.delete(previous.coverStorageId);
+    fields.profileSong = profileSong
+      ? sameLink
+        ? { ...profileSong, coverStorageId: previous.coverStorageId, color: previous.color }
+        : profileSong
+      : undefined;
+    if (profileSong && !sameLink) {
+      await ctx.scheduler.runAfter(0, internal.songs.storeCover, {
+        userId: user._id,
+        url: profileSong.url,
+      });
+    }
+  }
   if (profileShows !== undefined) fields.profileShows = profileShows;
   if (favoriteBookIds !== undefined) {
     fields.favoriteBookIds = await existingBooks(ctx, favoriteBookIds);
