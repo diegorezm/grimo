@@ -47,10 +47,10 @@ function Page({ page, username }: { page: ReaderPage; username: string }) {
         onPressCount={openConnections}
         corner={
           <View style={styles.corner}>
-            <CoverButton title="‹ Voltar" onPress={() => router.back()} />
+            <CoverButton icon="back" label="Voltar" onPress={() => router.back()} />
             <CoverButton
-              title="⋯"
-              accessibilityLabel="Denunciar ou bloquear"
+              icon="more"
+              label="Denunciar ou bloquear"
               onPress={() =>
                 showReaderActions({
                   reader: profile,

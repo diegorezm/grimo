@@ -67,7 +67,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const [shows, setShows] = useState(profile.profileShows);
   const [error, setError] = useState<string | null>(null);
 
-  const songTouched = song.title !== "" || song.artist !== "" || song.url !== "";
+  const songTouched = song.url.trim() !== "";
   const service = musicService(song.url.trim());
   const songPreview = useSongPreview();
   // What the saved song looks like until a new link is read: its stored cover and color.
@@ -85,12 +85,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     const timer = setTimeout(() => {
       lastRead.current = url;
       setLooks(null);
+      // A new link: what the old one said no longer applies.
+      setSong((current) => ({ url: current.url, title: "", artist: "" }));
       songPreview.mutate(url, {
         onSuccess: (preview) => {
           setSong((current) => ({
             url: current.url,
-            title: preview.title ?? current.title,
-            artist: preview.artist ?? current.artist,
+            title: preview.title ?? "",
+            artist: preview.artist ?? "",
           }));
           setLooks({ cover: preview.cover, color: preview.color });
         },
@@ -120,6 +122,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   }
 
   function save() {
+    // The name and artist come from the link: one that couldn't be read can't be saved yet.
+    if (songTouched && (song.title.trim() === "" || song.artist.trim() === "")) {
+      return setError(
+        songPreview.isPending
+          ? "Espere a música carregar para salvar."
+          : "Não conseguimos ler esse link de música. Tente outro ou tire a música.",
+      );
+    }
     const input = updateProfileSchema.safeParse({
       name,
       bio: bio.trim() ? bio : null,
@@ -251,27 +261,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               }}
             />
           )}
-        {songTouched && (
-          <Text variant="small" color="textMuted">
-            Nome ou artista errado? Corrija aqui:
-          </Text>
-        )}
-        <View style={styles.pair}>
-          <Input
-            value={song.title}
-            onChangeText={(title) => setSong({ ...song, title })}
-            placeholder="Música"
-            maxLength={80}
-            style={styles.grow}
-          />
-          <Input
-            value={song.artist}
-            onChangeText={(artist) => setSong({ ...song, artist })}
-            placeholder="Artista"
-            maxLength={80}
-            style={styles.grow}
-          />
-        </View>
         {songTouched && (
           <Button
             variant="ghost"
@@ -412,6 +401,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         disabled={updateMe.isPending}
         onPress={save}
       />
+
+      <Field label="Ajustes">
+        <Button
+          variant="secondary"
+          title="Aparência, conta e sair"
+          onPress={() => router.push("/settings")}
+        />
+      </Field>
     </Screen>
   );
 }
@@ -463,7 +460,6 @@ const styles = StyleSheet.create({
   swatches: { flexDirection: "row", gap: spacing[3] },
   swatch: { width: 44, height: 44, borderRadius: radius.full },
   bio: { minHeight: 96, textAlignVertical: "top" },
-  pair: { flexDirection: "row", gap: spacing[2] },
   grow: { flex: 1 },
   books: { gap: spacing[2] },
   pick: { position: "relative" },
