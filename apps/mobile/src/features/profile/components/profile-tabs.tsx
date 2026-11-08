@@ -71,9 +71,9 @@ export function ProfileTabs({
                   {item.label}
                 </Text>
                 {item.id === "shelves" && shelfCount > 0 && (
-                  <View style={[styles.count, { backgroundColor: theme.surfaceMuted }]}>
-                    <Text variant="small">{shelfCount}</Text>
-                  </View>
+                  <Text variant="label" color="textMuted">
+                    {shelfCount}
+                  </Text>
                 )}
               </View>
             </Pressable>
@@ -122,7 +122,6 @@ function Activity({ username }: { username: string }) {
 
 const styles = StyleSheet.create({
   tabLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
-  count: { borderRadius: radius.full, paddingHorizontal: 7, paddingVertical: 1 },
   root: { gap: spacing[4] },
   bar: { borderBottomWidth: 1, flexGrow: 0 },
   barContent: { flexGrow: 1 },

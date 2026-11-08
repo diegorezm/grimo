@@ -29,7 +29,7 @@ export function TrendingRow() {
               {namesLabel(friends.map((friend) => friend.name))}
             </Text>
             {viewerStatus && (
-              <Text variant="label" color="accent">
+              <Text variant="label" color="accentInk">
                 {SHELF_LABELS[viewerStatus]}
               </Text>
             )}

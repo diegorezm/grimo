@@ -24,7 +24,7 @@ import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Button, Chip, SelectSheet, Text } from "@/components/ui";
+import { Button, Chip, Icon, SelectSheet, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useShelfNaming } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
@@ -87,12 +87,12 @@ export function ShelfBoard() {
             <Text variant="label" color="textMuted">
               Estante
             </Text>
-            <Text variant="display" numberOfLines={2}>
-              {shelf ? shelf.name : "Todos os meus livros"}
-              <Text variant="heading" color="accent">
-                {"  ▾"}
+            <View style={styles.name}>
+              <Text variant="display" numberOfLines={2} style={styles.shrink}>
+                {shelf ? shelf.name : "Todos os meus livros"}
               </Text>
-            </Text>
+              <Icon name="chevronDown" size={20} />
+            </View>
             <Text variant="small" color="textMuted">
               {shelf
                 ? `${books} · ${shelf.isPublic ? "aparece no seu perfil" : "só você vê"}`
@@ -450,6 +450,8 @@ const styles = StyleSheet.create({
   roomForBar: { paddingBottom: 140 },
   header: { flexDirection: "row", alignItems: "flex-start", gap: spacing[2] },
   title: { flex: 1, gap: 2 },
+  name: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  shrink: { flexShrink: 1 },
   selectionBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   center: { flex: 1, textAlign: "center" },
   icon: {

@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { Icon } from "./icon";
 import { Text } from "./text";
 
 export interface SelectOption {
@@ -38,7 +39,7 @@ export function SelectButton({
       <Text numberOfLines={1} style={styles.buttonLabel}>
         {label}
       </Text>
-      <Text color="textMuted">▾</Text>
+      <Icon name="chevronDown" size={16} color="textMuted" />
     </Pressable>
   );
 }
@@ -122,7 +123,7 @@ export function SelectSheet({
                       {option.detail}
                     </Text>
                   )}
-                  <Text color="accent" style={styles.check}>
+                  <Text color="accentInk" style={styles.check}>
                     {active ? "✓" : ""}
                   </Text>
                 </Pressable>

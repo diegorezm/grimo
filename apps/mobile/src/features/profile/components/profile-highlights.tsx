@@ -27,7 +27,7 @@ export function ProfileReadingNow({ page }: { page: ReaderPage }) {
           <Text variant="label" color="textMuted">
             Lendo agora{more > 0 ? ` · e mais ${more}` : ""}
           </Text>
-          <Text variant="heading" numberOfLines={2}>
+          <Text variant="title" numberOfLines={2}>
             {book.title}
           </Text>
           <Text variant="small" color="textMuted" numberOfLines={1}>

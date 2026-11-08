@@ -85,7 +85,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
           <Text variant="display" style={styles.center} numberOfLines={3}>
             {book.title}
           </Text>
-          <Text color="accent" style={styles.center}>
+          <Text color="accentInk" style={styles.center}>
             {book.authors.join(", ")}
           </Text>
           <Text variant="label" color="textMuted">
@@ -231,7 +231,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
                   }
                   hitSlop={8}
                 >
-                  <Text variant="label" color="accent">
+                  <Text variant="label" color="accentInk">
                     Card
                   </Text>
                 </Pressable>

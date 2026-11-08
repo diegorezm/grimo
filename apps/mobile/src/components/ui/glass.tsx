@@ -26,7 +26,7 @@ export function Glass({ style, interactive, ...props }: ViewProps & { interactiv
       style={[
         styles.base,
         styles.fallback,
-        { backgroundColor: theme.glass, borderColor: theme.glassBorder, shadowColor: theme.shadow },
+        { backgroundColor: theme.glass, borderColor: theme.border },
         style,
       ]}
       {...props}
@@ -38,9 +38,6 @@ const styles = StyleSheet.create({
   base: { borderRadius: radius.xl, overflow: "hidden" },
   fallback: {
     borderWidth: 1,
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
     overflow: "visible",
   },
 });

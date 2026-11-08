@@ -40,6 +40,11 @@ export function Screen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacing[4], gap: spacing[4], paddingBottom: 120 },
+  content: {
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    gap: spacing[6],
+    paddingBottom: 120,
+  },
   centered: { flexGrow: 1, justifyContent: "center", paddingBottom: spacing[4] },
 });

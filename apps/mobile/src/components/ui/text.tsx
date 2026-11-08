@@ -18,12 +18,12 @@ const styles = StyleSheet.create({
   small: { fontFamily: Fonts.sans, fontSize: fontSize.sm, lineHeight: 18 },
   label: {
     fontFamily: Fonts.mono,
-    fontSize: 11,
+    fontSize: fontSize.xs,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
   number: { fontFamily: Fonts.monoBold, fontSize: fontSize["2xl"] },
   title: { fontSize: fontSize.lg, fontFamily: Fonts.serif },
-  heading: { fontSize: fontSize["2xl"], fontFamily: Fonts.serifBold },
-  display: { fontSize: fontSize["3xl"], fontFamily: Fonts.serifBold },
+  heading: { fontSize: fontSize.xl, fontFamily: Fonts.serifBold },
+  display: { fontSize: fontSize["2xl"], fontFamily: Fonts.serifBold, lineHeight: 34 },
 });

@@ -33,7 +33,7 @@ export function FeelingPicker({
       </View>
       {value.length === 0 && suggested.length > 0 && (
         <Pressable accessibilityRole="button" onPress={() => onChange([...suggested])}>
-          <Text variant="label" color="accent">
+          <Text variant="label" color="accentInk">
             Pelo seu diário: {suggested.map((feeling) => FEELING_LABELS[feeling]).join(", ")} →
           </Text>
         </Pressable>
@@ -76,7 +76,7 @@ export function FeelingTags({ feelings }: { feelings: readonly Feeling[] }) {
     <View style={styles.chips} accessibilityLabel="Sentimentos">
       {feelings.map((feeling) => (
         <View key={feeling} style={[styles.tag, { borderColor: theme.accent }]}>
-          <Text variant="label" color="accent" style={styles.tagText}>
+          <Text variant="label" color="accentInk" style={styles.tagText}>
             {FEELING_LABELS[feeling]}
           </Text>
         </View>

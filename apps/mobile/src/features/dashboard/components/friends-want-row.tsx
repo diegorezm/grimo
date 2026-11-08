@@ -29,7 +29,7 @@ export function FriendsWantRow() {
               {friendsWantLabel(friends.map((friend) => friend.name))}
             </Text>
             {youWant && (
-              <Text variant="label" color="accent">
+              <Text variant="label" color="accentInk">
                 Você também
               </Text>
             )}

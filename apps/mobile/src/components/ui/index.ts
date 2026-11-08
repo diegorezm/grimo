@@ -5,6 +5,7 @@ export { Card } from "./card";
 export { Chip } from "./chip";
 export { FeelingPicker, FeelingTags } from "./feelings";
 export { Glass } from "./glass";
+export { Icon, type IconName } from "./icon";
 export { Input } from "./input";
 export { MentionText } from "./mention-text";
 export { NameDialog } from "./name-dialog";

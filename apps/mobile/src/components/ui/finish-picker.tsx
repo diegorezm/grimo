@@ -33,7 +33,7 @@ export function FinishPicker({
               active && { backgroundColor: theme.surfaceMuted },
             ]}
           >
-            <Text variant="label" color={active ? "accent" : "textMuted"}>
+            <Text variant="label" color={active ? "accentInk" : "textMuted"}>
               {option.label}
             </Text>
           </Pressable>

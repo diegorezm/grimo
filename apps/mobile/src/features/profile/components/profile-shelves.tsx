@@ -1,7 +1,7 @@
 import { useProfileShelves, useReaderShelves } from "@grimo/client";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text } from "@/components/ui";
+import { Icon, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
@@ -92,9 +92,12 @@ function Preview({
         <Text variant="heading" numberOfLines={1} style={styles.grow}>
           {name}
         </Text>
-        <Text color="accent">
-          {count} {count === 1 ? "livro" : "livros"} ›
-        </Text>
+        <View style={styles.link}>
+          <Text variant="label" color="accentInk">
+            {count} {count === 1 ? "livro" : "livros"}
+          </Text>
+          <Icon name="chevronRight" size={14} color="accentInk" />
+        </View>
       </View>
       {books.length === 0 ? (
         <Text variant="small" color="textMuted">
@@ -117,7 +120,8 @@ function Preview({
 const styles = StyleSheet.create({
   root: { gap: spacing[6] },
   preview: { gap: spacing[2] },
-  between: { flexDirection: "row", alignItems: "baseline", gap: spacing[2] },
+  between: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  link: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
   grow: { flex: 1 },
   covers: { flexDirection: "row", gap: spacing[2], overflow: "hidden", paddingBottom: 2 },
   plank: { height: 8, borderRadius: radius.sm / 2 },

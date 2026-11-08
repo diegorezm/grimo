@@ -3,7 +3,7 @@ import { unreadBadge } from "@grimo/core";
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Text } from "@/components/ui";
+import { Icon, Text } from "@/components/ui";
 import { radius } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -17,13 +17,16 @@ export function NotificationBell() {
       accessibilityLabel={unread > 0 ? `Notificações, ${unread} novas` : "Notificações"}
       hitSlop={8}
       onPress={() => router.push("/notifications")}
-      style={({ pressed }) => [styles.root, { opacity: pressed ? 0.6 : 1 }]}
+      style={({ pressed }) => [
+        styles.root,
+        { borderColor: theme.edge, opacity: pressed ? 0.6 : 1 },
+      ]}
     >
       <SymbolView
         name="bell"
         tintColor={theme.text}
-        size={26}
-        fallback={<Text variant="title">🔔</Text>}
+        size={20}
+        fallback={<Icon name="bell" size={20} />}
       />
       {unread > 0 && (
         <View style={[styles.badge, { backgroundColor: theme.accent }]}>
@@ -37,7 +40,14 @@ export function NotificationBell() {
 }
 
 const styles = StyleSheet.create({
-  root: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  root: {
+    width: 44,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   badge: {
     position: "absolute",
     top: 0,

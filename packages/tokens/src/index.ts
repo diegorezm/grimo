@@ -58,6 +58,8 @@ export const colors = {
     /** Rose → lavender pair; `accent` alone is the lavender. */
     accent: palette.lavender,
     accentStart: palette.rose,
+    /** The lavender dark enough for small text on the page (links, labels). */
+    accentInk: "#7E5FC0",
     accentForeground: "#FFFFFF",
     /** Sparkles, star ratings, monthly goal bar. */
     gold: palette.gold,
@@ -94,6 +96,7 @@ export const colors = {
     inverseForeground: palette.nightInk,
     accent: palette.nightLavender,
     accentStart: palette.nightRose,
+    accentInk: palette.nightLavender,
     accentForeground: palette.nightDesk,
     gold: palette.nightGold,
     ornament: "#8D78A4",

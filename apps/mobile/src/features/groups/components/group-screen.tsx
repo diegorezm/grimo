@@ -91,7 +91,7 @@ function Header({ group }: { group: GroupDetail }) {
           <Text variant="heading" numberOfLines={3}>
             {group.book.title}
           </Text>
-          <Text color="accent" numberOfLines={1}>
+          <Text color="accentInk" numberOfLines={1}>
             {group.book.authors.join(", ")}
           </Text>
         </View>
@@ -170,7 +170,7 @@ function Members({ group }: { group: GroupDetail }) {
               <Text style={styles.bold} numberOfLines={1}>
                 {member.isYou ? "Você" : member.name}
               </Text>
-              <Text variant="label" color={member.percent === 100 ? "accent" : "textMuted"}>
+              <Text variant="label" color={member.percent === 100 ? "accentInk" : "textMuted"}>
                 {member.percent === 100 ? "terminou" : `${member.percent}%`}
               </Text>
             </View>

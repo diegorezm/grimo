@@ -42,7 +42,7 @@ export function BookTile({
         <Text variant="title" numberOfLines={2} style={styles.title}>
           {book.title}
         </Text>
-        <Text variant="small" color="accent" numberOfLines={1}>
+        <Text variant="small" color="accentInk" numberOfLines={1}>
           {book.authors.join(", ")}
         </Text>
         {percent !== null && (

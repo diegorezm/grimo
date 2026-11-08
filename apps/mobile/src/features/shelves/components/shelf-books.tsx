@@ -54,7 +54,7 @@ function Plank({ children }: { children: React.ReactNode }) {
   return (
     <View>
       <View style={styles.books}>{children}</View>
-      <View style={[styles.plank, { backgroundColor: theme.edge, shadowColor: theme.shadow }]} />
+      <View style={[styles.plank, { backgroundColor: theme.edge }]} />
     </View>
   );
 }
@@ -225,13 +225,7 @@ const styles = StyleSheet.create({
   shelves: { gap: spacing[5] },
   books: { paddingHorizontal: spacing[2] },
   row: { flexDirection: "row", alignItems: "flex-end" },
-  plank: {
-    height: 12,
-    borderRadius: 3,
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-  },
+  plank: { height: 8, borderRadius: 2 },
   spine: {
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,

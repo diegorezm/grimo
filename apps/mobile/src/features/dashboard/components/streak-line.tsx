@@ -8,7 +8,7 @@ export function StreakLine() {
   if (!streak?.days) return null;
   return (
     <Text variant="label" color="textMuted">
-      <Text variant="label" color="accent">
+      <Text variant="label" color="accentInk">
         Ofensiva
       </Text>{" "}
       · {streakLabel(streak.days)}

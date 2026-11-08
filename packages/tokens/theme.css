@@ -13,6 +13,7 @@
   --color-inverse-foreground: #FBF5EE;
   --color-accent: #9C7CD6;
   --color-accent-start: #E7A1B5;
+  --color-accent-ink: #7E5FC0;
   --color-accent-foreground: #FFFFFF;
   --color-gold: #D6AE55;
   --color-ornament: #B9A0C9;
@@ -77,6 +78,7 @@
     --color-inverse-foreground: #F3EAF2;
     --color-accent: #B79AE6;
     --color-accent-start: #EBA9BC;
+    --color-accent-ink: #B79AE6;
     --color-accent-foreground: #17121E;
     --color-gold: #E9C870;
     --color-ornament: #8D78A4;
@@ -122,6 +124,7 @@
   --color-inverse-foreground: #F3EAF2;
   --color-accent: #B79AE6;
   --color-accent-start: #EBA9BC;
+  --color-accent-ink: #B79AE6;
   --color-accent-foreground: #17121E;
   --color-gold: #E9C870;
   --color-ornament: #8D78A4;

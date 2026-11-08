@@ -3,7 +3,7 @@ import { editionPages, goalProgress, greetingFor, readingPercent } from "@grimo/
 import { router } from "expo-router";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Card, ProgressBar, Text } from "@/components/ui";
+import { Button, Card, Icon, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { VerifyEmailBanner } from "@/features/account";
 import { BookCover, BookTile, SessionControl } from "@/features/books";
@@ -93,15 +93,17 @@ export function Dashboard() {
         )}
 
         {goal && year.data && (
-          <Card>
-            <Text variant="label" color="textMuted">
-              Meta de leitura
-            </Text>
-            <Text variant="heading">
-              {goal.done} de {goal.target} livros em {year.data.year}
-            </Text>
-            <ProgressBar percent={goal.percent} color="gold" height={10} />
-          </Card>
+          <View style={styles.goal}>
+            <View style={styles.sectionHead}>
+              <Text variant="label" color="textMuted">
+                Meta de {year.data.year}
+              </Text>
+              <Text variant="label">
+                {goal.done} / {goal.target} livros
+              </Text>
+            </View>
+            <ProgressBar percent={goal.percent} height={6} />
+          </View>
         )}
 
         <View style={styles.section}>
@@ -127,9 +129,12 @@ export function Dashboard() {
                 onPress={() => router.push("/feed")}
                 hitSlop={8}
               >
-                <Text variant="label" color="accent">
-                  Ver feed →
-                </Text>
+                <View style={styles.link}>
+                  <Text variant="label" color="accentInk">
+                    Ver feed
+                  </Text>
+                  <Icon name="chevronRight" size={14} color="accentInk" />
+                </View>
               </Pressable>
             </View>
             {activity.map((item) => (
@@ -152,20 +157,15 @@ function CurrentRead({ item }: { item: ReadingItem }) {
   const open = () => router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } });
 
   return (
-    <View
-      style={[
-        styles.page,
-        { backgroundColor: theme.surface, borderColor: theme.edge, shadowColor: theme.shadow },
-      ]}
-    >
+    <View style={[styles.page, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
       <View style={[styles.tape, { backgroundColor: theme.accentStart }]} />
       <Pressable accessibilityRole="button" onPress={open} style={styles.current}>
         <BookCover src={book.coverUrl} title={book.title} width={88} />
         <View style={styles.currentInfo}>
-          <Text variant="label" color="accent">
+          <Text variant="label" color="accentInk">
             Lendo agora
           </Text>
-          <Text variant="title" numberOfLines={2} style={styles.currentTitle}>
+          <Text variant="heading" numberOfLines={2}>
             {book.title}
           </Text>
           <Text variant="small" color="textMuted" numberOfLines={1}>
@@ -173,47 +173,65 @@ function CurrentRead({ item }: { item: ReadingItem }) {
           </Text>
           {percent !== null && (
             <View style={styles.progress}>
-              <ProgressBar percent={percent} height={8} />
-              <Text variant="label" color="textMuted">
-                p.{entry.currentPage} de {book.pageCount} · {percent}%
-              </Text>
+              <View style={styles.pages}>
+                <Text variant="number" style={styles.pageNumber}>
+                  {entry.currentPage}
+                  <Text variant="small" color="textMuted">
+                    {" "}
+                    / {book.pageCount}
+                  </Text>
+                </Text>
+                <Text variant="label" color="textMuted">
+                  {percent}%
+                </Text>
+              </View>
+              <ProgressBar percent={percent} height={6} />
             </View>
           )}
         </View>
       </Pressable>
-      <Button
-        title="Atualizar progresso"
-        onPress={() =>
-          router.push({ pathname: "/progress/[id]", params: { id: book.openLibraryId } })
-        }
-      />
-      <SessionControl
-        entryId={entry.id}
-        page={entry.currentPage}
-        pageCount={editionPages(entry.pageCount, book.pageCount)}
-        book={book}
-      />
+      <View style={styles.actions}>
+        <Button
+          title="Atualizar progresso"
+          style={styles.flex}
+          onPress={() =>
+            router.push({ pathname: "/progress/[id]", params: { id: book.openLibraryId } })
+          }
+        />
+        <SessionControl
+          compact
+          entryId={entry.id}
+          page={entry.currentPage}
+          pageCount={editionPages(entry.pageCount, book.pageCount)}
+          book={book}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacing[4], gap: spacing[5], paddingBottom: 120 },
+  content: {
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    gap: spacing[6],
+    paddingBottom: 120,
+  },
   header: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   logo: { width: 48, height: 48 },
   flex: { flex: 1 },
   section: { gap: spacing[3] },
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  row: { gap: spacing[4], paddingRight: spacing[4] },
+  row: { gap: spacing[3], paddingRight: spacing[5] },
+  goal: { gap: spacing[2] },
+  link: { flexDirection: "row", alignItems: "center", gap: spacing[1] },
+  actions: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   page: {
     borderWidth: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     padding: spacing[4],
     gap: spacing[4],
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
   },
   tape: {
     position: "absolute",
@@ -226,6 +244,7 @@ const styles = StyleSheet.create({
   },
   current: { flexDirection: "row", gap: spacing[4] },
   currentInfo: { flex: 1, gap: spacing[1] },
-  currentTitle: { fontSize: 20, lineHeight: 24 },
-  progress: { marginTop: "auto", gap: spacing[1] },
+  progress: { marginTop: "auto", gap: spacing[2] },
+  pages: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  pageNumber: { fontSize: 22 },
 });

@@ -133,7 +133,7 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
         <Text variant="heading">{session ? "Terminar sessão" : "Registrar leitura"}</Text>
         <Text color="textMuted" numberOfLines={1}>
           {data.book.title}
-          {session ? ` · ⏱ ${formatTimer(elapsed)}` : ""}
+          {session ? ` · sessão de ${formatTimer(elapsed)}` : ""}
         </Text>
       </View>
 
@@ -209,7 +209,7 @@ export function ProgressSheet({ openLibraryId }: { openLibraryId: string }) {
               hasSpoilers && { backgroundColor: theme.surfaceMuted },
             ]}
           >
-            <Text variant="label" color={hasSpoilers ? "accent" : "textMuted"}>
+            <Text variant="label" color={hasSpoilers ? "accentInk" : "textMuted"}>
               {hasSpoilers ? "✓ Tem spoiler" : "Tem spoiler?"}
             </Text>
           </Pressable>
@@ -272,7 +272,7 @@ function Step({
         { backgroundColor: theme.surfaceMuted, opacity: pressed ? 0.6 : 1 },
       ]}
     >
-      <Text variant="label" color="accent" style={styles.stepText}>
+      <Text variant="label" color="accentInk" style={styles.stepText}>
         {label}
       </Text>
     </Pressable>

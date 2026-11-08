@@ -17,7 +17,16 @@ import {
 } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Avatar, Card, FeelingTags, MentionText, ProgressBar, Stars, Text } from "@/components/ui";
+import {
+  Avatar,
+  Card,
+  FeelingTags,
+  Icon,
+  MentionText,
+  ProgressBar,
+  Stars,
+  Text,
+} from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover, QuoteText } from "@/features/books";
 import { showPostActions } from "@/features/moderation";
@@ -153,9 +162,16 @@ export function FeedItem({ item, more = [] }: { item: FeedItemData; more?: FeedI
             accessibilityLabel={post?.likedByMe ? "Descurtir" : "Curtir"}
             onPress={() => toggleLike.mutate({ activityId: item.id, like: !post?.likedByMe })}
             hitSlop={8}
+            style={styles.like}
           >
-            <Text variant="label" color={post?.likedByMe ? "accent" : "textMuted"}>
-              {post?.likedByMe ? "♥" : "♡"} {post?.likeCount ?? 0}
+            <Icon
+              name="heart"
+              size={16}
+              filled={post?.likedByMe}
+              color={post?.likedByMe ? "accentInk" : "textMuted"}
+            />
+            <Text variant="label" color={post?.likedByMe ? "accentInk" : "textMuted"}>
+              {post?.likeCount ?? 0}
             </Text>
           </Pressable>
           <Pressable
@@ -256,7 +272,7 @@ function ShelfAction({
   const shelve = useShelveFromFeed();
   if (status) {
     return (
-      <Text variant="label" color="accent" style={styles.action}>
+      <Text variant="label" color="accentInk" style={styles.action}>
         ✓ Na sua estante · {SHELF_LABELS[status]}
       </Text>
     );
@@ -275,6 +291,7 @@ function ShelfAction({
 }
 
 const styles = StyleSheet.create({
+  like: { flexDirection: "row", alignItems: "center", gap: 6 },
   head: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   actions: {
     flexDirection: "row",

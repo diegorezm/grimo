@@ -68,7 +68,7 @@ export function ReportSheet({ target, targetId }: { target: ReportTarget; target
           onPress={() => setReason(r)}
           style={[styles.option, { borderColor: reason === r ? theme.accent : theme.border }]}
         >
-          <Text color={reason === r ? "accent" : "text"}>{REPORT_REASON_LABELS[r]}</Text>
+          <Text color={reason === r ? "accentInk" : "text"}>{REPORT_REASON_LABELS[r]}</Text>
         </Pressable>
       ))}
       <Input

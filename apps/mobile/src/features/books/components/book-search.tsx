@@ -2,7 +2,7 @@ import { useBookSearch, useShelf } from "@grimo/client";
 import { SHELF_LABELS } from "@grimo/core";
 import { useDeferredValue, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, TextInput, View } from "react-native";
-import { Button, Glass, Text } from "@/components/ui";
+import { Button, Icon, Text } from "@/components/ui";
 import { fontSize, radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
@@ -26,10 +26,10 @@ export function BookSearch() {
 
   return (
     <View style={styles.root}>
-      <Glass style={styles.field}>
-        <Text color="textMuted" style={styles.icon}>
-          ⌕
-        </Text>
+      <View
+        style={[styles.field, { borderColor: theme.border, backgroundColor: theme.background }]}
+      >
+        <Icon name="search" size={20} color="textMuted" />
         <TextInput
           autoFocus
           value={query}
@@ -41,7 +41,7 @@ export function BookSearch() {
           style={[styles.input, { color: theme.text }]}
         />
         {search.isFetching && <ActivityIndicator color={theme.accent} />}
-      </Glass>
+      </View>
 
       {searched && items.length === 0 && (
         <Text color="textMuted">Nenhum livro encontrado. Tente o autor ou o ISBN.</Text>
@@ -58,10 +58,9 @@ export function BookSearch() {
             <View key={book.openLibraryId} style={styles.cell}>
               <BookTile book={book} width={100} />
               {status && badge && (
-                <View
-                  style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}
-                >
-                  <Text variant="label" style={{ color: badge.fg, fontSize: 9 }}>
+                <View style={styles.status}>
+                  <View style={[styles.dot, { backgroundColor: badge.fg }]} />
+                  <Text variant="small" style={styles.statusText}>
                     {SHELF_LABELS[status]}
                   </Text>
                 </View>
@@ -94,23 +93,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     minHeight: 52,
     borderRadius: radius.full,
+    borderWidth: 1,
   },
-  icon: { fontSize: 20 },
   input: { flex: 1, fontSize: fontSize.md, paddingVertical: spacing[3] },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing[4],
+    rowGap: spacing[5],
     justifyContent: "space-between",
   },
-  cell: { width: 100 },
-  badge: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
+  cell: { width: 100, gap: spacing[1] },
+  status: { flexDirection: "row", alignItems: "center", gap: 6 },
+  dot: { width: 8, height: 8, borderRadius: radius.full },
+  statusText: { fontSize: 12 },
 });

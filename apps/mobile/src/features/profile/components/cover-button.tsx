@@ -42,7 +42,7 @@ export function CoverButton({
       hitSlop={6}
       style={({ pressed }) => [
         styles.root,
-        { backgroundColor: theme.surface, opacity: pressed ? 0.7 : 1 },
+        { borderColor: theme.edge, opacity: pressed ? 0.7 : 1 },
       ]}
     >
       <Svg
@@ -51,7 +51,7 @@ export function CoverButton({
         viewBox="0 0 24 24"
         fill="none"
         stroke={theme.text}
-        strokeWidth={2}
+        strokeWidth={1.6}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -63,8 +63,9 @@ export function CoverButton({
 
 const styles = StyleSheet.create({
   root: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderWidth: 1,
     borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",

@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
-import { profileCovers, radius, spacing } from "@/constants/theme";
+import { Fonts, profileCovers, radius, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
@@ -92,17 +92,14 @@ export function ProfileHeader({
         </View>
       )}
 
-      <View style={styles.numbers}>
+      <View style={[styles.numbers, { borderColor: theme.edge }]}>
         <Stat value={shelves ? compactCount(shelves.read.count) : "–"} label="lidos" />
-        <Dot />
         <Stat value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
-        <Dot />
         <Stat
           value={compactCount(profile.followers)}
           label="seguidores"
           onPress={onPressCount && (() => onPressCount("followers"))}
         />
-        <Dot />
         <Stat
           value={compactCount(profile.following)}
           label="seguindo"
@@ -115,14 +112,6 @@ export function ProfileHeader({
   );
 }
 
-function Dot() {
-  return (
-    <Text color="textMuted" style={styles.dot}>
-      ·
-    </Text>
-  );
-}
-
 function Stat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
   return (
     <Pressable
@@ -131,10 +120,13 @@ function Stat({ value, label, onPress }: { value: string; label: string; onPress
       disabled={!onPress}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => [styles.stat, { opacity: pressed ? 0.6 : 1 }]}
     >
-      <Text color="textMuted">
-        <Text style={styles.bold}>{value}</Text> {label}
+      <Text variant="number" style={styles.statValue} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text variant="small" color="textMuted" style={styles.statLabel}>
+        {label}
       </Text>
     </Pressable>
   );
@@ -154,8 +146,14 @@ const styles = StyleSheet.create({
   quote: { flexDirection: "row", gap: spacing[2] },
   quoteMark: { fontSize: 36, lineHeight: 36, fontStyle: "italic" },
   grow: { flex: 1, gap: 2, paddingTop: 2 },
-  quoteText: { fontStyle: "italic", fontSize: 16, lineHeight: 22 },
-  numbers: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", rowGap: 4 },
-  dot: { marginHorizontal: 6 },
-  bold: { fontWeight: "700" },
+  quoteText: { fontFamily: Fonts.serifItalic, fontSize: 17, lineHeight: 24 },
+  numbers: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    paddingVertical: spacing[3],
+  },
+  stat: { flex: 1, gap: 2 },
+  statValue: { fontSize: 18 },
+  statLabel: { fontSize: 12 },
 });
