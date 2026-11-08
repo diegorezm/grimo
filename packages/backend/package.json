@@ -28,7 +28,7 @@
     "@edge-runtime/vm": "^5.0.0",
     "@grimo/tsconfig": "workspace:*",
     "@types/node": "^24.0.0",
-    "convex-test": "^0.0.62",
+    "convex-test": "^0.0.67",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
