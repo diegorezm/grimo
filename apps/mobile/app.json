@@ -49,7 +49,15 @@
         "expo-image-picker",
         {
           "photosPermission": "O Grimo usa suas fotos para você escolher a foto do perfil.",
-          "cameraPermission": "O Grimo usa a câmera para você tirar a foto do perfil."
+          "cameraPermission": "O Grimo usa a câmera para tirar a foto do perfil e ler o código de barras dos livros."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O Grimo usa a câmera para tirar a foto do perfil e ler o código de barras dos livros.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
       "expo-secure-store",
