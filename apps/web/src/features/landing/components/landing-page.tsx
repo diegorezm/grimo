@@ -205,7 +205,7 @@ function Eyebrow({ children }: { children: ReactNode }) {
  */
 export function LandingPage() {
   return (
-    <div className="min-h-dvh overflow-x-clip bg-surface text-text">
+    <div className="min-h-dvh overflow-x-clip bg-background text-text">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5 lg:px-8">
         <Link to="/welcome" className="flex items-center gap-2.5">
           <Logo className="h-10" />

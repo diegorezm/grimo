@@ -73,7 +73,7 @@ export function OnboardingFlow() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
+    <div className="flex min-h-dvh flex-col bg-background">
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-5">
         <Logo className="h-9" />
         {step !== "done" && step !== "profile" && (

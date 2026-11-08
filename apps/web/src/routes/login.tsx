@@ -28,7 +28,7 @@ function LoginPage() {
   const { redirect, ott } = Route.useSearch();
   const returning = useGoogleReturn(Boolean(ott), redirect);
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:bg-surface">
+    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:bg-background">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-surface-muted p-12 lg:flex">
         <Sparkle className="absolute top-16 right-24 size-5" />
         <Sparkle className="absolute right-16 bottom-56 size-3.5 fill-accent" />
