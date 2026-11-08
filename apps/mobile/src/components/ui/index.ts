@@ -10,6 +10,7 @@ export { MentionText } from "./mention-text";
 export { NameDialog } from "./name-dialog";
 export { ProgressBar } from "./progress-bar";
 export { Screen } from "./screen";
+export { SelectButton, type SelectOption, SelectSheet } from "./select-sheet";
 export { Stars } from "./stars";
 export { Text } from "./text";
 export { Toaster } from "./toaster";

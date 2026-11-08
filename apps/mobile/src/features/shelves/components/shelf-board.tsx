@@ -18,15 +18,17 @@ import {
   shelfGenres,
 } from "@grimo/core";
 import { router } from "expo-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Button, Chip, Text } from "@/components/ui";
+import { Button, Chip, SelectButton, SelectSheet, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover, useShelfNaming } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
 import { ShelfSelectBar } from "./shelf-select-bar";
 
 const TILE = 100;
+/** The selector's value for "Todos os meus livros". */
+const ALL = "all";
 
 /**
  * Estantes: "Todos os meus livros" and the shelves you made ("Física", "Kindle"), each filtered
@@ -44,35 +46,21 @@ export function ShelfBoard() {
   const inShelf = shelf ? rows.filter((row) => row.entry.tagIds.includes(shelf.id)) : rows;
   const items = inShelf.filter((row) => matchesShelfFilter(row, { ...filter, tagIds: [] }));
   const counts = countByShelf(inShelf.map(({ entry }) => entry));
-  const genres = shelfGenres(inShelf).slice(0, 10);
+  const genres = shelfGenres(inShelf);
   const picking = shelves.find((item) => item.id === pickingFor) ?? null;
+  const [sheet, setSheet] = useState<"shelf" | "filters" | null>(null);
+  const activeFilters = filter.statuses.length + filter.genres.length;
 
   return (
     <View style={styles.root}>
-      <Row>
-        <Chip
-          label={`Todos os meus livros ${rows.length}`}
-          active={shelfId === null}
-          onPress={() => store.openShelf(null)}
+      <View style={styles.bar}>
+        <SelectButton
+          label={`${shelf ? shelf.name : "Todos os meus livros"} · ${inShelf.length}`}
+          accessibilityLabel="Trocar de estante"
+          onPress={() => setSheet("shelf")}
         />
-        {shelves.map((item) => (
-          <Chip
-            key={item.id}
-            label={`${item.name} ${item.count}`}
-            active={item.id === shelfId}
-            onPress={() => store.openShelf(item.id)}
-          />
-        ))}
-        <Chip label="+ Nova estante" onPress={() => naming.askNew([], store.openShelf)} />
-      </Row>
-
-      {picking ? (
-        <Text color="textMuted">
-          Escolha os livros para a estante {picking.name} e toque em Adicionar.
-        </Text>
-      ) : (
-        shelf && (
-          <ShelfHeader
+        {shelf && !picking && (
+          <ShelfMenu
             shelf={shelf}
             onRename={() => naming.askRename(shelf)}
             onDuplicate={() =>
@@ -82,31 +70,116 @@ export function ShelfBoard() {
               })
             }
           />
+        )}
+        <Button
+          variant={activeFilters > 0 ? "primary" : "secondary"}
+          title={activeFilters > 0 ? `Filtros · ${activeFilters}` : "Filtros"}
+          onPress={() => setSheet("filters")}
+        />
+      </View>
+      {picking ? (
+        <Text color="textMuted">
+          Escolha os livros para a estante {picking.name} e toque em Adicionar.
+        </Text>
+      ) : (
+        shelf && (
+          <Text variant="small" color="textMuted">
+            {shelf.isPublic ? "Aparece no seu perfil" : "Só você vê esta estante"}
+          </Text>
         )
       )}
-
-      <Row>
-        {SHELF_STATUSES.map((status) => (
-          <Chip
-            key={status}
-            label={`${SHELF_LABELS[status]} ${counts[status]}`}
-            active={filter.statuses.includes(status)}
-            onPress={() => store.toggle("statuses", status)}
-          />
-        ))}
-      </Row>
-      {genres.length > 0 && (
+      {activeFilters > 0 && (
         <Row>
-          {genres.map((genre) => (
+          {filter.statuses.map((status) => (
+            <Chip
+              key={status}
+              label={`${SHELF_LABELS[status]} ✕`}
+              active
+              onPress={() => store.toggle("statuses", status)}
+            />
+          ))}
+          {filter.genres.map((genre) => (
             <Chip
               key={genre}
-              label={GENRE_LABELS[genre as Genre] ?? genre}
-              active={filter.genres.includes(genre)}
+              label={`${GENRE_LABELS[genre as Genre] ?? genre} ✕`}
+              active
               onPress={() => store.toggle("genres", genre)}
             />
           ))}
+          <Chip label="Limpar" onPress={store.clearFilter} />
         </Row>
       )}
+
+      <SelectSheet
+        visible={sheet === "shelf"}
+        title="Estantes"
+        value={shelfId ?? ALL}
+        options={[
+          { value: ALL, label: "Todos os meus livros", detail: String(rows.length) },
+          ...shelves.map((item) => ({
+            value: item.id,
+            label: item.name,
+            detail: String(item.count),
+            hint: item.isPublic ? "aparece no seu perfil" : "só você vê",
+          })),
+        ]}
+        onSelect={(value) => store.openShelf(value === ALL ? null : value)}
+        onClose={() => setSheet(null)}
+        footer={
+          <Button
+            variant="secondary"
+            title="+ Nova estante"
+            onPress={() => {
+              setSheet(null);
+              naming.askNew([], store.openShelf);
+            }}
+          />
+        }
+      />
+      <SelectSheet
+        visible={sheet === "filters"}
+        title="Filtros"
+        onClose={() => setSheet(null)}
+        footer={
+          <View style={styles.bar}>
+            <Button variant="ghost" title="Limpar" onPress={store.clearFilter} />
+            <Button title={`Ver ${items.length} livros`} onPress={() => setSheet(null)} />
+          </View>
+        }
+      >
+        <View style={styles.filterGroup}>
+          <Text variant="label" color="textMuted">
+            Situação
+          </Text>
+          <View style={styles.wrap}>
+            {SHELF_STATUSES.map((status) => (
+              <Chip
+                key={status}
+                label={`${SHELF_LABELS[status]} ${counts[status]}`}
+                active={filter.statuses.includes(status)}
+                onPress={() => store.toggle("statuses", status)}
+              />
+            ))}
+          </View>
+        </View>
+        {genres.length > 0 && (
+          <View style={styles.filterGroup}>
+            <Text variant="label" color="textMuted">
+              Gênero
+            </Text>
+            <View style={styles.wrap}>
+              {genres.map((genre) => (
+                <Chip
+                  key={genre}
+                  label={GENRE_LABELS[genre as Genre] ?? genre}
+                  active={filter.genres.includes(genre)}
+                  onPress={() => store.toggle("genres", genre)}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+      </SelectSheet>
 
       <View style={styles.between}>
         <Text variant="label" color="textMuted">
@@ -212,8 +285,8 @@ export function ShelfBoard() {
   );
 }
 
-/** The open shelf: its name, who sees it, and ⋯ for the whole shelf. */
-function ShelfHeader({
+/** ⋯ beside the open shelf: everything you can do with the whole shelf. */
+function ShelfMenu({
   shelf,
   onRename,
   onDuplicate,
@@ -269,26 +342,15 @@ function ShelfHeader({
   }
 
   return (
-    <View style={[styles.header, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
-      <View style={styles.grow}>
-        <Text variant="heading" numberOfLines={1}>
-          {shelf.name}
-        </Text>
-        <Text variant="small" color="textMuted">
-          {shelf.count} {shelf.count === 1 ? "livro" : "livros"} ·{" "}
-          {shelf.isPublic ? "aparece no seu perfil" : "só você vê"}
-        </Text>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Opções da estante ${shelf.name}`}
-        onPress={menu}
-        hitSlop={8}
-        style={[styles.more, { borderColor: theme.border }]}
-      >
-        <Text variant="heading">⋯</Text>
-      </Pressable>
-    </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Opções da estante ${shelf.name}`}
+      onPress={menu}
+      hitSlop={8}
+      style={[styles.more, { borderColor: theme.border, backgroundColor: theme.surface }]}
+    >
+      <Text variant="heading">⋯</Text>
+    </Pressable>
   );
 }
 
@@ -308,15 +370,9 @@ const styles = StyleSheet.create({
   root: { gap: spacing[3] },
   row: { gap: spacing[2], alignItems: "center" },
   between: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing[3],
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing[3],
-  },
-  grow: { flex: 1, gap: 2 },
+  bar: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  filterGroup: { gap: spacing[2], paddingTop: spacing[2] },
   more: {
     width: 40,
     height: 40,

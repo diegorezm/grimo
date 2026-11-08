@@ -25,13 +25,14 @@ export function Chip({
       style={({ pressed }) => [
         styles.chip,
         {
-          borderColor: active ? theme.inverse : theme.border,
-          backgroundColor: active ? theme.inverse : theme.surface,
+          // Active is a light lilac wash, never a dark fill (the app's light look).
+          borderColor: active ? theme.accent : theme.border,
+          backgroundColor: active ? theme.glowB : theme.surface,
           opacity: pressed ? 0.75 : 1,
         },
       ]}
     >
-      <Text variant="small" style={{ color: active ? theme.inverseForeground : theme.text }}>
+      <Text variant="small" style={[{ color: theme.text }, active && { fontWeight: "700" }]}>
         {label}
       </Text>
     </Pressable>

@@ -1,8 +1,9 @@
 import { useProfileShelves, useReaderShelves } from "@grimo/client";
 import { yearRunLabel } from "@grimo/core";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Card, Text } from "@/components/ui";
+import { Card, SelectButton, type SelectOption, SelectSheet, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
@@ -17,85 +18,88 @@ interface ShelfCover {
 }
 
 /**
- * A profile's shelves as rows of covers, spine to spine: Lendo, then Lidos in runs by the year
- * each book was finished ("Lidos '26", "Lidos '25").
+ * A profile's shelves, one at a time in a selector (Lendo, Lidos, the shelves the reader made),
+ * as a row of covers spine to spine; Lidos in runs by the year each book was finished.
  */
 export function ProfileShelves({ username }: { username: string }) {
   const shelves = useReaderShelves(username).data;
-  const saved = useProfileShelves(username).data?.items ?? [];
+  const made = useProfileShelves(username).data?.items ?? [];
+  const [picked, setPicked] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   if (!shelves) return null;
   const { reading, read } = shelves;
-  if (reading.count === 0 && read.count === 0 && saved.length === 0) {
+
+  // One shelf at a time, picked in the selector: Lendo, Lidos, then the shelves the reader made.
+  const options: SelectOption[] = [
+    ...(reading.count > 0
+      ? [{ value: READING, label: "Lendo", detail: String(reading.count) }]
+      : []),
+    ...(read.count > 0 ? [{ value: READ, label: "Lidos", detail: String(read.count) }] : []),
+    ...made.map((shelf) => ({
+      value: shelf.id,
+      label: shelf.name,
+      detail: String(shelf.count),
+      hint: shelf.isPublic ? undefined : "só você vê",
+    })),
+  ];
+  if (options.length === 0) {
     return <Text color="textMuted">Nenhum livro lido ou em leitura ainda.</Text>;
   }
+  const value = options.some((option) => option.value === picked)
+    ? picked!
+    : (options.find((option) => option.value === READ)?.value ?? options[0]!.value);
+  const current = options.find((option) => option.value === value)!;
+  const shelf = made.find((item) => item.id === value);
+
   return (
     <View style={styles.root}>
-      {reading.count > 0 && (
-        <Shelf title="Lendo" count={reading.count}>
-          <Run label="Lendo agora" tone="accentStart" items={reading.items} />
-        </Shelf>
-      )}
-      {read.count > 0 && (
-        <Shelf title="Lidos" count={read.count}>
-          {read.runs.map((run, index) => (
-            <Run
-              key={run.year ?? "sem-data"}
-              label={yearRunLabel(run.year)}
-              tone={index % 2 === 0 ? "accentStart" : "accent"}
-              items={run.items}
-            />
-          ))}
-        </Shelf>
-      )}
-      {saved.map((shelf) => (
-        <Shelf
-          key={shelf.id}
-          title={shelf.isPublic ? shelf.name : `${shelf.name} · só você`}
-          count={shelf.count}
+      <SelectButton
+        label={`${current.label} · ${current.detail}`}
+        accessibilityLabel="Trocar de estante"
+        onPress={() => setOpen(true)}
+      />
+      <SelectSheet
+        visible={open}
+        title="Estantes"
+        options={options}
+        value={value}
+        onSelect={setPicked}
+        onClose={() => setOpen(false)}
+      />
+      <Card style={styles.card}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.strip}
         >
-          {shelf.covers.length > 0 ? (
-            <Run tone="accent" items={shelf.covers} />
-          ) : (
-            <Text variant="small" color="textMuted">
-              Nenhum livro neste filtro ainda.
-            </Text>
+          {value === READING && (
+            <Run label="Lendo agora" tone="accentStart" items={reading.items} />
           )}
-        </Shelf>
-      ))}
+          {value === READ &&
+            read.runs.map((run, index) => (
+              <Run
+                key={run.year ?? "sem-data"}
+                label={yearRunLabel(run.year)}
+                tone={index % 2 === 0 ? "accentStart" : "accent"}
+                items={run.items}
+              />
+            ))}
+          {shelf &&
+            (shelf.covers.length > 0 ? (
+              <Run tone="accent" items={shelf.covers} />
+            ) : (
+              <Text variant="small" color="textMuted">
+                Nenhum livro nesta estante ainda.
+              </Text>
+            ))}
+        </ScrollView>
+      </Card>
     </View>
   );
 }
 
-function Shelf({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count: number;
-  children: React.ReactNode;
-}) {
-  const theme = useTheme();
-  return (
-    <Card style={styles.card}>
-      <View style={styles.header}>
-        <Text variant="heading">{title}</Text>
-        <View style={[styles.count, { backgroundColor: theme.surfaceMuted }]}>
-          <Text variant="small">
-            {count} {count === 1 ? "livro" : "livros"}
-          </Text>
-        </View>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.strip}
-      >
-        {children}
-      </ScrollView>
-    </Card>
-  );
-}
+const READING = "reading";
+const READ = "read";
 
 /** One run of covers under its label, with a line in the label's color along the run. */
 function Run({
@@ -142,14 +146,7 @@ function Run({
 
 const styles = StyleSheet.create({
   root: { gap: spacing[3] },
-  card: { paddingHorizontal: 0, gap: spacing[3] },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing[4],
-  },
-  count: { borderRadius: radius.full, paddingHorizontal: spacing[3], paddingVertical: 2 },
+  card: { paddingHorizontal: 0 },
   strip: { paddingHorizontal: spacing[4] },
   run: { gap: spacing[1], marginRight: 2 },
   label: {
