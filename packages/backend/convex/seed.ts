@@ -205,6 +205,19 @@ export const populate = internalMutation({
           featuredQuoteId: quoteIndex >= 0 ? ids[quoteIndex] : null,
           profileShows: { goal: true, reading: true, streak: true },
         });
+
+        // A shelf of the books on the reader's physical shelf, shown on the profile.
+        const shelfId = await ctx.db.insert("shelfTags", {
+          userId: user._id,
+          name: "Física",
+          isPublic: true,
+          createdAt: tick(),
+        });
+        const entries = await ctx.db
+          .query("shelfEntries")
+          .withIndex("by_user_updated", (q) => q.eq("userId", user._id))
+          .take(6);
+        for (const entry of entries) await ctx.db.patch(entry._id, { tagIds: [shelfId] });
       }
     }
 

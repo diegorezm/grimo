@@ -11,6 +11,7 @@
 import type * as account from "../account.js";
 import type * as auth from "../auth.js";
 import type * as books from "../books.js";
+import type * as bookshelves from "../bookshelves.js";
 import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as feed from "../feed.js";
@@ -44,7 +45,6 @@ import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as seed from "../seed.js";
 import type * as sessions from "../sessions.js";
-import type * as shelfFilters from "../shelfFilters.js";
 import type * as shelves from "../shelves.js";
 import type * as songs from "../songs.js";
 import type * as stats from "../stats.js";
@@ -60,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   account: typeof account;
   auth: typeof auth;
   books: typeof books;
+  bookshelves: typeof bookshelves;
   crons: typeof crons;
   email: typeof email;
   feed: typeof feed;
@@ -93,7 +94,6 @@ declare const fullApi: ApiFromModules<{
   posts: typeof posts;
   seed: typeof seed;
   sessions: typeof sessions;
-  shelfFilters: typeof shelfFilters;
   shelves: typeof shelves;
   songs: typeof songs;
   stats: typeof stats;

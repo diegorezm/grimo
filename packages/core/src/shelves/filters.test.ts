@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  copyName,
   EMPTY_SHELF_FILTER,
   matchesShelfFilter,
-  savedShelfSchema,
   shelfGenres,
+  shelfNameSchema,
   toggleFilter,
 } from "./filters";
 
@@ -44,17 +45,10 @@ describe("shelf filters", () => {
     expect(shelfGenres(shelf)).toEqual(["romance", "fantasy"]);
   });
 
-  it("needs a name and a filter to save a shelf", () => {
-    expect(
-      savedShelfSchema.safeParse({ name: "Física", filter: EMPTY_SHELF_FILTER, isPublic: true })
-        .success,
-    ).toBe(false);
-    expect(
-      savedShelfSchema.safeParse({
-        name: " Física ",
-        filter: { ...EMPTY_SHELF_FILTER, tagIds: ["tenho"] },
-        isPublic: false,
-      }).data?.name,
-    ).toBe("Física");
+  it("names shelves and their copies within the limit", () => {
+    expect(shelfNameSchema.safeParse("  ").success).toBe(false);
+    expect(shelfNameSchema.parse(" Física ")).toBe("Física");
+    expect(copyName("Física")).toBe("Física (cópia)");
+    expect(copyName("x".repeat(40))).toHaveLength(40);
   });
 });

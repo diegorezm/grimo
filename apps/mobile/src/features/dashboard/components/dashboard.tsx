@@ -1,11 +1,5 @@
-import { useFeed, useMe, useShelf, useShelfFilterStore, useYearOverview } from "@grimo/client";
-import {
-  EMPTY_SHELF_FILTER,
-  editionPages,
-  goalProgress,
-  greetingFor,
-  readingPercent,
-} from "@grimo/core";
+import { useFeed, useMe, useShelf, useShelfScreenStore, useYearOverview } from "@grimo/client";
+import { editionPages, goalProgress, greetingFor, readingPercent } from "@grimo/core";
 import { router } from "expo-router";
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -115,7 +109,7 @@ export function Dashboard() {
           <ShelfTiles
             onSelect={(status) => {
               // Opens the shelf filtered by that status.
-              useShelfFilterStore.getState().apply({ ...EMPTY_SHELF_FILTER, statuses: [status] });
+              useShelfScreenStore.getState().showStatus(status);
               router.navigate("/shelves");
             }}
           />

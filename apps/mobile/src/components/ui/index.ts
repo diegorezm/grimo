@@ -7,6 +7,7 @@ export { FeelingPicker, FeelingTags } from "./feelings";
 export { Glass } from "./glass";
 export { Input } from "./input";
 export { MentionText } from "./mention-text";
+export { NameDialog } from "./name-dialog";
 export { ProgressBar } from "./progress-bar";
 export { Screen } from "./screen";
 export { Stars } from "./stars";

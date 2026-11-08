@@ -223,16 +223,21 @@ export default defineSchema({
     .index("by_user_status_finished", ["userId", "status", "finishedAt"])
     .index("by_book", ["bookId"]),
 
-  /** A reader's personal tag for their books ("Tenho", "Kindle", "Emprestei"). */
+  /**
+   * A shelf the reader makes ("Física", "Kindle", "Emprestei"). Its books are the shelf entries
+   * whose `tagIds` hold it, so a book can be on many shelves. See `bookshelves.ts`.
+   */
   shelfTags: defineTable({
     userId: v.id("users"),
     name: v.string(),
     createdAt: v.number(),
+    /** Shown on the profile (only books read or being read); absent or false: only the reader. */
+    isPublic: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
 
   /**
-   * A filter of the reader's shelf saved with a name ("Minha estante física" = tag Tenho). It
-   * holds no books: it shows whatever matches, so it stays up to date by itself.
+   * Removed: named filters, replaced by the shelves the reader makes. Kept only until
+   * `migrations.savedShelvesToShelves` turned each into a shelf on every deployment.
    */
   savedShelves: defineTable({
     userId: v.id("users"),

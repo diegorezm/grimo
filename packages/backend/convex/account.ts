@@ -120,29 +120,20 @@ export const exportData = query({
     const username = async (id: Id<"users">) => (await ctx.db.get(id))?.username ?? null;
     const date = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
     const groupBook = async (id: Id<"groups">) => bookTitle((await ctx.db.get(id))?.bookId ?? null);
-    const [shelfTags, savedShelves] = await Promise.all([
-      ctx.db
-        .query("shelfTags")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("savedShelves")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect(),
-    ]);
-    const tagName = new Map(shelfTags.map((tag) => [tag._id, tag.name]));
+    const myShelves = await ctx.db
+      .query("shelfTags")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const shelfName = new Map(myShelves.map((shelf) => [shelf._id, shelf.name]));
     const tagNames = (ids: Id<"shelfTags">[] | undefined) =>
-      (ids ?? []).flatMap((id) => tagName.get(id) ?? []);
+      (ids ?? []).flatMap((id) => shelfName.get(id) ?? []);
 
     return {
       exportedAt: new Date().toISOString(),
-      shelfTags: shelfTags.map((tag) => tag.name),
-      savedShelves: savedShelves.map((shelf) => ({
+      /** The shelves you made; each book in `shelf` lists the ones it is on. */
+      myShelves: myShelves.map((shelf) => ({
         name: shelf.name,
-        statuses: shelf.filter.statuses,
-        genres: shelf.filter.genres,
-        tags: tagNames(shelf.filter.tagIds),
-        isPublic: shelf.isPublic,
+        isPublic: shelf.isPublic ?? false,
       })),
       account: {
         email: identity?.email ?? null,
@@ -189,7 +180,7 @@ export const exportData = query({
           editionPages: entry.pageCount ?? null,
           rating: entry.rating,
           feelings: entry.feelings ?? [],
-          tags: tagNames(entry.tagIds),
+          shelves: tagNames(entry.tagIds),
           startedAt: date(entry.startedAt),
           finishedAt: date(entry.finishedAt),
         })),

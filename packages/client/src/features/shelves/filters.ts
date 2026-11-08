@@ -1,4 +1,4 @@
-import { api, type Id } from "@grimo/backend";
+import { api } from "@grimo/backend";
 import { EMPTY_SHELF_FILTER, type ShelfFilter, toggleFilter } from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
@@ -8,131 +8,175 @@ import { usePatchQueries } from "../../lib/mutation";
 import { useConvexCache } from "../../lib/provider";
 
 /**
- * One shelf, many views: personal tags, the shelf's filter (status, genre, tag), the select mode
- * to tag many books at once, and named saved shelves. See `@grimo/core` shelves/filters.
+ * The shelves a reader makes ("Física", "Kindle"): create, rename, share, duplicate, delete,
+ * and put books on them (or take them off, or move them) in one go. Status and genre are the
+ * filters inside a shelf. See `@grimo/core` shelves/filters.
  */
 
 type ShelfList = FunctionReturnType<typeof api.shelves.list>;
-export type ShelfTag = FunctionReturnType<typeof api.shelfFilters.tags>["items"][number];
-export type SavedShelf = FunctionReturnType<typeof api.shelfFilters.savedShelves>["items"][number];
-export type ProfileSavedShelf = FunctionReturnType<
-  typeof api.shelfFilters.profileShelves
->["items"][number];
+type MyShelves = FunctionReturnType<typeof api.bookshelves.mine>;
+export type MyShelf = MyShelves["items"][number];
+export type ProfileShelf = FunctionReturnType<typeof api.bookshelves.profile>["items"][number];
 
-const shelves = [convexQueryPrefix(api.shelves.list)];
+const shelfLists = [convexQueryPrefix(api.shelves.list)];
+const myShelvesKey = [convexQueryPrefix(api.bookshelves.mine)];
 
-export function shelfTagsQuery() {
-  return convexQuery(api.shelfFilters.tags, {}, "required");
+export function myShelvesQuery() {
+  return convexQuery(api.bookshelves.mine, {}, "required");
 }
 
-export function useShelfTags() {
-  return useQuery(shelfTagsQuery());
+export function useMyShelves() {
+  return useQuery(myShelvesQuery());
 }
 
-export function useCreateTag() {
+export function profileShelvesQuery(username: string) {
+  return convexQuery(api.bookshelves.profile, { username }, "optional");
+}
+
+/** A reader's shelves as rows of covers (public ones, or all of them on your own profile). */
+export function useProfileShelves(username: string) {
+  return useQuery(profileShelvesQuery(username));
+}
+
+export function useCreateShelf() {
   const { convex } = useConvexCache();
   return useMutation({
-    mutationFn: (name: string) => convex.mutation(api.shelfFilters.createTag, { name }),
+    mutationFn: (input: { name: string; isPublic: boolean; entryIds?: string[] }) =>
+      convex.mutation(api.bookshelves.create, input),
   });
 }
 
-export function useRenameTag() {
+export function useRenameShelf() {
   const { convex } = useConvexCache();
   return useMutation({
     mutationFn: (input: { id: string; name: string }) =>
-      convex.mutation(api.shelfFilters.renameTag, input),
+      convex.mutation(api.bookshelves.rename, input),
   });
 }
 
-export function useRemoveTag() {
-  const { convex } = useConvexCache();
-  return useMutation({
-    mutationFn: (id: string) => convex.mutation(api.shelfFilters.removeTag, { id }),
-  });
-}
-
-/** Tags (or untags) several books at once; the shelf updates before the server answers. */
-export function useSetTag() {
+export function useSetShelfPublic() {
   const { convex } = useConvexCache();
   const patchQueries = usePatchQueries();
   return useMutation({
-    mutationFn: (input: { tagId: string; entryIds: string[]; on: boolean }) =>
-      convex.mutation(api.shelfFilters.setTag, {
-        ...input,
-        entryIds: input.entryIds as Id<"shelfEntries">[],
-      }),
-    onMutate: ({ tagId, entryIds, on }) =>
-      patchQueries<ShelfList>(shelves, (data) => ({
+    mutationFn: (input: { id: string; isPublic: boolean }) =>
+      convex.mutation(api.bookshelves.setPublic, input),
+    onMutate: ({ id, isPublic }) =>
+      patchQueries<MyShelves>(myShelvesKey, (data) => ({
         ...data,
-        items: data.items.map((item) => {
-          if (!entryIds.includes(item.entry.id)) return item;
-          const without = item.entry.tagIds.filter((id) => id !== tagId);
-          return { ...item, entry: { ...item.entry, tagIds: on ? [...without, tagId] : without } };
-        }),
+        items: data.items.map((shelf) => (shelf.id === id ? { ...shelf, isPublic } : shelf)),
       })),
     onError: (_error, _input, rollback) => rollback?.(),
   });
 }
 
-export function savedShelvesQuery() {
-  return convexQuery(api.shelfFilters.savedShelves, {}, "required");
-}
-
-export function useSavedShelves() {
-  return useQuery(savedShelvesQuery());
-}
-
-export function useSaveShelf() {
+export function useRemoveShelf() {
   const { convex } = useConvexCache();
   return useMutation({
-    /** Validated with `savedShelfSchema` on the server (genres too). */
-    mutationFn: (input: { id?: string; name: string; filter: ShelfFilter; isPublic: boolean }) =>
-      convex.mutation(api.shelfFilters.saveShelf, input),
+    mutationFn: (id: string) => convex.mutation(api.bookshelves.remove, { id }),
   });
 }
 
-export function useRemoveSavedShelf() {
+export function useDuplicateShelf() {
   const { convex } = useConvexCache();
   return useMutation({
-    mutationFn: (id: string) => convex.mutation(api.shelfFilters.removeSavedShelf, { id }),
+    mutationFn: (input: { id: string; name?: string }) =>
+      convex.mutation(api.bookshelves.duplicate, input),
   });
 }
 
-/** A reader's saved shelves as rows of covers (public ones, or all of them on your own). */
-export function profileShelvesQuery(username: string) {
-  return convexQuery(api.shelfFilters.profileShelves, { username }, "optional");
+/** Moves the shelf's books in the cached shelf list at once (the counts follow the server). */
+function patchBooks(entryIds: string[], change: (shelves: string[]) => string[]) {
+  return (data: ShelfList): ShelfList => ({
+    ...data,
+    items: data.items.map((item) =>
+      entryIds.includes(item.entry.id)
+        ? { ...item, entry: { ...item.entry, tagIds: change(item.entry.tagIds) } }
+        : item,
+    ),
+  });
 }
 
-export function useProfileShelves(username: string) {
-  return useQuery(profileShelvesQuery(username));
+/** Puts books on a shelf or takes them off. */
+export function useSetShelfBooks() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (input: { shelfId: string; entryIds: string[]; on: boolean }) =>
+      convex.mutation(api.bookshelves.setBooks, input),
+    onMutate: ({ shelfId, entryIds, on }) =>
+      patchQueries<ShelfList>(
+        shelfLists,
+        patchBooks(entryIds, (shelves) => {
+          const without = shelves.filter((id) => id !== shelfId);
+          return on ? [...without, shelfId] : without;
+        }),
+      ),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
 }
 
-interface ShelfFilterState {
-  filter: ShelfFilter;
-  /** The saved shelf the filter came from, if any (to update it instead of making another). */
-  savedShelfId: string | null;
-  toggle: <K extends keyof ShelfFilter>(key: K, value: ShelfFilter[K][number]) => void;
-  apply: (filter: ShelfFilter, savedShelfId?: string | null) => void;
-  clear: () => void;
-  /** Select mode: the books picked to tag at once. */
+export function useMoveBooks() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (input: { fromId: string; toId: string; entryIds: string[] }) =>
+      convex.mutation(api.bookshelves.move, input),
+    onMutate: ({ fromId, toId, entryIds }) =>
+      patchQueries<ShelfList>(
+        shelfLists,
+        patchBooks(entryIds, (shelves) => [
+          ...shelves.filter((id) => id !== fromId && id !== toId),
+          toId,
+        ]),
+      ),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** Status and genre: the filters inside a shelf. */
+export type ShelfViewFilter = Pick<ShelfFilter, "statuses" | "genres">;
+
+interface ShelfScreenState {
+  /** The shelf shown: one you made, or null for "Todos os meus livros". */
+  shelfId: string | null;
+  filter: ShelfViewFilter;
+  openShelf: (shelfId: string | null) => void;
+  toggle: <K extends keyof ShelfViewFilter>(key: K, value: ShelfViewFilter[K][number]) => void;
+  /** Opens every book filtered by this status (the dashboard's tiles). */
+  showStatus: (status: ShelfFilter["statuses"][number]) => void;
+  clearFilter: () => void;
+  /** Select mode: the books picked to act on at once. */
   selecting: boolean;
   selected: string[];
+  /** "Escolher livros" for an empty shelf: picking from every book to add to this one. */
+  pickingFor: string | null;
   setSelecting: (selecting: boolean) => void;
+  pickBooksFor: (shelfId: string) => void;
   toggleSelected: (entryId: string) => void;
   selectAll: (entryIds: string[]) => void;
 }
 
+const NO_FILTER: ShelfViewFilter = { statuses: [], genres: [] };
+
 /** Client-only state of the shelf screen (web and mobile). */
-export const useShelfFilterStore = create<ShelfFilterState>((set) => ({
-  filter: EMPTY_SHELF_FILTER,
-  savedShelfId: null,
+export const useShelfScreenStore = create<ShelfScreenState>((set) => ({
+  shelfId: null,
+  filter: NO_FILTER,
+  openShelf: (shelfId) =>
+    set({ shelfId, filter: NO_FILTER, selecting: false, selected: [], pickingFor: null }),
   toggle: (key, value) =>
-    set((state) => ({ filter: toggleFilter(state.filter, key, value), savedShelfId: null })),
-  apply: (filter, savedShelfId = null) => set({ filter, savedShelfId }),
-  clear: () => set({ filter: EMPTY_SHELF_FILTER, savedShelfId: null }),
+    set((state) => ({
+      filter: toggleFilter({ ...EMPTY_SHELF_FILTER, ...state.filter }, key, value),
+    })),
+  showStatus: (status) =>
+    set({ shelfId: null, filter: { statuses: [status], genres: [] }, selecting: false }),
+  clearFilter: () => set({ filter: NO_FILTER }),
   selecting: false,
   selected: [],
-  setSelecting: (selecting) => set({ selecting, selected: [] }),
+  pickingFor: null,
+  setSelecting: (selecting) => set({ selecting, selected: [], pickingFor: null }),
+  pickBooksFor: (shelfId) =>
+    set({ shelfId: null, filter: NO_FILTER, selecting: true, selected: [], pickingFor: shelfId }),
   toggleSelected: (entryId) =>
     set((state) => ({
       selected: state.selected.includes(entryId)

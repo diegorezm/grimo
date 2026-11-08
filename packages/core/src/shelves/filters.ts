@@ -1,60 +1,48 @@
 import { z } from "zod";
-import { GENRES } from "../books/genres";
-import { SHELF_STATUSES, type ShelfStatus } from "./constants";
+import type { ShelfStatus } from "./constants";
 
 /**
- * One shelf, many views: the reader's books filtered by status, genre (from the catalog) and
- * personal tags ("Tenho", "Kindle", "Emprestei"). A combination can be saved as a named shelf
- * ("Minha estante física" = tag Tenho), which stays up to date by itself.
+ * Shelves the reader makes ("Física", "Kindle", "Emprestei"): a book can be on any number of
+ * them. The reading status (Quero ler, Lendo, Lidos, Abandonei) is not a shelf: it is a filter
+ * inside every shelf, with the genre. "Todos os meus livros" is every book.
  */
 
-/** Personal tags a reader can create. */
-export const MAX_TAGS = 30;
-/** Tags on one book. */
-export const MAX_TAGS_PER_BOOK = 10;
-/** Saved shelves a reader can have. */
-export const MAX_SAVED_SHELVES = 20;
-/** Books tagged in one go (select mode). */
-export const MAX_BULK_TAG = 100;
+/** Shelves a reader can make. */
+export const MAX_SHELVES = 50;
+/** Shelves one book can be on. */
+export const MAX_SHELVES_PER_BOOK = 20;
+/** Books changed in one go (select mode). */
+export const MAX_BULK_BOOKS = 500;
+export const MAX_SHELF_NAME = 40;
 
 /**
  * Statuses anyone may see on a profile (Privacy Policy: what you are reading and have read).
- * "Quero ler" and "Abandonei" stay with the owner.
+ * "Quero ler" and "Abandonei" stay with the owner, in public shelves too.
  */
 export const PUBLIC_SHELF_STATUSES = ["reading", "read"] as const satisfies readonly ShelfStatus[];
 
-export const tagNameSchema = z
+export const shelfNameSchema = z
   .string()
   .trim()
-  .min(1, "Dê um nome ao marcador")
-  .max(30, "Use até 30 caracteres");
+  .min(1, "Dê um nome à estante")
+  .max(MAX_SHELF_NAME, `Use até ${MAX_SHELF_NAME} caracteres`);
+
+/** "Física" → "Física (cópia)", within the name limit. */
+export function copyName(name: string): string {
+  const suffix = " (cópia)";
+  return `${name.slice(0, MAX_SHELF_NAME - suffix.length).trim()}${suffix}`;
+}
 
 export interface ShelfFilter {
   /** Empty: every status. */
   statuses: ShelfStatus[];
   /** Empty: every genre. A book matches if it has any of them. */
   genres: string[];
-  /** Empty: tagged or not. A book matches if it has any of them. */
+  /** Empty: on any shelf or none. A book matches if it is on any of them. */
   tagIds: string[];
 }
 
 export const EMPTY_SHELF_FILTER: ShelfFilter = { statuses: [], genres: [], tagIds: [] };
-
-export const shelfFilterSchema = z.object({
-  statuses: z.array(z.enum(SHELF_STATUSES)).max(SHELF_STATUSES.length),
-  genres: z.array(z.enum(GENRES)).max(GENRES.length),
-  tagIds: z.array(z.string()).max(MAX_TAGS),
-});
-
-export const savedShelfSchema = z.object({
-  name: z.string().trim().min(1, "Dê um nome à estante").max(40, "Use até 40 caracteres"),
-  filter: shelfFilterSchema.refine(
-    (filter) => filter.statuses.length + filter.genres.length + filter.tagIds.length > 0,
-    "Escolha pelo menos um filtro para salvar",
-  ),
-  isPublic: z.boolean(),
-});
-export type SavedShelfInput = z.infer<typeof savedShelfSchema>;
 
 export const isFilterEmpty = (filter: ShelfFilter) =>
   filter.statuses.length === 0 && filter.genres.length === 0 && filter.tagIds.length === 0;
@@ -62,7 +50,7 @@ export const isFilterEmpty = (filter: ShelfFilter) =>
 const matchesAny = (wanted: readonly string[], have: readonly string[]) =>
   wanted.length === 0 || wanted.some((value) => have.includes(value));
 
-/** Whether a shelf row passes the filter: every kind of filter must match (any value of it). */
+/** Whether a row passes the filter: every kind of filter must match (any value of it). */
 export function matchesShelfFilter(
   row: {
     entry: { status: ShelfStatus; tagIds: readonly string[] };
