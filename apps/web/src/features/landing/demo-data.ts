@@ -143,6 +143,7 @@ const SHELF: ShelfItem[] = ENTRIES.map((entry) => {
       feelings: [],
       startedAt: entry.status === "want_to_read" ? null : at - 10 * DAY,
       finishedAt: entry.status === "read" ? at : null,
+      pastReads: 0,
       createdAt: at - 10 * DAY,
       updatedAt: at,
     },

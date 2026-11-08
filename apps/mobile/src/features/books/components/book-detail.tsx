@@ -10,6 +10,7 @@ import {
   type Feeling,
   formatRating,
   readingPercent,
+  rereadLabel,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
@@ -119,6 +120,7 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
                 Página {entry.currentPage}
                 {pages ? ` de ${pages}` : ""}
                 {entry.pageCount ? " (sua edição)" : ""}
+                {rereadLabel(entry.pastReads) ? ` · ${rereadLabel(entry.pastReads)}` : ""}
               </Text>
               {percent !== null && <Text variant="label">{percent}%</Text>}
             </View>

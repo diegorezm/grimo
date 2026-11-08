@@ -1,12 +1,13 @@
 import { useBookSearch, useShelf } from "@grimo/client";
 import { SHELF_LABELS } from "@grimo/core";
 import { useDeferredValue, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Button, Glass, Text } from "@/components/ui";
 import { fontSize, radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { BookTile } from "./book-tile";
+import { IsbnScanner } from "./isbn-scanner";
 import { ManualBookForm } from "./manual-book-form";
 
 /** Search as you type; results open the book page, where you pick a shelf. */
@@ -22,6 +23,7 @@ export function BookSearch() {
   );
   const items = search.data?.items ?? [];
   const [adding, setAdding] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const searched = query.trim().length >= 2 && !search.isFetching;
 
   return (
@@ -40,8 +42,29 @@ export function BookSearch() {
           accessibilityLabel="Buscar livros"
           style={[styles.input, { color: theme.text }]}
         />
-        {search.isFetching && <ActivityIndicator color={theme.accent} />}
+        {search.isFetching ? (
+          <ActivityIndicator color={theme.accent} />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ler o código de barras"
+            hitSlop={8}
+            onPress={() => setScanning(true)}
+          >
+            <Text variant="label" color="textMuted">
+              ISBN ▦
+            </Text>
+          </Pressable>
+        )}
       </Glass>
+      <IsbnScanner
+        visible={scanning}
+        onClose={() => setScanning(false)}
+        onScanned={(isbn) => {
+          setScanning(false);
+          setQuery(isbn);
+        }}
+      />
 
       {searched && items.length === 0 && (
         <Text color="textMuted">Nenhum livro encontrado. Tente o autor ou o ISBN.</Text>

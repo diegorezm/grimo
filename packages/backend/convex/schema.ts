@@ -187,6 +187,8 @@ export default defineSchema({
     feelings: v.optional(v.array(feeling)),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
+    /** Earlier readings of this book (rereads), kept in `pastReadings`. */
+    pastReads: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_user_book", ["userId", "bookId"])
@@ -194,6 +196,21 @@ export default defineSchema({
     .index("by_user_status_updated", ["userId", "status", "updatedAt"])
     .index("by_user_status_finished", ["userId", "status", "finishedAt"])
     .index("by_book", ["bookId"]),
+
+  /**
+   * A finished reading of a book the reader is reading again (moved from "Lido" back to
+   * "Lendo"): its dates and rating, so the year it was read keeps counting it.
+   */
+  pastReadings: defineTable({
+    userId: v.id("users"),
+    shelfEntryId: v.id("shelfEntries"),
+    bookId: v.id("books"),
+    startedAt: v.union(v.number(), v.null()),
+    finishedAt: v.number(),
+    rating: v.union(v.number(), v.null()),
+  })
+    .index("by_user_finished", ["userId", "finishedAt"])
+    .index("by_entry", ["shelfEntryId"]),
 
   /** Append-only progress log: source of truth for "pages read". */
   readingLogs: defineTable({

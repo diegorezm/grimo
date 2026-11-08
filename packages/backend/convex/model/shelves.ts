@@ -26,6 +26,8 @@ export const entryView = (entry: Doc<"shelfEntries">) => ({
   feelings: entry.feelings ?? [],
   startedAt: entry.startedAt,
   finishedAt: entry.finishedAt,
+  /** Times read before this reading (rereads). */
+  pastReads: entry.pastReads ?? 0,
   createdAt: entry._creationTime,
   updatedAt: entry.updatedAt,
 });
@@ -218,9 +220,22 @@ export async function updateShelfEntry(
     ),
     new Date(now),
   );
+  // A reread keeps the finished reading apart (`pastReadings`) before the entry starts over.
+  const archived = plan.reread && entry.finishedAt !== null;
+  if (archived) {
+    await ctx.db.insert("pastReadings", {
+      userId,
+      shelfEntryId: entry._id,
+      bookId: entry.bookId,
+      startedAt: entry.startedAt,
+      finishedAt: entry.finishedAt!,
+      rating: entry.rating,
+    });
+  }
   await ctx.db.patch(entryId, {
     ...storedPatch(plan.set),
     maxPage: plan.maxPage,
+    ...(archived && { pastReads: (entry.pastReads ?? 0) + 1 }),
     updatedAt: now,
   });
   const updated = (await ctx.db.get(entryId))!;
@@ -340,7 +355,11 @@ export async function removeFromShelf(
     .query("readingLogs")
     .withIndex("by_entry", (q) => q.eq("shelfEntryId", entryId))
     .collect();
-  for (const log of logs) await ctx.db.delete(log._id);
+  const past = await ctx.db
+    .query("pastReadings")
+    .withIndex("by_entry", (q) => q.eq("shelfEntryId", entryId))
+    .collect();
+  for (const row of [...logs, ...past]) await ctx.db.delete(row._id);
   await ctx.db.delete(entryId);
   await recordBookCounters(ctx, entry.bookId, entry, null);
   const user = await ctx.db.get(userId);
