@@ -2,6 +2,8 @@ import type { PostKind } from "../posts/schemas";
 
 export const NOTIFICATION_KINDS = [
   "follow",
+  "follow_request",
+  "follow_accepted",
   "like",
   "comment",
   "mention",
@@ -75,6 +77,10 @@ export function describeNotification(
   switch (kind) {
     case "follow":
       return "começou a seguir você";
+    case "follow_request":
+      return "pediu para seguir você";
+    case "follow_accepted":
+      return "aceitou seu pedido para seguir";
     case "like":
       return `curtiu ${post}`;
     case "comment":

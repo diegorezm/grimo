@@ -31,7 +31,14 @@ import {
   timeZoneOf,
   userByUsername,
 } from "./model/readers";
-import { blockedIds, hasBlocked, isBlockedBetween, isHidden } from "./model/safety";
+import {
+  blockedIds,
+  canSeeReader,
+  followRequest,
+  hasBlocked,
+  isBlockedBetween,
+  isHidden,
+} from "./model/safety";
 import { withBooks } from "./model/shelves";
 import { yearOverview } from "./model/stats";
 
@@ -217,15 +224,31 @@ export const byUsername = query({
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
     // Whoever blocked you doesn't exist for you; whoever you blocked shows "Desbloquear".
     if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
-    const [profile, stats, books, following, followsYou, blockedByMe] = await Promise.all([
+    // A private reader shows only the header to whoever doesn't follow them.
+    const open = await canSeeReader(ctx, viewer?._id ?? null, reader);
+    const [profile, stats, books, following, followsYou, blockedByMe, request] = await Promise.all([
       profileOf(ctx, reader),
-      yearOverview(ctx, reader, year),
-      profileBooks(ctx, reader, viewer?._id ?? null),
+      open ? yearOverview(ctx, reader, year) : null,
+      open
+        ? profileBooks(ctx, reader, viewer?._id ?? null)
+        : { reading: [], favorites: [], covers: [], total: reader.bookCount },
       viewer ? isFollowing(ctx, viewer._id, reader._id) : false,
       viewer ? isFollowing(ctx, reader._id, viewer._id) : false,
       viewer ? hasBlocked(ctx, viewer._id, reader._id) : false,
+      viewer ? followRequest(ctx, viewer._id, reader._id) : null,
     ]);
-    return { profile, stats, books, isFollowing: following, followsYou, blockedByMe };
+    return {
+      profile,
+      stats,
+      books,
+      isFollowing: following,
+      followsYou,
+      blockedByMe,
+      /** False when the profile is private and you don't follow them: only the header shows. */
+      canSeeReading: open,
+      /** You asked to follow this private reader and they haven't answered. */
+      requested: request !== null,
+    };
   },
 });
 
@@ -235,6 +258,9 @@ export const activity = query({
   handler: async (ctx, { username, limit }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
     if (viewer && (await isBlockedBetween(ctx, viewer._id, reader._id))) {
+      return { items: [], hasMore: false };
+    }
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, reader))) {
       return { items: [], hasMore: false };
     }
     return listActivities(ctx, [reader._id], viewer?._id ?? null, listLimit(limit));
@@ -250,6 +276,9 @@ export const connections = query({
   },
   handler: async (ctx, { username, kind, limit }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, reader))) {
+      return { items: [], hasMore: false };
+    }
     const blocked = await blockedIds(ctx, viewer?._id ?? null);
     const take = listLimit(limit);
     const rows =
@@ -386,14 +415,19 @@ export const suggestions = query({
   },
 });
 
-/** Follow (`follow: true`) or unfollow a reader. Idempotent. Used by the seed too. */
+/**
+ * Follow (`follow: true`) or unfollow a reader. Idempotent. Used by the seed too. Following a
+ * private reader asks them first (`requested: true`) unless `approved` (they accepted it);
+ * unfollowing also withdraws a pending request.
+ */
 export async function setFollow(
   ctx: MutationCtx,
   viewer: Doc<"users">,
   targetId: Id<"users">,
   follow: boolean,
   now = Date.now(),
-) {
+  approved = false,
+): Promise<{ following: boolean; requested: boolean }> {
   if (targetId === viewer._id) throw appError("INVALID", "Você não pode seguir a si mesmo");
   const target = await ctx.db.get(targetId);
   if (!target) throw notFound("Leitor");
@@ -407,6 +441,22 @@ export async function setFollow(
     )
     .unique();
 
+  const request = await followRequest(ctx, viewer._id, targetId);
+  if (follow && !existing && target.isPrivate && !approved) {
+    if (!request) {
+      await ctx.db.insert("followRequests", {
+        requesterId: viewer._id,
+        targetId,
+        createdAt: now,
+      });
+      await notify(ctx, { userId: targetId, actorId: viewer._id, kind: "follow_request" }, now);
+    }
+    return { following: false, requested: true };
+  }
+  if (request) {
+    await ctx.db.delete(request._id);
+    await unnotify(ctx, { userId: targetId, actorId: viewer._id, kind: "follow_request" });
+  }
   if (follow && !existing) {
     await ctx.db.insert("follows", { followerId: viewer._id, followingId: targetId });
     await ctx.db.patch(viewer._id, { following: viewer.following + 1 });
@@ -430,8 +480,64 @@ export async function setFollow(
     for (const line of lines) if (line.kind === "followed") await ctx.db.delete(line._id);
     await unnotify(ctx, { userId: targetId, actorId: viewer._id, kind: "follow" });
   }
-  return { following: follow };
+  return { following: follow, requested: false };
 }
+
+/** Accepts (the requester now follows you) or declines a request to follow you. */
+async function answerRequest(
+  ctx: MutationCtx,
+  viewer: Doc<"users">,
+  request: Doc<"followRequests">,
+  accept: boolean,
+  now = Date.now(),
+) {
+  const requester = await ctx.db.get(request.requesterId);
+  if (accept && requester && !isHidden(requester)) {
+    await setFollow(ctx, requester, viewer._id, true, now, true);
+    await notify(ctx, { userId: requester._id, actorId: viewer._id, kind: "follow_accepted" }, now);
+  } else {
+    await ctx.db.delete(request._id);
+    await unnotify(ctx, {
+      userId: viewer._id,
+      actorId: request.requesterId,
+      kind: "follow_request",
+    });
+  }
+}
+
+export const answerFollowRequest = mutation({
+  args: { userId: v.id("users"), accept: v.boolean() },
+  handler: async (ctx, { userId, accept }) => {
+    const viewer = await requireViewer(ctx);
+    const request = await followRequest(ctx, userId, viewer._id);
+    if (request) await answerRequest(ctx, viewer, request, accept);
+    return null;
+  },
+});
+
+/** Requests waiting at most, accepted when a private profile turns public (more: next call). */
+const OPEN_REQUESTS_BATCH = 100;
+
+/**
+ * Private profile on or off. Turning it off accepts the pending requests: anyone can follow a
+ * public reader anyway.
+ */
+export const setPrivate = mutation({
+  args: { isPrivate: v.boolean() },
+  handler: async (ctx, { isPrivate }) => {
+    const viewer = await requireViewer(ctx);
+    await ctx.db.patch(viewer._id, { isPrivate });
+    if (!isPrivate) {
+      const requests = await ctx.db
+        .query("followRequests")
+        .withIndex("by_target_created", (q) => q.eq("targetId", viewer._id))
+        .take(OPEN_REQUESTS_BATCH);
+      const me = (await ctx.db.get(viewer._id))!;
+      for (const request of requests) await answerRequest(ctx, me, request, true);
+    }
+    return { isPrivate };
+  },
+});
 
 export const setFollowing = mutation({
   args: { userId: v.id("users"), follow: v.boolean() },

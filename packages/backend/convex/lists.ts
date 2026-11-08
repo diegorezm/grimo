@@ -13,7 +13,7 @@ import {
   requireViewer,
   userByUsername,
 } from "./model/readers";
-import { blockedIds, isBookVisible, isHidden } from "./model/safety";
+import { blockedIds, canSeeReader, isBookVisible, isHidden } from "./model/safety";
 import { bookByOpenLibraryId, upsertBook } from "./model/shelves";
 import { bookInput } from "./schema";
 
@@ -25,6 +25,7 @@ export const byUser = query({
     const owner = await userByUsername(ctx, username.toLowerCase());
     if (!owner || isHidden(owner)) return { items: [] };
     if ((await blockedIds(ctx, viewer?._id ?? null)).has(owner._id)) return { items: [] };
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, owner))) return { items: [] };
     const lists = await ctx.db
       .query("lists")
       .withIndex("by_owner_updated", (q) => q.eq("ownerId", owner._id))
@@ -46,6 +47,7 @@ export const get = query({
     const owner = list ? await ctx.db.get(list.ownerId) : null;
     if (!list || !owner || isHidden(owner)) return null;
     if ((await blockedIds(ctx, viewer?._id ?? null)).has(owner._id)) return null;
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, owner))) return null;
     const items = await ctx.db
       .query("listItems")
       .withIndex("by_list_added", (q) => q.eq("listId", list._id))

@@ -39,7 +39,7 @@ export function ReaderProfile({ username }: { username: string }) {
 }
 
 function Page({ page, username }: { page: ReaderPage; username: string }) {
-  const { profile, stats, books, isFollowing, followsYou, blockedByMe } = page;
+  const { profile, stats, books, isFollowing, followsYou, blockedByMe, requested } = page;
   const setBlocked = useSetBlocked();
   const openConnections = (kind: "followers" | "following") =>
     router.push({ pathname: "/u/[username]/[kind]", params: { username, kind } });
@@ -86,8 +86,24 @@ function Page({ page, username }: { page: ReaderPage; username: string }) {
         </>
       ) : (
         <>
-          <FollowButton userId={profile.id} isFollowing={isFollowing} followsYou={followsYou} />
-          <YearStats overview={stats} />
+          <FollowButton
+            userId={profile.id}
+            isFollowing={isFollowing}
+            followsYou={followsYou}
+            requested={requested}
+          />
+        </>
+      )}
+      {!blockedByMe && !page.canSeeReading && (
+        <Text color="textMuted" style={styles.center}>
+          {requested
+            ? `Você pediu para seguir ${profile.name}. As leituras aparecem quando o pedido for aceito.`
+            : `Perfil privado: só quem segue ${profile.name} vê as estantes, as leituras e as resenhas.`}
+        </Text>
+      )}
+      {!blockedByMe && page.canSeeReading && (
+        <>
+          <YearStats overview={stats ?? undefined} />
           {books.reading.length > 0 && (
             <Shelf title="Lendo agora">
               {books.reading.map(({ entry, book }) => (

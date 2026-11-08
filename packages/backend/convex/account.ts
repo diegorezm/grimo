@@ -173,6 +173,22 @@ const sections = {
       ctx.db.query("follows").withIndex("by_following", (q) => q.eq("followingId", userId)),
     (row, h) => h.username(row.followerId),
   ),
+  followRequestsSent: section(
+    "followRequests",
+    (ctx, userId) =>
+      ctx.db
+        .query("followRequests")
+        .withIndex("by_requester_target", (q) => q.eq("requesterId", userId)),
+    async (row, h) => ({ to: await h.username(row.targetId), at: date(row.createdAt) }),
+  ),
+  followRequestsReceived: section(
+    "followRequests",
+    (ctx, userId) =>
+      ctx.db
+        .query("followRequests")
+        .withIndex("by_target_created", (q) => q.eq("targetId", userId)),
+    async (row, h) => ({ from: await h.username(row.requesterId), at: date(row.createdAt) }),
+  ),
   blocked: section(
     "blocks",
     (ctx, userId) =>
@@ -286,6 +302,7 @@ export const exportProfile = internalQuery({
         image: viewer.image,
         bio: viewer.bio,
         favoriteGenres: viewer.favoriteGenres,
+        isPrivate: viewer.isPrivate ?? false,
       },
       role: viewer.role ?? null,
     };
@@ -300,6 +317,7 @@ type ExportHead = {
     image: string | null;
     bio: string | null;
     favoriteGenres: string[];
+    isPrivate: boolean;
   };
   role: Doc<"users">["role"] | null;
 };
@@ -520,6 +538,20 @@ const steps: Step[] = [
     deleteAll(
       ctx,
       ctx.db.query("pastReadings").withIndex("by_user_finished", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db
+        .query("followRequests")
+        .withIndex("by_requester_target", (q) => q.eq("requesterId", userId)),
+    ),
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db
+        .query("followRequests")
+        .withIndex("by_target_created", (q) => q.eq("targetId", userId)),
     ),
   // Shelf entries: the books they were on lose a reader (and a rating).
   async (ctx, userId) => {

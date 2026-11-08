@@ -38,7 +38,7 @@ function ReaderPage() {
     );
   }
   if (!reader.data) return <Spinner />;
-  const { profile, stats, books, isFollowing, followsYou, blockedByMe } = reader.data;
+  const { profile, stats, books, isFollowing, followsYou, blockedByMe, requested } = reader.data;
   const viewerId = session?.user.id ?? null;
   // `profile.id` is the reader id (users table), not the auth user id: compare with `me`.
   const isMe = profile.id === me.data?.id;
@@ -56,7 +56,7 @@ function ReaderPage() {
         actions={
           <>
             {viewerId && meKnown && !isMe && !blockedByMe && (
-              <FollowButton reader={{ ...profile, isFollowing, followsYou }} />
+              <FollowButton reader={{ ...profile, isFollowing, followsYou, requested }} />
             )}
             {!viewerId && (
               <Link
@@ -85,35 +85,46 @@ function ReaderPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-10 @5xl/main:grid-cols-[minmax(0,1fr)_24rem] @5xl/main:gap-8">
-        <div className="flex min-w-0 flex-col gap-10">
-          <YearStats stats={stats} />
-          <BookRow
-            title="Lendo agora"
-            items={books.reading}
-            empty={`${profile.name} não tem nenhum livro aberto agora.`}
-          />
-          <BookRow
-            title="Favoritos"
-            items={books.favorites}
-            empty="Os livros mais bem avaliados aparecem aqui."
-          />
-          <ReaderLists username={username} isMe={isMe} />
-        </div>
-
-        {/* Fixed height, scrolling inside: a long history never stretches the page. */}
-        <section
-          aria-labelledby="activity-title"
-          className="flex max-h-[36rem] min-h-0 flex-col rounded-xl bg-surface-muted/70 @5xl/main:sticky @5xl/main:top-6 @5xl/main:max-h-[calc(100dvh-3rem)] @5xl/main:self-start"
-        >
-          <h2 id="activity-title" className="px-5 pt-5 pb-2 text-xl font-medium italic">
-            Atividade
-          </h2>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-3 [scrollbar-width:thin]">
-            <ReaderActivity username={username} interactive={Boolean(viewerId)} />
-          </div>
+      {!reader.data.canSeeReading ? (
+        <section className="flex flex-col items-center gap-2 rounded-xl border border-border px-6 py-12 text-center">
+          <h2 className="text-xl font-medium italic">Perfil privado</h2>
+          <p className="max-w-sm text-text-muted">
+            {requested
+              ? `Você pediu para seguir ${profile.name}. As leituras aparecem quando o pedido for aceito.`
+              : `Só quem segue ${profile.name} vê as estantes, as leituras e as resenhas.`}
+          </p>
         </section>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-10 @5xl/main:grid-cols-[minmax(0,1fr)_24rem] @5xl/main:gap-8">
+          <div className="flex min-w-0 flex-col gap-10">
+            <YearStats stats={stats ?? undefined} />
+            <BookRow
+              title="Lendo agora"
+              items={books.reading}
+              empty={`${profile.name} não tem nenhum livro aberto agora.`}
+            />
+            <BookRow
+              title="Favoritos"
+              items={books.favorites}
+              empty="Os livros mais bem avaliados aparecem aqui."
+            />
+            <ReaderLists username={username} isMe={isMe} />
+          </div>
+
+          {/* Fixed height, scrolling inside: a long history never stretches the page. */}
+          <section
+            aria-labelledby="activity-title"
+            className="flex max-h-[36rem] min-h-0 flex-col rounded-xl bg-surface-muted/70 @5xl/main:sticky @5xl/main:top-6 @5xl/main:max-h-[calc(100dvh-3rem)] @5xl/main:self-start"
+          >
+            <h2 id="activity-title" className="px-5 pt-5 pb-2 text-xl font-medium italic">
+              Atividade
+            </h2>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-3 [scrollbar-width:thin]">
+              <ReaderActivity username={username} interactive={Boolean(viewerId)} />
+            </div>
+          </section>
+        </div>
+      )}
     </Screen>
   );
 }

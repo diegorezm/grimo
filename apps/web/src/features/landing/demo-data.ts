@@ -162,6 +162,7 @@ const ME: Me = {
   yearlyGoal: 24,
   followers: 38,
   following: 41,
+  isPrivate: false,
   timeZone: "America/Sao_Paulo",
   needsEmailVerification: false,
   needsSetup: false,

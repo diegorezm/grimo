@@ -91,6 +91,11 @@ export default defineSchema({
     avatarStorageId: v.optional(v.id("_storage")),
     bio: v.union(v.string(), v.null()),
     favoriteGenres: v.array(v.string()),
+    /**
+     * Private profile: only approved followers see the reader's shelf, stats, activity, posts
+     * and lists (`canSeeReader`); following them is a request (`followRequests`).
+     */
+    isPrivate: v.optional(v.boolean()),
     /** Denormalized counters, kept by the follow/shelf mutations. */
     followers: v.number(),
     following: v.number(),
@@ -269,6 +274,15 @@ export default defineSchema({
     .index("by_follower", ["followerId"])
     .index("by_follower_following", ["followerId", "followingId"])
     .index("by_following", ["followingId"]),
+
+  /** Someone asking to follow a private reader; becomes a `follows` row when accepted. */
+  followRequests: defineTable({
+    requesterId: v.id("users"),
+    targetId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_requester_target", ["requesterId", "targetId"])
+    .index("by_target_created", ["targetId", "createdAt"]),
 
   /** Reviews (book + rating) and free-form reading notes. */
   posts: defineTable({

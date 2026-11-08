@@ -58,7 +58,7 @@ Status: `[ ]` a fazer · `[x]` feito.
 - [x] **Denunciar** post e perfil (web e mobile) e comentário (API pronta; os apps ainda não mostram comentários). Tabela `reports` com cópia do conteúdo.
 - [x] **Bloquear**: desfaz follows, impede seguir, curtir e comentar, e esconde conteúdo nos dois sentidos (feed, perfil, busca, sugestões, listas, comentários). Desbloquear em "Conta e privacidade" ou no perfil (web).
 - [x] Moderação pelo painel do Convex (abaixo) e suspensão de conta.
-- [ ] Opcional: perfil privado.
+- [x] Opcional: perfil privado (`users.isPrivate`, pedidos em `followRequests`, `canSeeReader` em `model/safety.ts`).
 
 ### 6. Aviso de cookies
 - [x] Aviso informativo na primeira visita (`CookieNotice`, chave `grimo.cookie-notice`).

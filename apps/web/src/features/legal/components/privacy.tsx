@@ -133,6 +133,14 @@ export function PrivacyPage() {
           dados técnicos nunca são públicos.
         </p>
         <p>
+          Se você ligar o <strong>perfil privado</strong> (em Conta e privacidade), só quem você
+          aprova vê suas estantes, leituras, estatísticas, resenhas, notas e listas, e sua atividade
+          sai do feed &ldquo;Comunidade&rdquo;. Nome, @, foto, bio e o número de seguidores
+          continuam visíveis, para que as pessoas possam pedir para seguir você. Comentários que
+          você faz em posts de outros leitores continuam aparecendo para quem vê esses posts.
+          Guardamos os pedidos para seguir até você aceitar ou recusar.
+        </p>
+        <p>
           Num grupo do Juntos, os outros participantes veem seu progresso no livro e suas mensagens.
           Quem tiver o link de convite do grupo vê o livro, quem participa e o progresso de cada um,
           mas não as mensagens.

@@ -7,6 +7,7 @@ import {
   useExportData,
   useLatestImport,
   useSetBlocked,
+  useSetPrivate,
 } from "@grimo/client";
 import { deleteConfirmationMatches } from "@grimo/core";
 import { useQuery } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 import { type ReactNode, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
 import { Button, Card, Input, Text } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { LegalLinks } from "@/features/legal";
@@ -41,6 +42,12 @@ export function AccountSettings({ me }: { me: Me }) {
       >
         <ImportStatus />
       </Section>
+      <Section
+        title="Perfil privado"
+        text="Só quem você aprova vê suas estantes, leituras, resenhas e listas. Quem quiser seguir você pede, e você aceita ou recusa nas notificações."
+      >
+        <PrivateToggle isPrivate={me.isPrivate} />
+      </Section>
       <Section title="Leitores bloqueados" text="Quem você bloqueia não vê nem interage com você.">
         <BlockedList />
       </Section>
@@ -64,6 +71,20 @@ function Section({ title, text, children }: { title: string; text: string; child
       <Text color="textMuted">{text}</Text>
       {children}
     </Card>
+  );
+}
+
+function PrivateToggle({ isPrivate }: { isPrivate: boolean }) {
+  const setPrivate = useSetPrivate();
+  return (
+    <View style={styles.toggle}>
+      <Text variant="label">{isPrivate ? "Perfil privado" : "Perfil público"}</Text>
+      <Switch
+        value={isPrivate}
+        onValueChange={(value) => setPrivate.mutate(value)}
+        accessibilityLabel="Perfil privado"
+      />
+    </View>
   );
 }
 
@@ -215,6 +236,7 @@ function DeleteAccount({ username }: { username: string }) {
 }
 
 const styles = StyleSheet.create({
+  toggle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   list: { gap: spacing[2] },
   row: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   flex: { flex: 1 },
