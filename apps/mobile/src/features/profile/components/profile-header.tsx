@@ -94,13 +94,15 @@ export function ProfileHeader({
 
       <View style={[styles.numbers, { borderColor: theme.edge }]}>
         <Stat value={shelves ? compactCount(shelves.read.count) : "–"} label="lidos" />
-        <Stat value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
+        <Stat divider value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
         <Stat
+          divider
           value={compactCount(profile.followers)}
           label="seguidores"
           onPress={onPressCount && (() => onPressCount("followers"))}
         />
         <Stat
+          divider
           value={compactCount(profile.following)}
           label="seguindo"
           onPress={onPressCount && (() => onPressCount("following"))}
@@ -112,7 +114,20 @@ export function ProfileHeader({
   );
 }
 
-function Stat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
+/** One column of the numbers ruler: the number (its "mil"/"mi" smaller) over the label. */
+function Stat({
+  value,
+  label,
+  divider,
+  onPress,
+}: {
+  value: string;
+  label: string;
+  divider?: boolean;
+  onPress?: () => void;
+}) {
+  const theme = useTheme();
+  const [number, unit] = value.split(" ");
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
@@ -120,12 +135,22 @@ function Stat({ value, label, onPress }: { value: string; label: string; onPress
       disabled={!onPress}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => [styles.stat, { opacity: pressed ? 0.6 : 1 }]}
+      style={({ pressed }) => [
+        styles.stat,
+        divider && { borderLeftWidth: 1, borderLeftColor: theme.edge },
+        { opacity: pressed ? 0.6 : 1 },
+      ]}
     >
-      <Text variant="number" style={styles.statValue} numberOfLines={1}>
-        {value}
+      <Text variant="number" style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+        {number}
+        {unit && (
+          <Text variant="small" color="textMuted">
+            {" "}
+            {unit}
+          </Text>
+        )}
       </Text>
-      <Text variant="small" color="textMuted" style={styles.statLabel}>
+      <Text variant="small" color="textMuted" style={styles.statLabel} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -147,13 +172,14 @@ const styles = StyleSheet.create({
   quoteMark: { fontSize: 36, lineHeight: 36, fontStyle: "italic" },
   grow: { flex: 1, gap: 2, paddingTop: 2 },
   quoteText: { fontFamily: Fonts.serifItalic, fontSize: 17, lineHeight: 24 },
-  numbers: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+  numbers: { flexDirection: "row", borderWidth: 1, borderRadius: radius.md },
+  stat: {
+    flex: 1,
+    alignItems: "center",
+    gap: 2,
     paddingVertical: spacing[3],
+    paddingHorizontal: 4,
   },
-  stat: { flex: 1, gap: 2 },
-  statValue: { fontSize: 18 },
+  statValue: { fontSize: 20 },
   statLabel: { fontSize: 12 },
 });
