@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button, Chip, Screen, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { useFirstVisit } from "@/lib/motion";
 import { useShelfViewStore } from "@/lib/shelf-view";
 import { ShelfBooks } from "./shelf-books";
 
@@ -14,6 +15,7 @@ import { ShelfBooks } from "./shelf-books";
  */
 export function FullShelf({ username, shelf }: { username: string; shelf: string }) {
   const theme = useTheme();
+  const firstVisit = useFirstVisit(`shelf-${username}-${shelf}`);
   const query = useProfileShelf(username, shelf);
   const { view, setView } = useShelfViewStore();
   const data = query.data;
@@ -58,6 +60,7 @@ export function FullShelf({ username, shelf }: { username: string; shelf: string
                 </View>
               )}
               <ShelfBooks
+                animate={firstVisit}
                 items={run.items}
                 view={view}
                 selecting={false}

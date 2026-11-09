@@ -41,7 +41,7 @@ function Page({ page, username }: { page: ReaderPage; username: string }) {
     router.push({ pathname: "/u/[username]/[kind]", params: { username, kind } });
 
   return (
-    <Screen>
+    <Screen enter={`reader-${username}`}>
       <ProfileHeader
         profile={profile}
         onPressCount={openConnections}

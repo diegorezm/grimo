@@ -7,6 +7,7 @@ import { Text } from "@/components/ui";
 import { Fonts, profileCovers, radius, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { useCountUp, useFirstVisit } from "@/lib/motion";
 import { AvatarPicker } from "./avatar-picker";
 import { SongCard } from "./song-card";
 
@@ -41,6 +42,8 @@ export function ProfileHeader({
     .filter(Boolean)
     .join(" · ");
   const quote = profile.featuredQuote;
+  // The first time this profile opens, its numbers count up.
+  const animate = useFirstVisit(`numbers-${profile.username}`);
 
   return (
     <View style={styles.root}>
@@ -75,19 +78,21 @@ export function ProfileHeader({
 
       <View style={styles.numbers}>
         <View style={styles.line}>
-          <Stat value={shelves ? compactCount(shelves.read.count) : "–"} label="lidos" />
+          <Stat count={shelves?.read.count ?? null} animate={animate} label="lidos" />
           <Dot />
-          <Stat value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
+          <Stat count={shelves?.read.pages ?? null} animate={animate} label="páginas" />
         </View>
         <View style={styles.line}>
           <Stat
-            value={compactCount(profile.followers)}
+            count={profile.followers}
+            animate={animate}
             label="seguidores"
             onPress={onPressCount && (() => onPressCount("followers"))}
           />
           <Dot />
           <Stat
-            value={compactCount(profile.following)}
+            count={profile.following}
+            animate={animate}
             label="seguindo"
             onPress={onPressCount && (() => onPressCount("following"))}
           />
@@ -127,7 +132,20 @@ function Dot() {
 }
 
 /** "10 lidos", "1,9 mil páginas": the number in mono, the label in text, on one line. */
-function Stat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
+function Stat({
+  count,
+  animate,
+  label,
+  onPress,
+}: {
+  /** `null` while loading (a dash). */
+  count: number | null;
+  animate: boolean;
+  label: string;
+  onPress?: () => void;
+}) {
+  const shown = useCountUp(count ?? 0, animate);
+  const value = count === null ? "–" : compactCount(Math.round(shown));
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}

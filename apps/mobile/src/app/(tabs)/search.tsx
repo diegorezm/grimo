@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Screen, Text } from "@/components/ui";
-import { radius, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { BookSearch } from "@/features/books";
 import { ReaderSearch } from "@/features/readers";
 import { useTheme } from "@/hooks/use-theme";
@@ -16,7 +16,7 @@ export default function SearchScreen() {
   const theme = useTheme();
   const [mode, setMode] = useState<Mode>("books");
   return (
-    <Screen>
+    <Screen enter="search">
       <Text variant="display">Buscar</Text>
       <View style={[styles.tabs, { borderColor: theme.edge }]} accessibilityRole="tablist">
         {MODES.map((item) => {

@@ -11,14 +11,14 @@ import { SITE_URL } from "@/lib/server";
  */
 export default function ProfileScreen() {
   const me = useMe().data;
-  return <Screen>{me && <MyProfile me={me} />}</Screen>;
+  return me ? <MyProfile me={me} /> : <Screen>{null}</Screen>;
 }
 
 function MyProfile({ me }: { me: Profile }) {
   const page = useReader(me.username).data;
   const streak = useStreak().data;
   return (
-    <>
+    <Screen enter="profile">
       <ProfileHeader
         profile={me}
         editable
@@ -44,12 +44,10 @@ function MyProfile({ me }: { me: Profile }) {
           </>
         }
       />
+      {page && <ProfileReadingNow page={page} />}
       {page && (
-        <>
-          <ProfileReadingNow page={page} />
-          <ProfileTabs page={page} username={me.username} isMe streak={streak?.days ?? null} />
-        </>
+        <ProfileTabs page={page} username={me.username} isMe streak={streak?.days ?? null} />
       )}
-    </>
+    </Screen>
   );
 }

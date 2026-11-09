@@ -28,7 +28,7 @@ export function NotificationList() {
   }, [unread, list.data, mutate]);
 
   return (
-    <Screen>
+    <Screen enter="notifications">
       <View style={styles.bar}>
         <Button variant="ghost" title="‹ Voltar" onPress={() => router.back()} />
       </View>

@@ -10,7 +10,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Image, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Card, ProgressBar, Text } from "@/components/ui";
+import { Button, Card, Enter, EnterEach, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { VerifyEmailBanner } from "@/features/account";
 import { BookCover, SessionControl } from "@/features/books";
@@ -19,6 +19,7 @@ import { NotificationBell } from "@/features/notifications";
 import { RetrospectiveBanner } from "@/features/stats";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { useCountUp, useFirstVisit } from "@/lib/motion";
 import { FirstSteps } from "./first-steps";
 import { StreakLine } from "./streak-line";
 
@@ -39,6 +40,8 @@ export function Dashboard() {
   const [tab, setTab] = useState<FeedTab>("community");
   const feed = useFeed(tab);
   const groups = groupActivities(feed.data?.items ?? []);
+  // The first time Início opens, its blocks rise in and the numbers fill.
+  const animate = useFirstVisit("home");
 
   function refresh() {
     void Promise.all([reading.refetch(), year.refetch(), feed.refetch()]);
@@ -49,10 +52,14 @@ export function Dashboard() {
       <FlatList
         data={groups}
         keyExtractor={(group) => group.id}
-        renderItem={({ item: { items } }) => <FeedItem item={items[0]!} more={items.slice(1)} />}
+        renderItem={({ item: { items }, index }) => (
+          <Enter index={6 + index} animate={animate && index < 4}>
+            <FeedItem item={items[0]!} more={items.slice(1)} />
+          </Enter>
+        )}
         ItemSeparatorComponent={Gap}
         contentContainerStyle={styles.content}
-        ListHeaderComponent={<Top tab={tab} onTab={setTab} />}
+        ListHeaderComponent={<Top tab={tab} onTab={setTab} animate={animate} />}
         ListEmptyComponent={
           feed.isPending ? undefined : tab === "following" ? (
             <View style={styles.empty}>
@@ -79,7 +86,15 @@ function Gap() {
 }
 
 /** Everything above the feed: greeting, goal, streak, the book you are reading, the tabs. */
-function Top({ tab, onTab }: { tab: FeedTab; onTab: (tab: FeedTab) => void }) {
+function Top({
+  tab,
+  onTab,
+  animate,
+}: {
+  tab: FeedTab;
+  onTab: (tab: FeedTab) => void;
+  animate: boolean;
+}) {
   const theme = useTheme();
   const dark = useColorScheme() === "dark";
   const me = useMe();
@@ -87,83 +102,88 @@ function Top({ tab, onTab }: { tab: FeedTab; onTab: (tab: FeedTab) => void }) {
   const year = useYearOverview();
   const current = reading.data?.items[0];
   const goal = year.data?.goal ? goalProgress(year.data.goal.target, year.data.goal.done) : null;
+  const done = Math.round(useCountUp(goal?.done ?? 0, animate));
 
   return (
     <View style={styles.top}>
-      <View style={styles.header}>
-        <Image
-          source={
-            dark ? require("@/assets/images/logo-dark.png") : require("@/assets/images/logo.png")
-          }
-          style={styles.logo}
-          accessibilityIgnoresInvertColors
-        />
-        <View style={styles.flex}>
-          <Text variant="label" color="textMuted">
-            {greetingFor(new Date())}
-          </Text>
-          <Text variant="display" numberOfLines={1}>
-            {me.data?.name.split(" ")[0] ?? "Início"}
-          </Text>
-        </View>
-        <NotificationBell />
-      </View>
-
-      <VerifyEmailBanner />
-      <FirstSteps />
-      <RetrospectiveBanner />
-
-      <View style={styles.status}>
-        {goal && year.data && (
-          <View style={styles.goal}>
-            <View style={styles.between}>
-              <Text variant="label" color="textMuted">
-                Meta de {year.data.year}
-              </Text>
-              {goal.done >= goal.target ? (
-                <Text variant="label" color="accentInk">
-                  Meta batida · {goal.done} de {goal.target}
-                </Text>
-              ) : (
-                <Text variant="label">
-                  {goal.done} / {goal.target} livros
-                </Text>
-              )}
-            </View>
-            <ProgressBar percent={goal.percent} height={6} />
+      <EnterEach animate={animate}>
+        <View style={styles.header}>
+          <Image
+            source={
+              dark ? require("@/assets/images/logo-dark.png") : require("@/assets/images/logo.png")
+            }
+            style={styles.logo}
+            accessibilityIgnoresInvertColors
+          />
+          <View style={styles.flex}>
+            <Text variant="label" color="textMuted">
+              {greetingFor(new Date())}
+            </Text>
+            <Text variant="display" numberOfLines={1}>
+              {me.data?.name.split(" ")[0] ?? "Início"}
+            </Text>
           </View>
+          <NotificationBell />
+        </View>
+
+        <VerifyEmailBanner />
+        <FirstSteps />
+        <RetrospectiveBanner />
+
+        <View style={styles.status}>
+          {goal && year.data && (
+            <View style={styles.goal}>
+              <View style={styles.between}>
+                <Text variant="label" color="textMuted">
+                  Meta de {year.data.year}
+                </Text>
+                {goal.done >= goal.target ? (
+                  <Text variant="label" color="accentInk">
+                    Meta batida · {done} de {goal.target}
+                  </Text>
+                ) : (
+                  <Text variant="label">
+                    {done} / {goal.target} livros
+                  </Text>
+                )}
+              </View>
+              <ProgressBar percent={goal.percent} height={6} animate={animate} />
+            </View>
+          )}
+          <StreakLine />
+        </View>
+
+        {current ? (
+          <CurrentRead item={current} animate={animate} />
+        ) : (
+          <Card>
+            <Text variant="title">Nenhum livro em leitura</Text>
+            <Text color="textMuted">
+              Busque um livro e marque como "Lendo" para acompanhar aqui.
+            </Text>
+            <Button title="Buscar livro" onPress={() => router.navigate("/search")} />
+          </Card>
         )}
-        <StreakLine />
-      </View>
 
-      {current ? (
-        <CurrentRead item={current} />
-      ) : (
-        <Card>
-          <Text variant="title">Nenhum livro em leitura</Text>
-          <Text color="textMuted">Busque um livro e marque como "Lendo" para acompanhar aqui.</Text>
-          <Button title="Buscar livro" onPress={() => router.navigate("/search")} />
-        </Card>
-      )}
-
-      <View accessibilityRole="tablist" style={[styles.tabs, { borderColor: theme.edge }]}>
-        {TABS.map((item) => {
-          const active = item.id === tab;
-          return (
-            <Pressable
-              key={item.id}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-              onPress={() => onTab(item.id)}
-              style={[styles.tab, active && { borderColor: theme.text }]}
-            >
-              <Text variant="label" color={active ? "text" : "textMuted"}>
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <View accessibilityRole="tablist" style={[styles.tabs, { borderColor: theme.edge }]}>
+          {TABS.map((item) => {
+            const active = item.id === tab;
+            return (
+              <Pressable
+                key={item.id}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => onTab(item.id)}
+                style={[styles.tab, active && { borderColor: theme.text }]}
+              >
+                <Text variant="label" color={active ? "text" : "textMuted"}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </EnterEach>
     </View>
   );
 }
@@ -171,9 +191,10 @@ function Top({ tab, onTab }: { tab: FeedTab; onTab: (tab: FeedTab) => void }) {
 type ReadingItem = NonNullable<ReturnType<typeof useShelf>["data"]>["items"][number];
 
 /** The "Lendo agora" page: cover, progress and the shortcut to log reading. */
-function CurrentRead({ item }: { item: ReadingItem }) {
+function CurrentRead({ item, animate }: { item: ReadingItem; animate: boolean }) {
   const theme = useTheme();
   const { entry, book } = item;
+  const page = Math.round(useCountUp(entry.currentPage, animate));
   const percent = readingPercent(entry.currentPage, book.pageCount);
   const open = () => router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } });
 
@@ -196,7 +217,7 @@ function CurrentRead({ item }: { item: ReadingItem }) {
             <View style={styles.progress}>
               <View style={styles.pages}>
                 <Text variant="number" style={styles.pageNumber}>
-                  {entry.currentPage}
+                  {page}
                   <Text variant="small" color="textMuted">
                     {" "}
                     / {book.pageCount}
@@ -206,7 +227,7 @@ function CurrentRead({ item }: { item: ReadingItem }) {
                   {percent}%
                 </Text>
               </View>
-              <ProgressBar percent={percent} height={6} />
+              <ProgressBar percent={percent} height={6} animate={animate} />
             </View>
           )}
         </View>

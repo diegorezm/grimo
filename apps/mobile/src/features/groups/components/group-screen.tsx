@@ -36,7 +36,7 @@ export function GroupScreen({ id }: { id: string }) {
   const { data, isPending, error } = useGroup(id);
 
   return (
-    <Screen>
+    <Screen enter={`group-${id}`}>
       <View style={styles.bar}>
         <Button variant="ghost" title="‹ Voltar" onPress={() => router.back()} />
       </View>

@@ -3,6 +3,7 @@ export { AvatarStack } from "./avatar-stack";
 export { Button } from "./button";
 export { Card } from "./card";
 export { Chip } from "./chip";
+export { Enter, EnterEach } from "./enter";
 export { FeelingPicker, FeelingTags } from "./feelings";
 export { Glass } from "./glass";
 export { Icon, type IconName } from "./icon";

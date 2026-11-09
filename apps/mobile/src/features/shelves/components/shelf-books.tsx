@@ -1,10 +1,12 @@
 import { coverUrl, type ShelfView, spineLook } from "@grimo/core";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
+import { landAt, plankAt } from "@/lib/motion";
 
 /** What a book on the shelf needs: your own shelf rows and a profile's shelf both fit. */
 export interface ShelfBookItem {
@@ -32,11 +34,14 @@ interface Props {
   onPress: (item: ShelfItem) => void;
   /** Holding a book (starts select mode). */
   onLongPress?: (item: ShelfItem) => void;
+  /** First visit: planks draw themselves and the first books land on them. */
+  animate?: boolean;
 }
 
 /**
  * The books of a shelf as a real shelf: covers standing on planks ("Capas"), or spines side by
- * side, wider for longer books ("Lombadas"). Both work in select mode.
+ * side, wider for longer books ("Lombadas"). Both work in select mode and, with `animate`, the
+ * first rows come in: the plank draws itself and the books land on it.
  */
 export function ShelfBooks(props: Props) {
   const { width } = useWindowDimensions();
@@ -49,12 +54,26 @@ export function ShelfBooks(props: Props) {
   );
 }
 
-function Plank({ children }: { children: React.ReactNode }) {
+/** Rows past this one appear as they are (the first screenful is what you see animate). */
+const ANIMATED_ROWS = 4;
+
+function Plank({
+  row,
+  animate,
+  children,
+}: {
+  row: number;
+  animate: boolean;
+  children: React.ReactNode;
+}) {
   const theme = useTheme();
   return (
     <View>
       <View style={styles.books}>{children}</View>
-      <View style={[styles.plank, { backgroundColor: theme.edge }]} />
+      <Animated.View
+        entering={animate && row < ANIMATED_ROWS ? plankAt(row) : undefined}
+        style={[styles.plank, { backgroundColor: theme.edge }]}
+      />
     </View>
   );
 }
@@ -66,19 +85,21 @@ function CoverShelves({
   onPress,
   onLongPress,
   inner,
+  animate = false,
 }: Props & { inner: number }) {
   const cover = Math.floor((inner - spacing[3] * (PER_SHELF - 1)) / PER_SHELF);
   const rows: ShelfItem[][] = [];
   for (let i = 0; i < items.length; i += PER_SHELF) rows.push(items.slice(i, i + PER_SHELF));
   return (
     <View style={styles.shelves}>
-      {rows.map((row) => (
-        <Plank key={row[0]!.entry.id}>
+      {rows.map((row, rowIndex) => (
+        <Plank key={row[0]!.entry.id} row={rowIndex} animate={animate}>
           <View style={[styles.row, { gap: spacing[3] }]}>
-            {row.map((item) => (
+            {row.map((item, index) => (
               <Book
                 key={item.entry.id}
                 item={item}
+                land={animate && rowIndex < ANIMATED_ROWS ? rowIndex * PER_SHELF + index : null}
                 {...{ selecting, selected, onPress, onLongPress }}
               >
                 <BookCover src={item.book.coverUrl} title={item.book.title} width={cover} />
@@ -98,6 +119,7 @@ function SpineShelves({
   onPress,
   onLongPress,
   inner,
+  animate = false,
 }: Props & { inner: number }) {
   const theme = useTheme();
   const tones = [
@@ -122,15 +144,16 @@ function SpineShelves({
   }
   return (
     <View style={styles.shelves}>
-      {rows.map((row) => (
-        <Plank key={row[0]!.item.entry.id}>
+      {rows.map((row, rowIndex) => (
+        <Plank key={row[0]!.item.entry.id} row={rowIndex} animate={animate}>
           <View style={[styles.row, { gap: GAP }]}>
-            {row.map(({ item, w, h, variant }) => {
+            {row.map(({ item, w, h, variant }, index) => {
               const tone = tones[variant % tones.length]!;
               return (
                 <Book
                   key={item.entry.id}
                   item={item}
+                  land={animate && rowIndex < ANIMATED_ROWS ? rowIndex * 3 + index : null}
                   {...{ selecting, selected, onPress, onLongPress }}
                 >
                   <View
@@ -178,9 +201,12 @@ function Book({
   selected,
   onPress,
   onLongPress,
+  land,
   children,
 }: {
   item: ShelfItem;
+  /** Its turn to land on the plank, or `null` (no animation). */
+  land?: number | null;
   selecting: boolean;
   selected: string[];
   onPress: (item: ShelfItem) => void;
@@ -190,34 +216,36 @@ function Book({
   const theme = useTheme();
   const picked = selected.includes(item.entry.id);
   return (
-    <Pressable
-      accessibilityRole={selecting ? "checkbox" : "button"}
-      accessibilityState={selecting ? { checked: picked } : undefined}
-      accessibilityLabel={item.book.title}
-      onPress={() => onPress(item)}
-      onLongPress={onLongPress && (() => onLongPress(item))}
-      delayLongPress={350}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-    >
-      {children}
-      {selecting && (
-        <View
-          style={[
-            styles.check,
-            {
-              backgroundColor: picked ? theme.accent : theme.glass,
-              borderColor: picked ? theme.accent : theme.glassBorder,
-            },
-          ]}
-        >
-          {picked && (
-            <Text variant="label" color="accentForeground">
-              ✓
-            </Text>
-          )}
-        </View>
-      )}
-    </Pressable>
+    <Animated.View entering={land != null ? landAt(land) : undefined}>
+      <Pressable
+        accessibilityRole={selecting ? "checkbox" : "button"}
+        accessibilityState={selecting ? { checked: picked } : undefined}
+        accessibilityLabel={item.book.title}
+        onPress={() => onPress(item)}
+        onLongPress={onLongPress && (() => onLongPress(item))}
+        delayLongPress={350}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      >
+        {children}
+        {selecting && (
+          <View
+            style={[
+              styles.check,
+              {
+                backgroundColor: picked ? theme.accent : theme.glass,
+                borderColor: picked ? theme.accent : theme.glassBorder,
+              },
+            ]}
+          >
+            {picked && (
+              <Text variant="label" color="accentForeground">
+                ✓
+              </Text>
+            )}
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 

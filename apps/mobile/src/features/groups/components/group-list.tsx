@@ -37,7 +37,7 @@ export function GroupList() {
   const items = groups.data?.items ?? [];
 
   return (
-    <Screen>
+    <Screen enter="juntos">
       <Text variant="display">Juntos</Text>
       <Text color="textMuted">Ler o mesmo livro com outras pessoas, no ritmo de cada um.</Text>
       {groups.isPending ? (

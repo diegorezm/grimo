@@ -28,6 +28,7 @@ import {
   Avatar,
   Button,
   Card,
+  EnterEach,
   FeelingPicker,
   FeelingTags,
   Glass,
@@ -39,6 +40,7 @@ import {
 import { radius, shelfBadges, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { useFirstVisit } from "@/lib/motion";
 import { BookCover } from "./book-cover";
 import { EntryTags } from "./entry-tags";
 import { FriendsWant } from "./friends-want";
@@ -52,6 +54,8 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { data, isPending, isError } = useBook(openLibraryId);
+  // The first time this book opens, its blocks rise in one after the other.
+  const animate = useFirstVisit(`book-${openLibraryId}`);
 
   if (isPending) {
     return (
@@ -80,154 +84,156 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 64 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
-          <BookCover src={book.coverUrl} title={book.title} width={140} />
-          <Text variant="display" style={styles.center} numberOfLines={3}>
-            {book.title}
-          </Text>
-          <Text color="accentInk" style={styles.center}>
-            {book.authors.join(", ")}
-          </Text>
-          <Text variant="label" color="textMuted">
-            {[book.pageCount && `${book.pageCount} págs`, book.publishedYear]
-              .filter(Boolean)
-              .join(" · ")}
-          </Text>
-          {community.ratings > 0 && (
-            <Text variant="label">
-              <Text variant="label" color="gold">
-                ★
-              </Text>{" "}
-              {formatRating(community.averageRating ?? 0)} · {community.ratings}{" "}
-              {community.ratings === 1 ? "nota" : "notas"}
+        <EnterEach animate={animate}>
+          <View style={styles.hero}>
+            <BookCover src={book.coverUrl} title={book.title} width={140} />
+            <Text variant="display" style={styles.center} numberOfLines={3}>
+              {book.title}
             </Text>
-          )}
-          <FriendsWant friends={friendsWant} />
-          {book.reviewStatus === "pending" && (
-            <Text variant="small" color="textMuted" style={styles.center}>
-              Em revisão: você cadastrou este livro, só você o vê até a revisão.
+            <Text color="accentInk" style={styles.center}>
+              {book.authors.join(", ")}
             </Text>
-          )}
-          {book.reviewStatus === "rejected" && (
-            <Text variant="small" color="textMuted" style={styles.center}>
-              Este cadastro não foi aprovado: o livro continua só na sua estante.
+            <Text variant="label" color="textMuted">
+              {[book.pageCount && `${book.pageCount} págs`, book.publishedYear]
+                .filter(Boolean)
+                .join(" · ")}
             </Text>
-          )}
-        </View>
-
-        <ShelfPicker book={book} entry={entry} />
-        {entry && <EntryTags entryId={entry.id} />}
-        {entry?.status === "reading" && (
-          <Card>
-            <View style={styles.between}>
-              <Text variant="label" color="textMuted">
-                Página {entry.currentPage}
-                {pages ? ` de ${pages}` : ""}
-                {entry.pageCount ? " (sua edição)" : ""}
+            {community.ratings > 0 && (
+              <Text variant="label">
+                <Text variant="label" color="gold">
+                  ★
+                </Text>{" "}
+                {formatRating(community.averageRating ?? 0)} · {community.ratings}{" "}
+                {community.ratings === 1 ? "nota" : "notas"}
               </Text>
-              {percent !== null && <Text variant="label">{percent}%</Text>}
-            </View>
-            {percent !== null && <ProgressBar percent={percent} />}
-            <Button
-              title="Atualizar progresso"
-              onPress={() =>
-                router.push({ pathname: "/progress/[id]", params: { id: openLibraryId } })
-              }
-            />
-            {book.id && (
-              <SessionControl
-                entryId={entry.id}
-                page={entry.currentPage}
-                pageCount={pages}
-                book={{ ...book, id: book.id }}
-              />
             )}
-          </Card>
-        )}
+            <FriendsWant friends={friendsWant} />
+            {book.reviewStatus === "pending" && (
+              <Text variant="small" color="textMuted" style={styles.center}>
+                Em revisão: você cadastrou este livro, só você o vê até a revisão.
+              </Text>
+            )}
+            {book.reviewStatus === "rejected" && (
+              <Text variant="small" color="textMuted" style={styles.center}>
+                Este cadastro não foi aprovado: o livro continua só na sua estante.
+              </Text>
+            )}
+          </View>
 
-        {(entry?.status === "read" || entry?.status === "abandoned") && (
-          <>
-            <RatingCard
-              entryId={entry.id}
-              rating={entry.rating}
-              feelings={entry.feelings}
-              suggested={diary.suggested}
-            />
-            {entry.status === "read" && (
+          <ShelfPicker book={book} entry={entry} />
+          {entry && <EntryTags entryId={entry.id} />}
+          {entry?.status === "reading" && (
+            <Card>
+              <View style={styles.between}>
+                <Text variant="label" color="textMuted">
+                  Página {entry.currentPage}
+                  {pages ? ` de ${pages}` : ""}
+                  {entry.pageCount ? " (sua edição)" : ""}
+                </Text>
+                {percent !== null && <Text variant="label">{percent}%</Text>}
+              </View>
+              {percent !== null && <ProgressBar percent={percent} />}
+              <Button
+                title="Atualizar progresso"
+                onPress={() =>
+                  router.push({ pathname: "/progress/[id]", params: { id: openLibraryId } })
+                }
+              />
+              {book.id && (
+                <SessionControl
+                  entryId={entry.id}
+                  page={entry.currentPage}
+                  pageCount={pages}
+                  book={{ ...book, id: book.id }}
+                />
+              )}
+            </Card>
+          )}
+
+          {(entry?.status === "read" || entry?.status === "abandoned") && (
+            <>
+              <RatingCard
+                entryId={entry.id}
+                rating={entry.rating}
+                feelings={entry.feelings}
+                suggested={diary.suggested}
+              />
+              {entry.status === "read" && (
+                <Button
+                  variant="secondary"
+                  title="Card de “terminei” para os Stories"
+                  onPress={() =>
+                    router.push({ pathname: "/book-card/[id]", params: { id: openLibraryId } })
+                  }
+                />
+              )}
+            </>
+          )}
+          <Community community={community} />
+          <Reviews
+            reviews={reviews}
+            canWrite={Boolean(book.id && entry)}
+            openLibraryId={openLibraryId}
+          />
+
+          <Diary marks={diary.marks} />
+
+          {(book.reviewStatus === null || book.reviewStatus === "approved") && (
+            <StartGroup book={bookInput} />
+          )}
+          {(book.reviewStatus === null || book.reviewStatus === "approved") && (
+            <OpenReads openLibraryId={openLibraryId} />
+          )}
+
+          {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}
+
+          {book.description && (
+            <Card>
+              <Text variant="label" color="textMuted">
+                Sinopse
+              </Text>
+              <Text>{book.description}</Text>
+            </Card>
+          )}
+
+          <View style={styles.section}>
+            <Text variant="heading">Citações</Text>
+            {book.id && entry && (
               <Button
                 variant="secondary"
-                title="Card de “terminei” para os Stories"
+                title="Guardar citação"
                 onPress={() =>
-                  router.push({ pathname: "/book-card/[id]", params: { id: openLibraryId } })
+                  router.push({ pathname: "/quote/[id]", params: { id: openLibraryId } })
                 }
               />
             )}
-          </>
-        )}
-        <Community community={community} />
-        <Reviews
-          reviews={reviews}
-          canWrite={Boolean(book.id && entry)}
-          openLibraryId={openLibraryId}
-        />
-
-        <Diary marks={diary.marks} />
-
-        {(book.reviewStatus === null || book.reviewStatus === "approved") && (
-          <StartGroup book={bookInput} />
-        )}
-        {(book.reviewStatus === null || book.reviewStatus === "approved") && (
-          <OpenReads openLibraryId={openLibraryId} />
-        )}
-
-        {entry && <RemoveFromShelf entryId={entry.id} title={book.title} />}
-
-        {book.description && (
-          <Card>
-            <Text variant="label" color="textMuted">
-              Sinopse
-            </Text>
-            <Text>{book.description}</Text>
-          </Card>
-        )}
-
-        <View style={styles.section}>
-          <Text variant="heading">Citações</Text>
-          {book.id && entry && (
-            <Button
-              variant="secondary"
-              title="Guardar citação"
-              onPress={() =>
-                router.push({ pathname: "/quote/[id]", params: { id: openLibraryId } })
-              }
-            />
-          )}
-          {quotes.length === 0 && (
-            <Text color="textMuted">Ninguém guardou um trecho deste livro ainda.</Text>
-          )}
-          {quotes.map((quote) => (
-            <Card key={quote.id}>
-              <QuoteText body={quote.body} page={quote.page} />
-              <View style={styles.between}>
-                <Text variant="small" color="textMuted" style={styles.grow}>
-                  {quote.author.name} · {timeAgo(new Date(quote.createdAt))}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Card da citação para os Stories"
-                  onPress={() =>
-                    router.push({ pathname: "/quote-card/[id]", params: { id: quote.id } })
-                  }
-                  hitSlop={8}
-                >
-                  <Text variant="label" color="accentInk">
-                    Card
+            {quotes.length === 0 && (
+              <Text color="textMuted">Ninguém guardou um trecho deste livro ainda.</Text>
+            )}
+            {quotes.map((quote) => (
+              <Card key={quote.id}>
+                <QuoteText body={quote.body} page={quote.page} />
+                <View style={styles.between}>
+                  <Text variant="small" color="textMuted" style={styles.grow}>
+                    {quote.author.name} · {timeAgo(new Date(quote.createdAt))}
                   </Text>
-                </Pressable>
-              </View>
-            </Card>
-          ))}
-        </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Card da citação para os Stories"
+                    onPress={() =>
+                      router.push({ pathname: "/quote-card/[id]", params: { id: quote.id } })
+                    }
+                    hitSlop={8}
+                  >
+                    <Text variant="label" color="accentInk">
+                      Card
+                    </Text>
+                  </Pressable>
+                </View>
+              </Card>
+            ))}
+          </View>
+        </EnterEach>
       </ScrollView>
 
       <View style={[styles.topBar, { top: insets.top + spacing[2] }]}>

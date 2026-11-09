@@ -27,6 +27,7 @@ import { Button, Chip, Icon, SelectSheet, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { useShelfNaming } from "@/features/books";
 import { useTheme } from "@/hooks/use-theme";
+import { useFirstVisit } from "@/lib/motion";
 import { useShelfViewStore } from "@/lib/shelf-view";
 import { ShelfBooks } from "./shelf-books";
 
@@ -39,6 +40,7 @@ const ALL = "all";
  */
 export function ShelfBoard() {
   const theme = useTheme();
+  const firstVisit = useFirstVisit("shelves");
   const all = useShelf();
   const shelves = useMyShelves().data?.items ?? [];
   const store = useShelfScreenStore();
@@ -241,6 +243,7 @@ export function ShelfBoard() {
       )}
 
       <ShelfBooks
+        animate={firstVisit}
         items={items}
         view={view}
         selecting={selecting}
