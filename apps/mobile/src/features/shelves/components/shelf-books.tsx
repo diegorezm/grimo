@@ -21,8 +21,6 @@ type ShelfItem = ShelfBookItem;
 /** Covers per shelf in the "Capas" view. */
 const PER_SHELF = 3;
 const GAP = 3;
-/** The bookcase's side walls and top, in the plank's color. */
-const WALL = 6;
 /** Spines are drawn at this share of the look's size (`spineLook` is in web pixels). */
 const SPINE_SCALE = { width: 0.55, height: 0.5 };
 
@@ -38,23 +36,17 @@ interface Props {
 
 /**
  * The books of a shelf as a real shelf: covers standing on planks ("Capas"), or spines side by
- * side, wider for longer books ("Lombadas"). Both stand in a bookcase (thin side walls and top)
- * and work in select mode.
+ * side, wider for longer books ("Lombadas"). Both work in select mode.
  */
 export function ShelfBooks(props: Props) {
   const { width } = useWindowDimensions();
-  // The screen's side padding, the walls and the shelf's own padding.
-  const inner = width - spacing[5] * 2 - WALL * 2 - spacing[3] * 2;
+  // The screen's side padding and the shelf's own.
+  const inner = width - spacing[5] * 2 - spacing[2] * 2;
   return props.view === "grid" ? (
     <CoverShelves {...props} inner={inner} />
   ) : (
     <SpineShelves {...props} inner={inner} />
   );
-}
-
-function Bookcase({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
-  return <View style={[styles.bookcase, { borderColor: theme.edge }]}>{children}</View>;
 }
 
 function Plank({ children }: { children: React.ReactNode }) {
@@ -79,7 +71,7 @@ function CoverShelves({
   const rows: ShelfItem[][] = [];
   for (let i = 0; i < items.length; i += PER_SHELF) rows.push(items.slice(i, i + PER_SHELF));
   return (
-    <Bookcase>
+    <View style={styles.shelves}>
       {rows.map((row) => (
         <Plank key={row[0]!.entry.id}>
           <View style={[styles.row, { gap: spacing[3] }]}>
@@ -95,7 +87,7 @@ function CoverShelves({
           </View>
         </Plank>
       ))}
-    </Bookcase>
+    </View>
   );
 }
 
@@ -129,7 +121,7 @@ function SpineShelves({
     used += w + GAP;
   }
   return (
-    <Bookcase>
+    <View style={styles.shelves}>
       {rows.map((row) => (
         <Plank key={row[0]!.item.entry.id}>
           <View style={[styles.row, { gap: GAP }]}>
@@ -175,7 +167,7 @@ function SpineShelves({
           </View>
         </Plank>
       ))}
-    </Bookcase>
+    </View>
   );
 }
 
@@ -230,16 +222,10 @@ function Book({
 }
 
 const styles = StyleSheet.create({
-  bookcase: {
-    borderLeftWidth: WALL,
-    borderRightWidth: WALL,
-    borderTopWidth: WALL,
-    borderTopLeftRadius: radius.sm,
-    borderTopRightRadius: radius.sm,
-  },
-  books: { paddingHorizontal: spacing[3], paddingTop: spacing[4] },
+  shelves: { gap: spacing[5] },
+  books: { paddingHorizontal: spacing[2] },
   row: { flexDirection: "row", alignItems: "flex-end" },
-  plank: { height: 8 },
+  plank: { height: 8, borderRadius: 2 },
   spine: {
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
