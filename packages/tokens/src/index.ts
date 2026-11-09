@@ -81,6 +81,8 @@ export const colors = {
     shadow: "rgba(120,90,140,0.20)",
     success: "#2F6B4F",
     danger: palette.danger,
+    /** Pale danger wash behind an error notice (no dark fills in the light theme). */
+    dangerSoft: "#FBEAED",
   },
   dark: {
     background: palette.nightDesk,
@@ -113,6 +115,7 @@ export const colors = {
     shadow: "rgba(0,0,0,0.40)",
     success: "#A8D5BF",
     danger: palette.dangerLight,
+    dangerSoft: "#3A222A",
   },
 } as const;
 

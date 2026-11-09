@@ -23,6 +23,10 @@ const ICONS = {
     </>
   ),
   bell: <Path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" />,
+  check: <Path d="M5 12.5l4.5 4.5L19 7.5" />,
+  close: <Path d="M6 6l12 12M18 6L6 18" />,
+  alert: <Path d="M12 6v8M12 18v.5" />,
+  cloudOff: <Path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.3 4.4 4.4 0 0 0 7 18zM4 4l16 16" />,
   link: (
     <Path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1" />
   ),
