@@ -15,24 +15,6 @@ export function isShelfView(value: unknown): value is ShelfView {
   return SHELF_VIEWS.includes(value as ShelfView);
 }
 
-/** Colors a reader can pick for the bookcase. No white: it would vanish on the white app. */
-export const BOOKCASE_COLORS = ["lilac", "oak", "walnut", "sage", "rose", "graphite"] as const;
-export type BookcaseColor = (typeof BOOKCASE_COLORS)[number];
-export const DEFAULT_BOOKCASE_COLOR: BookcaseColor = "lilac";
-
-export const BOOKCASE_COLOR_LABELS: Record<BookcaseColor, string> = {
-  lilac: "Lilás",
-  oak: "Carvalho",
-  walnut: "Nogueira",
-  sage: "Sálvia",
-  rose: "Rosa",
-  graphite: "Grafite",
-};
-
-export function isBookcaseColor(value: unknown): value is BookcaseColor {
-  return BOOKCASE_COLORS.includes(value as BookcaseColor);
-}
-
 /**
  * Books read, newest first, in runs by the year they were finished ("Lidos '26", "Lidos '25"):
  * the profile's shelf of covers. Books without a date go to the end, in their own run.

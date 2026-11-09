@@ -9,8 +9,6 @@ import {
   useShelfScreenStore,
 } from "@grimo/client";
 import {
-  BOOKCASE_COLOR_LABELS,
-  BOOKCASE_COLORS,
   countByShelf,
   GENRE_LABELS,
   type Genre,
@@ -27,9 +25,8 @@ import { type ReactNode, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Button, Chip, Icon, SelectSheet, Text } from "@/components/ui";
-import { bookcaseColors, radius, spacing } from "@/constants/theme";
+import { radius, spacing } from "@/constants/theme";
 import { useShelfNaming } from "@/features/books";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { useShelfViewStore } from "@/lib/shelf-view";
 import { ShelfBooks } from "./shelf-books";
@@ -55,8 +52,7 @@ export function ShelfBoard() {
   const counts = countByShelf(inShelf.map(({ entry }) => entry));
   const genres = shelfGenres(inShelf);
   const picking = shelves.find((item) => item.id === pickingFor) ?? null;
-  const { view, setView, color, setColor } = useShelfViewStore();
-  const scheme = useColorScheme() === "dark" ? "dark" : "light";
+  const { view, setView } = useShelfViewStore();
   const [sheet, setSheet] = useState<"shelf" | "filters" | null>(null);
   const activeFilters = filter.statuses.length + filter.genres.length;
   const allPicked = items.length > 0 && items.every((row) => selected.includes(row.entry.id));
@@ -197,29 +193,6 @@ export function ShelfBoard() {
                 view={option}
                 active={view === option}
                 onPress={() => setView(option)}
-              />
-            ))}
-          </View>
-        </Group>
-        <Group label="Cor da estante">
-          <View style={styles.wrap}>
-            {BOOKCASE_COLORS.map((option) => (
-              <Pressable
-                key={option}
-                accessibilityRole="radio"
-                accessibilityLabel={`Estante ${BOOKCASE_COLOR_LABELS[option]}`}
-                accessibilityState={{ selected: color === option }}
-                onPress={() => setColor(option)}
-                style={({ pressed }) => [
-                  styles.swatch,
-                  {
-                    backgroundColor: bookcaseColors[scheme][option].back,
-                    borderColor:
-                      color === option ? theme.text : bookcaseColors[scheme][option].wall,
-                    borderWidth: color === option ? 3 : 4,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
               />
             ))}
           </View>
@@ -503,7 +476,6 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, lineHeight: 14 },
   row: { gap: spacing[2], alignItems: "center" },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  swatch: { width: 44, height: 44, borderRadius: radius.md },
   group: { gap: spacing[2], paddingTop: spacing[3] },
   views: { flexDirection: "row", gap: spacing[2] },
   viewOption: {

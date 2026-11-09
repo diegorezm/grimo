@@ -294,29 +294,6 @@ export const profileCovers = {
   },
 } as const;
 
-/**
- * Bookcase colors (`BOOKCASE_COLORS` in `@grimo/core`), per scheme: `wall` for the sides, top
- * and planks, `back` for the panel behind the books.
- */
-export const bookcaseColors = {
-  light: {
-    lilac: { wall: palette.ruled, back: palette.track },
-    oak: { wall: "#D9BE98", back: "#F6ECDD" },
-    walnut: { wall: "#8A6448", back: "#EADCCD" },
-    sage: { wall: "#A9BFA8", back: "#EAF1E8" },
-    rose: { wall: "#EDB9C8", back: "#FBE9EE" },
-    graphite: { wall: "#6E6372", back: "#ECEAEE" },
-  },
-  dark: {
-    lilac: { wall: palette.nightRuled, back: "#2C2436" },
-    oak: { wall: "#6E5638", back: "#2E271F" },
-    walnut: { wall: "#5A4030", back: "#2A211B" },
-    sage: { wall: "#3F5240", back: "#1F2620" },
-    rose: { wall: "#6B4351", back: "#2E2128" },
-    graphite: { wall: "#4A4550", back: "#222026" },
-  },
-} as const;
-
 /** Brand color of each music service, for the dot beside "Ouvir no …" on the profile song. */
 export const musicServiceColors: Record<string, string> = {
   Spotify: "#1ED760",

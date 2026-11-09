@@ -11,7 +11,6 @@ import { colors } from "@grimo/tokens";
 
 // Colors/spacing/radius come from @grimo/tokens (shared with web). Only fonts live here.
 export {
-  bookcaseColors,
   fontSize,
   musicServiceColors,
   profileCovers,
