@@ -2,9 +2,11 @@ import { coverUrl, type ShelfView, spineLook } from "@grimo/core";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Text } from "@/components/ui";
-import { radius, spacing } from "@/constants/theme";
+import { bookcaseColors, radius, spacing } from "@/constants/theme";
 import { BookCover } from "@/features/books";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { useShelfViewStore } from "@/lib/shelf-view";
 
 /** What a book on the shelf needs: your own shelf rows and a profile's shelf both fit. */
 export interface ShelfBookItem {
@@ -22,7 +24,7 @@ type ShelfItem = ShelfBookItem;
 const PER_SHELF = 3;
 const GAP = 3;
 /** The bookcase's side walls and top, in the plank's color. */
-const WALL = 6;
+const WALL = 8;
 /** Spines are drawn at this share of the look's size (`spineLook` is in web pixels). */
 const SPINE_SCALE = { width: 0.55, height: 0.5 };
 
@@ -38,8 +40,8 @@ interface Props {
 
 /**
  * The books of a shelf as a real shelf: covers standing on planks ("Capas"), or spines side by
- * side, wider for longer books ("Lombadas"). Both stand in a bookcase (thin side walls and top)
- * and work in select mode.
+ * side, wider for longer books ("Lombadas"). Both stand in a bookcase (walls, top and a back
+ * panel in the color the reader picked) and work in select mode.
  */
 export function ShelfBooks(props: Props) {
   const { width } = useWindowDimensions();
@@ -52,17 +54,26 @@ export function ShelfBooks(props: Props) {
   );
 }
 
+/** The bookcase's colors: the reader's pick, in the current scheme. */
+function useBookcase() {
+  const scheme = useColorScheme() === "dark" ? "dark" : "light";
+  const color = useShelfViewStore((state) => state.color);
+  return bookcaseColors[scheme][color];
+}
+
 function Bookcase({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
-  return <View style={[styles.bookcase, { borderColor: theme.edge }]}>{children}</View>;
+  const { wall, back } = useBookcase();
+  return (
+    <View style={[styles.bookcase, { borderColor: wall, backgroundColor: back }]}>{children}</View>
+  );
 }
 
 function Plank({ children }: { children: React.ReactNode }) {
-  const theme = useTheme();
+  const { wall } = useBookcase();
   return (
     <View>
       <View style={styles.books}>{children}</View>
-      <View style={[styles.plank, { backgroundColor: theme.edge }]} />
+      <View style={[styles.plank, { backgroundColor: wall }]} />
     </View>
   );
 }
@@ -237,9 +248,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.sm,
     borderTopRightRadius: radius.sm,
   },
-  books: { paddingHorizontal: spacing[3], paddingTop: spacing[4] },
+  books: { paddingHorizontal: spacing[3], paddingTop: spacing[5] },
   row: { flexDirection: "row", alignItems: "flex-end" },
-  plank: { height: 8 },
+  plank: { height: 10 },
   spine: {
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
