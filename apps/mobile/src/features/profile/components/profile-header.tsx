@@ -60,32 +60,38 @@ export function ProfileHeader({
             )}
           </View>
         )}
-        <View style={styles.numbers}>
+        <View style={styles.names}>
+          <Text variant="display" numberOfLines={2}>
+            {profile.name}
+          </Text>
+          {handle !== "" && (
+            <Text variant="label" color="textMuted">
+              {handle}
+            </Text>
+          )}
+          {actions}
+        </View>
+      </View>
+
+      <View style={styles.numbers}>
+        <View style={styles.line}>
           <Stat value={shelves ? compactCount(shelves.read.count) : "–"} label="lidos" />
+          <Dot />
           <Stat value={shelves ? compactCount(shelves.read.pages) : "–"} label="páginas" />
+        </View>
+        <View style={styles.line}>
           <Stat
             value={compactCount(profile.followers)}
             label="seguidores"
             onPress={onPressCount && (() => onPressCount("followers"))}
           />
+          <Dot />
           <Stat
             value={compactCount(profile.following)}
             label="seguindo"
             onPress={onPressCount && (() => onPressCount("following"))}
           />
         </View>
-      </View>
-
-      <View style={styles.names}>
-        <Text variant="display" numberOfLines={2}>
-          {profile.name}
-        </Text>
-        {handle !== "" && (
-          <Text variant="label" color="textMuted">
-            {handle}
-          </Text>
-        )}
-        {actions}
       </View>
 
       {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
@@ -112,9 +118,16 @@ export function ProfileHeader({
   );
 }
 
-/** One of the numbers beside the photo: the number (its "mil"/"mi" smaller) over the label. */
+function Dot() {
+  return (
+    <Text color="textMuted" style={styles.dot}>
+      ·
+    </Text>
+  );
+}
+
+/** "10 lidos", "1,9 mil páginas": the number in mono, the label in text, on one line. */
 function Stat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
-  const [number, unit] = value.split(" ");
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
@@ -122,23 +135,12 @@ function Stat({ value, label, onPress }: { value: string; label: string; onPress
       disabled={!onPress}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => [styles.stat, { opacity: pressed ? 0.6 : 1 }]}
+      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
     >
-      <Text variant="number" style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
-        {number}
-        {unit && (
-          <Text variant="small" color="textMuted" style={styles.unit}>
-            {unit}
-          </Text>
-        )}
-      </Text>
-      <Text
-        variant="small"
-        color="textMuted"
-        style={styles.statLabel}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-      >
+      <Text color="textMuted" numberOfLines={1} style={styles.stat}>
+        <Text variant="label" style={styles.statValue}>
+          {value}
+        </Text>{" "}
         {label}
       </Text>
     </Pressable>
@@ -160,14 +162,10 @@ const styles = StyleSheet.create({
   quoteMark: { fontSize: 36, lineHeight: 36, fontStyle: "italic" },
   grow: { flex: 1, gap: 2, paddingTop: 2 },
   quoteText: { fontFamily: Fonts.serifItalic, fontSize: 17, lineHeight: 24 },
-  numbers: { flex: 1, flexDirection: "row" },
-  unit: { fontSize: 11 },
-  stat: {
-    flex: 1,
-    alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 2,
-  },
-  statValue: { fontSize: 18 },
-  statLabel: { fontSize: 12 },
+  numbers: { gap: spacing[1] },
+  line: { flexDirection: "row", alignItems: "baseline" },
+  dot: { marginHorizontal: 6 },
+  stat: { fontSize: 15 },
+  // Mono numbers in the ink color, without the label's capitals.
+  statValue: { fontSize: 15, letterSpacing: 0, textTransform: "none", fontWeight: "600" },
 });
