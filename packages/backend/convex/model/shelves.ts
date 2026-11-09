@@ -196,7 +196,7 @@ export async function updateShelfEntry(
   });
   const updated = (await ctx.db.get(entryId))!;
   const sameFeelings = String(updated.feelings ?? []) === String(entry.feelings ?? []);
-  if (updated.rating !== entry.rating || !sameFeelings) {
+  if (updated.rating !== entry.rating || !sameFeelings || updated.status !== entry.status) {
     await recordBookCounters(ctx, entry.bookId, entry, updated);
   }
   if (updated.rating !== entry.rating) await rateReviews(ctx, updated);
@@ -253,7 +253,7 @@ export async function addToShelf(
   });
   const user = await ctx.db.get(userId);
   if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
-  await recordBookCounters(ctx, bookId, null, { rating: null });
+  await recordBookCounters(ctx, bookId, null, { rating: null, status: input.status });
 
   const entry = (await ctx.db.get(entryId))!;
   // Adding a book is always worth a feed entry ("shelved"/"finished").
@@ -296,7 +296,10 @@ export async function importToShelf(
   });
   const user = await ctx.db.get(userId);
   if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
-  await recordBookCounters(ctx, bookId, null, { rating: imported.rating });
+  await recordBookCounters(ctx, bookId, null, {
+    rating: imported.rating,
+    status: imported.status,
+  });
   return true;
 }
 

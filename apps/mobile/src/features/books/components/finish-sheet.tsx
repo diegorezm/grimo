@@ -102,10 +102,14 @@ export function FinishSheet({ openLibraryId }: { openLibraryId: string }) {
                 style={[
                   styles.chip,
                   { borderColor: theme.border },
-                  active && { backgroundColor: theme.inverse, borderColor: theme.inverse },
+                  active && {
+                    backgroundColor: theme.glowB,
+                    borderColor: theme.accent,
+                    borderWidth: 2,
+                  },
                 ]}
               >
-                <Text variant="label" style={active && { color: theme.inverseForeground }}>
+                <Text variant="label" color={active ? "text" : "textMuted"}>
                   {option.label}
                 </Text>
               </Pressable>

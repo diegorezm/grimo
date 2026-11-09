@@ -45,7 +45,9 @@ export const FEELING_LABELS: Record<Feeling, string> = {
 };
 
 /** Feelings picked at once: the strongest few say more than a long list. */
-export const MAX_FEELINGS = 3;
+export const MAX_FEELINGS = 7;
+/** How many feelings the reading diary suggests when a book is over. */
+export const SUGGESTED_FEELINGS = 3;
 
 const isFeeling = (value: string): value is Feeling =>
   (FEELINGS as readonly string[]).includes(value);
@@ -76,7 +78,7 @@ export function suggestFeelings(marks: readonly (readonly string[])[]): Feeling[
   });
   return [...score.entries()]
     .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
-    .slice(0, MAX_FEELINGS)
+    .slice(0, SUGGESTED_FEELINGS)
     .map(([feeling]) => feeling);
 }
 

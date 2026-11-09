@@ -184,11 +184,11 @@ export function CardStudio({ year }: { year?: number }) {
                 onPress={() => setPeriod(option)}
                 style={[
                   styles.chip,
-                  { borderColor: active ? theme.primary : theme.border },
-                  active && { backgroundColor: theme.primary },
+                  { borderColor: active ? theme.accent : theme.border },
+                  active && { backgroundColor: theme.glowB },
                 ]}
               >
-                <Text variant="label" color={active ? "primaryForeground" : "textMuted"}>
+                <Text variant="label" color={active ? "text" : "textMuted"}>
                   {option.kind === "year"
                     ? `Ano ${option.year}`
                     : monthChip.format(new Date(`${option.month}-15T12:00:00Z`))}

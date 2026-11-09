@@ -34,11 +34,11 @@ export function FeelingPicker({
       {value.length === 0 && suggested.length > 0 && (
         <Pressable accessibilityRole="button" onPress={() => onChange([...suggested])}>
           <Text variant="label" color="accentInk">
-            Pelo seu diário: {suggested.map((feeling) => FEELING_LABELS[feeling]).join(", ")} →
+            Pelo seu diário: {suggested.map((feeling) => FEELING_LABELS[feeling]).join(", ")}
           </Text>
         </Pressable>
       )}
-      <View style={styles.chips}>
+      <View style={styles.grid}>
         {FEELINGS.map((feeling) => {
           const picked = value.includes(feeling);
           const disabled = full && !picked;
@@ -50,14 +50,19 @@ export function FeelingPicker({
               disabled={disabled}
               onPress={() => onChange(toggleFeeling(value, feeling))}
               style={[
-                styles.chip,
+                styles.cell,
                 picked
-                  ? { backgroundColor: theme.accent, borderColor: theme.accent }
-                  : { borderColor: theme.border },
+                  ? { backgroundColor: theme.glowB, borderColor: theme.accent, borderWidth: 2 }
+                  : { backgroundColor: theme.background, borderColor: theme.border },
                 disabled && styles.disabled,
               ]}
             >
-              <Text variant="label" color={picked ? "accentForeground" : "textMuted"}>
+              <Text
+                variant="small"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={[styles.cellText, picked && styles.picked]}
+              >
                 {FEELING_LABELS[feeling]}
               </Text>
             </Pressable>
@@ -90,12 +95,19 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "baseline", gap: spacing[2] },
   flex: { flex: 1 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[1] },
-  chip: {
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  // Four per row: (100% - 3 gaps) / 4.
+  cell: {
+    width: "23.6%",
+    flexGrow: 1,
+    alignItems: "center",
     borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing[3],
+    borderRadius: radius.sm + 4,
+    paddingHorizontal: 2,
     paddingVertical: spacing[2],
   },
+  cellText: { fontSize: 13 },
+  picked: { fontWeight: "700" },
   disabled: { opacity: 0.4 },
   tag: {
     borderWidth: StyleSheet.hairlineWidth,

@@ -27,6 +27,19 @@ export const backfillBookCounters = migrations.define({
   },
 });
 
+/** Counts each book's shelf entries per status (added after the other counters). */
+export const backfillStatusCounts = migrations.define({
+  table: "books",
+  migrateOne: async (ctx, book) => {
+    if (book.statusCounts !== undefined) return;
+    const entries = await ctx.db
+      .query("shelfEntries")
+      .withIndex("by_book", (q) => q.eq("bookId", book._id))
+      .collect();
+    return { statusCounts: countEntries(entries).statusCounts };
+  },
+});
+
 /**
  * Copies Better Auth's `emailVerified` into `users.emailVerified` for accounts created before
  * the field existed (new and updated accounts are synced by the auth triggers).
@@ -97,6 +110,7 @@ export const savedShelvesToShelves = migrations.define({
 /** Runs every pending migration, in order. `npx convex run migrations:runAll`. */
 export const runAll = migrations.runner([
   internal.migrations.backfillBookCounters,
+  internal.migrations.backfillStatusCounts,
   internal.migrations.backfillEmailVerified,
   internal.migrations.dropLists,
   internal.migrations.savedShelvesToShelves,

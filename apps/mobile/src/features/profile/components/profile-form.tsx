@@ -9,9 +9,6 @@ import {
 } from "@grimo/client";
 import {
   firstIssue,
-  GENRE_LABELS,
-  GENRES,
-  type Genre,
   musicService,
   PROFILE_COLOR_LABELS,
   PROFILE_COLORS,
@@ -22,14 +19,12 @@ import {
 import { router } from "expo-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Switch, View } from "react-native";
-import { Button, Input, Screen, Text } from "@/components/ui";
+import { Button, Icon, Input, Screen, Text } from "@/components/ui";
 import { profileCovers, radius, spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
 import { AvatarPicker } from "./avatar-picker";
 import { SongCard } from "./song-card";
-
-const MAX_GENRES = 5;
 
 const SHOWS: { key: keyof ProfileShows; label: string }[] = [
   { key: "reading", label: "Lendo agora" },
@@ -38,8 +33,8 @@ const SHOWS: { key: keyof ProfileShows; label: string }[] = [
 ];
 
 /**
- * Edit how your profile looks: cover color, photo, name, pronouns, bio, the "trilha da leitura",
- * a highlighted quote, genres and which reading cards show.
+ * Edit what your profile shows: the photo and its ring color, name, pronouns, bio, the "trilha
+ * da leitura", a highlighted quote and which reading cards show.
  * The @ stays as it is.
  */
 export function ProfileForm({ profile }: { profile: Profile }) {
@@ -58,7 +53,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     url: profile.profileSong?.url ?? "",
   });
   const [quoteId, setQuoteId] = useState(profile.featuredQuote?.id ?? null);
-  const [genres, setGenres] = useState<Genre[]>(profile.favoriteGenres as Genre[]);
   const [shows, setShows] = useState(profile.profileShows);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,14 +90,10 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     return () => clearTimeout(timer);
   }, [song.url, service, songPreview.mutate]);
 
-  function toggleGenre(genre: Genre) {
-    setGenres((current) =>
-      current.includes(genre)
-        ? current.filter((item) => item !== genre)
-        : current.length < MAX_GENRES
-          ? [...current, genre]
-          : current,
-    );
+  function removeSong() {
+    lastRead.current = "";
+    setLooks(null);
+    setSong({ title: "", artist: "", url: "" });
   }
 
   function save() {
@@ -122,7 +112,6 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       profileColor: color,
       profileSong: songTouched ? song : null,
       featuredQuoteId: quoteId,
-      favoriteGenres: genres,
       profileShows: shows,
     });
     if (!input.success) return setError(firstIssue(input.error));
@@ -149,34 +138,36 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       </View>
       {error && <Text color="danger">{error}</Text>}
 
-      <Field label="Capa e foto">
-        <View style={[styles.cover, { backgroundColor: profileCovers[scheme][color].bg }]} />
-        <View style={styles.avatar}>
-          <AvatarPicker image={profile.image} name={profile.name} />
+      <View style={styles.photo}>
+        <AvatarPicker image={profile.image} name={profile.name} />
+        <View style={styles.ring}>
+          <Text variant="label" color="textMuted">
+            Cor do aro
+          </Text>
+          <View style={styles.swatches}>
+            {PROFILE_COLORS.map((option) => {
+              const active = option === color;
+              return (
+                <Pressable
+                  key={option}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Aro ${PROFILE_COLOR_LABELS[option]}`}
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setColor(option)}
+                  style={[
+                    styles.swatch,
+                    {
+                      backgroundColor: profileCovers[scheme][option].bg,
+                      borderColor: active ? theme.text : theme.border,
+                      borderWidth: active ? 3 : 1,
+                    },
+                  ]}
+                />
+              );
+            })}
+          </View>
         </View>
-        <View style={styles.swatches}>
-          {PROFILE_COLORS.map((option) => {
-            const active = option === color;
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="radio"
-                accessibilityLabel={`Capa ${PROFILE_COLOR_LABELS[option]}`}
-                accessibilityState={{ selected: active }}
-                onPress={() => setColor(option)}
-                style={[
-                  styles.swatch,
-                  {
-                    backgroundColor: profileCovers[scheme][option].bg,
-                    borderColor: active ? theme.text : theme.border,
-                    borderWidth: active ? 3 : 1,
-                  },
-                ]}
-              />
-            );
-          })}
-        </View>
-      </Field>
+      </View>
 
       <Field label="Nome">
         <Input value={name} onChangeText={setName} maxLength={80} autoComplete="name" />
@@ -235,6 +226,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           !songPreview.isPending && (
             <SongCard
               interactive={false}
+              onRemove={removeSong}
               song={{
                 title: song.title,
                 artist: song.artist,
@@ -245,16 +237,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               }}
             />
           )}
-        {songTouched && (
-          <Button
-            variant="ghost"
-            title="Tirar a música"
-            onPress={() => {
-              lastRead.current = "";
-              setLooks(null);
-              setSong({ title: "", artist: "", url: "" });
-            }}
-          />
+        {songTouched && !songPreview.isPending && song.title.trim() === "" && (
+          <Button variant="ghost" title="Tirar a música" onPress={removeSong} />
         )}
       </Field>
 
@@ -289,35 +273,16 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         )}
       </Field>
 
-      <Field label={`Gêneros favoritos · ${genres.length}/${MAX_GENRES}`}>
-        <View style={styles.chips}>
-          {GENRES.map((genre) => {
-            const active = genres.includes(genre);
-            return (
-              <Pressable
-                key={genre}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: active }}
-                onPress={() => toggleGenre(genre)}
-                style={[
-                  styles.chip,
-                  { borderColor: active ? theme.accent : theme.border },
-                  active && { backgroundColor: theme.accent },
-                ]}
-              >
-                <Text variant="label" color={active ? "accentForeground" : "text"}>
-                  {GENRE_LABELS[genre]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </Field>
-
       <Field label="Mostrar no perfil">
-        <View style={[styles.shows, { backgroundColor: theme.surfaceMuted }]}>
-          {SHOWS.map(({ key, label }) => (
-            <View key={key} style={styles.showRow}>
+        <View style={[styles.shows, { borderColor: theme.edge }]}>
+          {SHOWS.map(({ key, label }, index) => (
+            <View
+              key={key}
+              style={[
+                styles.showRow,
+                index > 0 && { borderTopWidth: 1, borderTopColor: theme.edge },
+              ]}
+            >
               <Text style={styles.grow}>{label}</Text>
               <Switch
                 accessibilityLabel={`Mostrar ${label}`}
@@ -336,13 +301,17 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         onPress={save}
       />
 
-      <Field label="Ajustes">
-        <Button
-          variant="secondary"
-          title="Aparência, conta e sair"
-          onPress={() => router.push("/settings")}
-        />
-      </Field>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push("/settings")}
+        style={({ pressed }) => [
+          styles.settings,
+          { borderColor: theme.edge, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Text style={styles.grow}>Aparência, conta e sair</Text>
+        <Icon name="chevronRight" size={16} color="textMuted" />
+      </Pressable>
     </Screen>
   );
 }
@@ -389,21 +358,21 @@ function Choice({
 const styles = StyleSheet.create({
   bar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   field: { gap: spacing[2] },
-  cover: { height: 88, borderRadius: radius.lg },
-  avatar: { marginTop: -48, marginLeft: spacing[3], alignSelf: "flex-start" },
-  swatches: { flexDirection: "row", gap: spacing[3] },
-  swatch: { width: 44, height: 44, borderRadius: radius.full },
+  photo: { flexDirection: "row", alignItems: "center", gap: spacing[4] },
+  ring: { flex: 1, gap: spacing[2] },
+  swatches: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  swatch: { width: 36, height: 36, borderRadius: radius.full },
   bio: { minHeight: 96, textAlignVertical: "top" },
   grow: { flex: 1 },
   choice: { borderWidth: 1, borderRadius: radius.md, padding: spacing[3], gap: spacing[1] },
   italic: { fontStyle: "italic" },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  chip: {
-    borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
+  shows: { borderTopWidth: 1, borderBottomWidth: 1 },
+  showRow: { flexDirection: "row", alignItems: "center", minHeight: 52, gap: spacing[3] },
+  settings: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 52,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
   },
-  shows: { borderRadius: radius.lg, paddingHorizontal: spacing[3] },
-  showRow: { flexDirection: "row", alignItems: "center", minHeight: 48, gap: spacing[3] },
 });

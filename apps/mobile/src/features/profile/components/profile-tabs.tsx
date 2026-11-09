@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "@/components/ui";
-import { radius, spacing } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 import { FeedItem } from "@/features/feed";
 import { MonthlyCard, YearStats } from "@/features/stats";
 import { useTheme } from "@/hooks/use-theme";

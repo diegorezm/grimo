@@ -3,7 +3,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 
 /** The part of a shelf entry the book's counters are made of. */
-type Counted = { rating: number | null; feelings?: readonly string[] };
+type Counted = { rating: number | null; feelings?: readonly string[]; status?: string };
 
 /** Counters of a book nobody has on a shelf yet. */
 export const emptyBookCounters = () => ({
@@ -13,6 +13,7 @@ export const emptyBookCounters = () => ({
   ratingStars: [0, 0, 0, 0, 0],
   feelingCounts: {},
   feelingReaders: 0,
+  statusCounts: {},
 });
 
 /** Adds (`sign` 1) or takes away (-1) what one entry counts in the star bars and feelings. */
@@ -32,6 +33,14 @@ function addDetails(
     if (count > 0) details.feelingCounts[feeling] = count;
     else delete details.feelingCounts[feeling];
   }
+}
+
+/** Adds (1) or takes away (-1) one entry from the count of its status. */
+function addStatus(counts: Record<string, number>, entry: Counted, sign: 1 | -1) {
+  if (!entry.status) return;
+  const count = Math.max(0, (counts[entry.status] ?? 0) + sign);
+  if (count > 0) counts[entry.status] = count;
+  else delete counts[entry.status];
 }
 
 /** What one shelf entry adds to its book's counters: a reader and, when rated, a rating. */
@@ -72,6 +81,12 @@ export async function recordBookCounters(
     if (after) addDetails(details, after, 1);
     Object.assign(patch, details);
   }
+  if (book.statusCounts !== undefined) {
+    const statusCounts = { ...book.statusCounts };
+    if (before) addStatus(statusCounts, before, -1);
+    if (after) addStatus(statusCounts, after, 1);
+    patch.statusCounts = statusCounts;
+  }
   await ctx.db.patch(bookId, patch);
 }
 
@@ -82,7 +97,13 @@ export async function recordBookCounters(
 export function communityFromCounters(
   book: Pick<
     Doc<"books">,
-    "readerCount" | "ratingSum" | "ratingCount" | "ratingStars" | "feelingCounts" | "feelingReaders"
+    | "readerCount"
+    | "ratingSum"
+    | "ratingCount"
+    | "ratingStars"
+    | "feelingCounts"
+    | "feelingReaders"
+    | "statusCounts"
   >,
 ) {
   if (book.readerCount === undefined || book.ratingStars === undefined) return null;
@@ -97,6 +118,13 @@ export function communityFromCounters(
     /** Readers who said how the book made them feel, and what they felt the most. */
     feelingReaders,
     feelings: topFeelings(book.feelingCounts ?? {}, feelingReaders),
+    /** Readers per status: how many read it, are reading, want to, stopped. */
+    statuses: {
+      read: book.statusCounts?.read ?? 0,
+      reading: book.statusCounts?.reading ?? 0,
+      want_to_read: book.statusCounts?.want_to_read ?? 0,
+      abandoned: book.statusCounts?.abandoned ?? 0,
+    },
   };
 }
 
@@ -105,10 +133,13 @@ export function countEntries(entries: Counted[]) {
   const rated = entries.flatMap((entry) => (entry.rating ? [entry.rating] : []));
   const details = { ratingStars: [0, 0, 0, 0, 0], feelingCounts: {}, feelingReaders: 0 };
   for (const entry of entries) addDetails(details, entry, 1);
+  const statusCounts: Record<string, number> = {};
+  for (const entry of entries) addStatus(statusCounts, entry, 1);
   return {
     readerCount: entries.length,
     ratingSum: rated.reduce((sum, rating) => sum + rating, 0),
     ratingCount: rated.length,
     ...details,
+    statusCounts,
   };
 }

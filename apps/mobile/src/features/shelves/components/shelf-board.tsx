@@ -18,7 +18,6 @@ import {
   SHELF_VIEW_LABELS,
   SHELF_VIEWS,
   type ShelfView,
-  shelfGenres,
 } from "@grimo/core";
 import { router } from "expo-router";
 import { type ReactNode, useState } from "react";
@@ -50,7 +49,6 @@ export function ShelfBoard() {
   const inShelf = shelf ? rows.filter((row) => row.entry.tagIds.includes(shelf.id)) : rows;
   const items = inShelf.filter((row) => matchesShelfFilter(row, { ...filter, tagIds: [] }));
   const counts = countByShelf(inShelf.map(({ entry }) => entry));
-  const genres = shelfGenres(inShelf);
   const picking = shelves.find((item) => item.id === pickingFor) ?? null;
   const { view, setView } = useShelfViewStore();
   const [sheet, setSheet] = useState<"shelf" | "filters" | null>(null);
@@ -198,31 +196,29 @@ export function ShelfBoard() {
           </View>
         </Group>
         <Group label="Situação">
-          <View style={styles.wrap}>
-            {SHELF_STATUSES.map((status) => (
-              <Chip
-                key={status}
-                label={`${SHELF_LABELS[status]} ${counts[status]}`}
-                active={filter.statuses.includes(status)}
-                onPress={() => store.toggle("statuses", status)}
-              />
-            ))}
+          <View style={styles.statusGrid}>
+            {SHELF_STATUSES.map((status) => {
+              const active = filter.statuses.includes(status);
+              return (
+                <Pressable
+                  key={status}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: active }}
+                  onPress={() => store.toggle("statuses", status)}
+                  style={[
+                    styles.statusCell,
+                    active
+                      ? { backgroundColor: theme.glowB, borderColor: theme.accent, borderWidth: 2 }
+                      : { backgroundColor: theme.background, borderColor: theme.border },
+                  ]}
+                >
+                  <Text style={active && styles.bold}>{SHELF_LABELS[status]}</Text>
+                  <Text variant="label">{counts[status]}</Text>
+                </Pressable>
+              );
+            })}
           </View>
         </Group>
-        {genres.length > 0 && (
-          <Group label="Gênero">
-            <View style={styles.wrap}>
-              {genres.map((genre) => (
-                <Chip
-                  key={genre}
-                  label={GENRE_LABELS[genre as Genre] ?? genre}
-                  active={filter.genres.includes(genre)}
-                  onPress={() => store.toggle("genres", genre)}
-                />
-              ))}
-            </View>
-          </Group>
-        )}
       </SelectSheet>
 
       {all.isPending && <ActivityIndicator color={theme.accent} />}
@@ -475,6 +471,18 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 11, lineHeight: 14 },
   row: { gap: spacing[2], alignItems: "center" },
+  statusGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  statusCell: {
+    width: "48.5%",
+    flexGrow: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+  },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   group: { gap: spacing[2], paddingTop: spacing[3] },
   views: { flexDirection: "row", gap: spacing[2] },

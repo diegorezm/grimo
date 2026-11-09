@@ -1,5 +1,5 @@
 import type { ReaderPage } from "@grimo/client";
-import { editionPages, GENRE_LABELS, type Genre, readingPercent } from "@grimo/core";
+import { editionPages, readingPercent } from "@grimo/core";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Card, ProgressBar, Text } from "@/components/ui";
@@ -43,7 +43,7 @@ export function ProfileReadingNow({ page }: { page: ReaderPage }) {
 
 /**
  * The "Destaques" tab: the year's goal and the streak (each
- * one the reader can hide), and the favorite genres. The quote is at the top of the profile.
+ * one the reader can hide). The quote is at the top of the profile.
  */
 export function ProfileFeatured({
   page,
@@ -53,11 +53,11 @@ export function ProfileFeatured({
   /** Days in a row; your own profile only (the streak query is private). */
   streak?: number | null;
 }) {
-  const theme = useTheme();
+  const _theme = useTheme();
   const { profile, stats } = page;
   const goal = profile.profileShows.goal ? stats.goal : null;
   const showStreak = profile.profileShows.streak && !!streak && streak > 0;
-  const empty = !goal && !showStreak && profile.favoriteGenres.length === 0;
+  const empty = !goal && !showStreak;
   if (empty) return <Text color="textMuted">Nada em destaque ainda.</Text>;
 
   return (
@@ -89,19 +89,6 @@ export function ProfileFeatured({
               .join(" ")}
           </Text>
         </Card>
-      )}
-
-      {profile.favoriteGenres.length > 0 && (
-        <View style={styles.section}>
-          <Text variant="heading">Gêneros favoritos</Text>
-          <View style={styles.chips}>
-            {profile.favoriteGenres.map((genre) => (
-              <View key={genre} style={[styles.chip, { backgroundColor: theme.surfaceMuted }]}>
-                <Text variant="small">{GENRE_LABELS[genre as Genre] ?? genre}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
       )}
     </View>
   );

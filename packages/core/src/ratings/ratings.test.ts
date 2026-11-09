@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cardFeelings,
+  type Feeling,
   feelingsSchema,
   formatRating,
   MAX_FEELINGS,
@@ -55,14 +56,26 @@ describe("feelings", () => {
     expect(feelingsSchema.parse(["tensao", "tensao", "medo"])).toEqual(["tensao", "medo"]);
     expect(feelingsSchema.safeParse(["saudade"]).success).toBe(false);
     expect(
-      feelingsSchema.safeParse(["alegria", "medo", "raiva", "tedio"]).error?.issues[0]?.message,
-    ).toMatch(/até 3/);
+      feelingsSchema.safeParse([
+        "alegria",
+        "medo",
+        "raiva",
+        "tedio",
+        "tensao",
+        "surpresa",
+        "paixao",
+        "conforto",
+      ]).error?.issues[0]?.message,
+    ).toMatch(/até 7/);
   });
 
   it("toggle up to the limit", () => {
     expect(toggleFeeling([], "medo")).toEqual(["medo"]);
     expect(toggleFeeling(["medo", "raiva"], "medo")).toEqual(["raiva"]);
-    const full = toggleFeeling(toggleFeeling(["alegria"], "medo"), "raiva");
+    const full = ["alegria", "medo", "raiva", "tensao", "surpresa", "paixao"].reduce(
+      (picked, feeling) => toggleFeeling(picked, feeling as Feeling),
+      ["conforto"] as Feeling[],
+    );
     expect(full).toHaveLength(MAX_FEELINGS);
     expect(toggleFeeling(full, "tedio")).toEqual(full);
   });

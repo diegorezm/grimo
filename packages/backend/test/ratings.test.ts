@@ -104,9 +104,9 @@ describe("rating a book", () => {
     await expect(
       rafa.as.mutation(api.shelves.update, {
         id,
-        feelings: ["alegria", "medo", "raiva", "tedio"],
+        feelings: ["alegria", "medo", "raiva", "tedio", "tensao", "surpresa", "paixao", "conforto"],
       }),
-    ).rejects.toThrow(/até 3/);
+    ).rejects.toThrow(/até 7/);
   });
 
   it("counts a book from before the star bars from its shelves", async () => {

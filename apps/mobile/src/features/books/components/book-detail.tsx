@@ -93,6 +93,15 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
               .filter(Boolean)
               .join(" · ")}
           </Text>
+          {community.ratings > 0 && (
+            <Text variant="label">
+              <Text variant="label" color="gold">
+                ★
+              </Text>{" "}
+              {formatRating(community.averageRating ?? 0)} · {community.ratings}{" "}
+              {community.ratings === 1 ? "nota" : "notas"}
+            </Text>
+          )}
           <FriendsWant friends={friendsWant} />
           {book.reviewStatus === "pending" && (
             <Text variant="small" color="textMuted" style={styles.center}>
@@ -155,6 +164,13 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
             )}
           </>
         )}
+        <Community community={community} />
+        <Reviews
+          reviews={reviews}
+          canWrite={Boolean(book.id && entry)}
+          openLibraryId={openLibraryId}
+        />
+
         <Diary marks={diary.marks} />
 
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
@@ -174,33 +190,6 @@ export function BookDetail({ openLibraryId }: { openLibraryId: string }) {
             <Text>{book.description}</Text>
           </Card>
         )}
-
-        <CommunityFeelings community={community} />
-
-        <View style={styles.section}>
-          <View style={styles.between}>
-            <Text variant="heading">Resenhas</Text>
-            <Text variant="label" color="textMuted">
-              {community.averageRating ? `★ ${formatRating(community.averageRating)} · ` : ""}
-              {community.readers} leitores
-            </Text>
-          </View>
-          {book.id && entry && (
-            <Button
-              variant="secondary"
-              title="Escrever resenha"
-              onPress={() =>
-                router.push({ pathname: "/review/[id]", params: { id: openLibraryId } })
-              }
-            />
-          )}
-          {reviews.length === 0 && (
-            <Text color="textMuted">Ninguém resenhou este livro ainda.</Text>
-          )}
-          {reviews.map((review) => (
-            <Review key={review.id} review={review} />
-          ))}
-        </View>
 
         <View style={styles.section}>
           <Text variant="heading">Citações</Text>
@@ -404,14 +393,79 @@ function Diary({ marks }: { marks: Detail["diary"]["marks"] }) {
   );
 }
 
-/** "Como os leitores se sentiram" and the star bars, once someone rated or felt the book. */
-function CommunityFeelings({ community }: { community: Detail["community"] }) {
-  if (community.ratings === 0 && community.feelings.length === 0) return null;
+const STATUS_COLUMNS = [
+  { status: "read", label: "leram" },
+  { status: "reading", label: "lendo" },
+  { status: "want_to_read", label: "querem ler" },
+  { status: "abandoned", label: "pararam" },
+] as const;
+
+/**
+ * "Na comunidade": how many readers read, are reading, want to and stopped; the star bars; and
+ * what they felt.
+ */
+function Community({ community }: { community: Detail["community"] }) {
+  const theme = useTheme();
+  const shelved = STATUS_COLUMNS.reduce((sum, { status }) => sum + community.statuses[status], 0);
   return (
     <View style={styles.section}>
+      <Text variant="heading">Na comunidade</Text>
+      {shelved === 0 ? (
+        <Text color="textMuted">Ninguém tem este livro na estante ainda.</Text>
+      ) : (
+        <View style={[styles.ruler, { borderColor: theme.edge }]}>
+          {STATUS_COLUMNS.map(({ status, label }, index) => (
+            <View
+              key={status}
+              style={[
+                styles.rulerCell,
+                index > 0 && { borderLeftWidth: 1, borderLeftColor: theme.edge },
+              ]}
+            >
+              <Text variant="number" style={styles.rulerNumber}>
+                {community.statuses[status]}
+              </Text>
+              <Text variant="small" color="textMuted" numberOfLines={1} style={styles.rulerLabel}>
+                {label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {community.ratings > 0 && (
+        <View style={styles.ratings}>
+          <View style={styles.average}>
+            <Text variant="number" style={styles.averageNumber}>
+              {formatRating(community.averageRating ?? 0)}
+            </Text>
+            <Stars value={community.averageRating} size={12} />
+            <Text variant="small" color="textMuted" style={styles.rulerLabel}>
+              {community.ratings} {community.ratings === 1 ? "nota" : "notas"}
+            </Text>
+          </View>
+          <View style={styles.grow}>
+            {starShares(community.stars)
+              .slice()
+              .reverse()
+              .map((bar) => (
+                <BarRow
+                  key={bar.star}
+                  label={String(bar.star)}
+                  percent={bar.percent}
+                  end={String(bar.count)}
+                  gold
+                  narrow
+                />
+              ))}
+          </View>
+        </View>
+      )}
       {community.feelings.length > 0 && (
-        <Card>
-          <Text variant="title">Como os leitores se sentiram</Text>
+        <View style={styles.feelings}>
+          <Text variant="label" color="textMuted">
+            O que sentiram · {community.feelingReaders}{" "}
+            {community.feelingReaders === 1 ? "leitor" : "leitores"}
+          </Text>
           {community.feelings.map((row) => (
             <BarRow
               key={row.feeling}
@@ -420,27 +474,51 @@ function CommunityFeelings({ community }: { community: Detail["community"] }) {
               end={`${row.percent}%`}
             />
           ))}
-          <Text variant="label" color="textMuted">
-            De {community.feelingReaders}{" "}
-            {community.feelingReaders === 1 ? "leitor que contou" : "leitores que contaram"}
-          </Text>
-        </Card>
+        </View>
       )}
-      {community.ratings > 0 && (
-        <Card>
-          <Text variant="title">
-            Notas · ★ {formatRating(community.averageRating ?? 0)} ({community.ratings})
+    </View>
+  );
+}
+
+/** Reviews of the book: the first three, then all of them on a tap. */
+function Reviews({
+  reviews,
+  canWrite,
+  openLibraryId,
+}: {
+  reviews: Detail["reviews"];
+  canWrite: boolean;
+  openLibraryId: string;
+}) {
+  const [all, setAll] = useState(false);
+  const shown = all ? reviews : reviews.slice(0, 3);
+  return (
+    <View style={styles.section}>
+      <View style={styles.between}>
+        <Text variant="heading">Resenhas</Text>
+        {reviews.length > 0 && (
+          <Text variant="label" color="textMuted">
+            {reviews.length} {reviews.length === 1 ? "resenha" : "resenhas"}
           </Text>
-          {starShares(community.stars).map((bar) => (
-            <BarRow
-              key={bar.star}
-              label={`${bar.star} ★`}
-              percent={bar.percent}
-              end={String(bar.count)}
-              gold
-            />
-          ))}
-        </Card>
+        )}
+      </View>
+      {reviews.length === 0 && <Text color="textMuted">Ninguém resenhou este livro ainda.</Text>}
+      {shown.map((review) => (
+        <Review key={review.id} review={review} />
+      ))}
+      {!all && reviews.length > 3 && (
+        <Button
+          variant="secondary"
+          title={`Ver as ${reviews.length} resenhas`}
+          onPress={() => setAll(true)}
+        />
+      )}
+      {canWrite && (
+        <Button
+          variant="secondary"
+          title="Escrever resenha"
+          onPress={() => router.push({ pathname: "/review/[id]", params: { id: openLibraryId } })}
+        />
       )}
     </View>
   );
@@ -451,16 +529,19 @@ function BarRow({
   percent,
   end,
   gold = false,
+  narrow = false,
 }: {
   label: string;
   percent: number;
   end: string;
   gold?: boolean;
+  /** A short label (the star number). */
+  narrow?: boolean;
 }) {
   const theme = useTheme();
   return (
     <View style={styles.barRow}>
-      <Text variant="small" style={styles.barLabel} color={gold ? "gold" : "text"}>
+      <Text variant="small" style={narrow ? styles.barLabelNarrow : styles.barLabel}>
         {label}
       </Text>
       <View style={[styles.barTrack, { backgroundColor: theme.surfaceMuted }]}>
@@ -545,7 +626,7 @@ function Review({ review }: { review: Detail["reviews"][number] }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacing[4], gap: spacing[4], paddingBottom: spacing[12] },
+  content: { paddingHorizontal: spacing[5], gap: spacing[6], paddingBottom: spacing[12] },
   center: {
     flex: 1,
     alignItems: "center",
@@ -560,9 +641,18 @@ const styles = StyleSheet.create({
   centerCard: { alignItems: "center" },
   diaryRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   diaryPage: { width: 56 },
-  barRow: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  barRow: { flexDirection: "row", alignItems: "center", gap: spacing[2], minHeight: 20 },
   barLabel: { width: 96 },
-  barTrack: { flex: 1, height: 8, borderRadius: radius.full, overflow: "hidden" },
+  barLabelNarrow: { width: 14 },
+  barTrack: { flex: 1, height: 6, borderRadius: radius.full, overflow: "hidden" },
+  ruler: { flexDirection: "row", borderWidth: 1, borderRadius: radius.md },
+  rulerCell: { flex: 1, alignItems: "center", gap: 2, paddingVertical: spacing[3] },
+  rulerNumber: { fontSize: 20 },
+  rulerLabel: { fontSize: 12 },
+  ratings: { flexDirection: "row", alignItems: "center", gap: spacing[5] },
+  average: { alignItems: "center", gap: 2, width: 76 },
+  averageNumber: { fontSize: 34 },
+  feelings: { gap: spacing[2] },
   barFill: { height: "100%", borderRadius: radius.full },
   barEnd: { width: 40, textAlign: "right" },
   bold: { fontWeight: "700" },

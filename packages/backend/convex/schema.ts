@@ -186,6 +186,8 @@ export default defineSchema({
     /** Readers who picked each feeling when rating, and how many picked any. */
     feelingCounts: v.optional(v.record(v.string(), v.number())),
     feelingReaders: v.optional(v.number()),
+    /** Shelf entries of the book per status (want_to_read, reading, read, abandoned). */
+    statusCounts: v.optional(v.record(v.string(), v.number())),
     /**
      * Hand-added books (`GR…` ids, `books.addManual`): who added it and the moderation review.
      * Until approved only that reader sees it. Absent on Open Library books.

@@ -18,14 +18,17 @@ export interface SongCardData {
 
 /**
  * "Trilha da leitura": a slim strip in the cover's color with the cover, the song and the
- * artist. Tapping opens the song in its own app (nothing plays or loads here).
+ * artist. Tapping opens the song in its own app (nothing plays or loads here). `onRemove`
+ * (editing): a "Tirar" button in place of play.
  */
 export function SongCard({
   song,
   interactive = true,
+  onRemove,
 }: {
   song: SongCardData;
   interactive?: boolean;
+  onRemove?: () => void;
 }) {
   const theme = useTheme();
   const background = song.color ?? theme.inverse;
@@ -68,11 +71,25 @@ export function SongCard({
           </Text>
         </View>
       </View>
-      <View style={[styles.play, { backgroundColor: ink }]}>
-        <Svg width={12} height={12} viewBox="0 0 24 24" accessibilityElementsHidden>
-          <Path d="M7 4v16l13-8z" fill={background} />
-        </Svg>
-      </View>
+      {onRemove ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tirar a música"
+          onPress={onRemove}
+          hitSlop={8}
+          style={styles.remove}
+        >
+          <Text variant="label" style={{ color: ink }}>
+            Tirar
+          </Text>
+        </Pressable>
+      ) : (
+        <View style={[styles.play, { backgroundColor: ink }]}>
+          <Svg width={12} height={12} viewBox="0 0 24 24" accessibilityElementsHidden>
+            <Path d="M7 4v16l13-8z" fill={background} />
+          </Svg>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -98,6 +115,7 @@ const styles = StyleSheet.create({
   service: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { width: 8, height: 8, borderRadius: radius.full },
   meta: { opacity: 0.8, flexShrink: 1 },
+  remove: { paddingHorizontal: spacing[2], paddingVertical: spacing[2] },
   play: {
     width: 32,
     height: 32,

@@ -30,7 +30,7 @@ export function FinishPicker({
             style={[
               styles.chip,
               { borderColor: active ? theme.accent : theme.border },
-              active && { backgroundColor: theme.surfaceMuted },
+              active && { backgroundColor: theme.glowB, borderWidth: 2 },
             ]}
           >
             <Text variant="label" color={active ? "accentInk" : "textMuted"}>

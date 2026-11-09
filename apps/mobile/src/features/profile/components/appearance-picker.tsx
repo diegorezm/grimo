@@ -24,9 +24,9 @@ export function AppearancePicker() {
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               onPress={() => setPreference(option)}
-              style={[styles.option, active && { backgroundColor: theme.primary }]}
+              style={[styles.option, active && { backgroundColor: theme.glowB }]}
             >
-              <Text variant="label" color={active ? "primaryForeground" : "textMuted"}>
+              <Text variant="label" color={active ? "text" : "textMuted"}>
                 {THEME_LABELS[option]}
               </Text>
             </Pressable>
