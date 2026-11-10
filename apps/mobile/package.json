@@ -13,6 +13,7 @@
     "@grimo/core": "workspace:*",
     "@grimo/tokens": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@sentry/react-native": "~8.28.0",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-persist-client": "catalog:",
     "better-auth": "catalog:",
