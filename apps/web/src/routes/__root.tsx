@@ -8,7 +8,7 @@ import { useSeo } from "@/lib/seo";
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient; cache: ConvexCache }>()(
   {
     component: Root,
-    errorComponent: ({ reset }) => <ErrorScreen reset={reset} />,
+    errorComponent: ({ error, reset }) => <ErrorScreen error={error} reset={reset} />,
   },
 );
 
