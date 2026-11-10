@@ -210,7 +210,8 @@ internacional) antes de publicar post, comentário e bio.
 ## Qualidade e infraestrutura
 
 - **Error boundaries:** feito (`errorComponent` no `__root` e no `_app`).
-- **Monitoramento de erros:** aberto (Sentry ou similar precisa entrar na Política).
+- **Monitoramento de erros:** Sentry na web e no mobile, desligado sem DSN, sem PII nem replay
+  (na Política e no ROPA). Backend: falta a integração de exceções do Convex (plano Pro).
 - **Testes:** backend cobre B1, B3, B6, releituras, perfil privado, retenção das denúncias, apagar
   post em lotes. Faltam o `ConvexCache` (client) e um smoke e2e com Playwright.
 - **CI:** `pnpm check`, `vite build` e `expo-doctor`; Dependabot semanal (Expo e React ficam de

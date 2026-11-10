@@ -159,6 +159,11 @@ export function PrivacyPage() {
             como qualquer site, o seu IP ao acessá-las.
           </li>
           <li>
+            <strong>Sentry</strong> (Functional Software, Inc., Estados Unidos): recebe os
+            relatórios de erro do site e do app (o que falhou, em qual tela, navegador ou aparelho e
+            versão), para corrigirmos problemas. Não enviamos seu nome, email, @ nem IP.
+          </li>
+          <li>
             <strong>Google e Apple</strong>: apenas se você escolher entrar com eles. Eles confirmam
             sua identidade e nos enviam nome, email e foto.
           </li>
@@ -175,9 +180,9 @@ export function PrivacyPage() {
 
       <Section title="6. Transferência internacional">
         <p>
-          Como o Convex e o Open Library ficam nos Estados Unidos, seus dados são tratados fora do
-          Brasil. Essa transferência é necessária para executar o contrato com você (art. 33, IX, da
-          LGPD) e se apoia nas garantias contratuais e de segurança desses fornecedores.
+          Como o Convex, o Sentry e o Open Library ficam nos Estados Unidos, seus dados são tratados
+          fora do Brasil. Essa transferência é necessária para executar o contrato com você (art.
+          33, IX, da LGPD) e se apoia nas garantias contratuais e de segurança desses fornecedores.
         </p>
       </Section>
 

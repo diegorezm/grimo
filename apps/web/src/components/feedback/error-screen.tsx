@@ -1,7 +1,12 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { captureError } from "@/lib/sentry";
 
 /** Shown when a screen throws while rendering, instead of a blank page. */
-export function ErrorScreen({ reset }: { reset?: () => void }) {
+export function ErrorScreen({ error, reset }: { error?: unknown; reset?: () => void }) {
+  useEffect(() => {
+    if (error) captureError(error);
+  }, [error]);
   return (
     <div role="alert" className="mx-auto flex max-w-md flex-col items-start gap-4 px-6 py-16">
       <h1 className="text-3xl font-medium italic">Algo deu errado</h1>
