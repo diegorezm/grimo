@@ -1,6 +1,19 @@
 {
   "fill": {
-    "solid": "srgb:1.00000,0.98431,0.96078,1.00000"
+    "linear-gradient": [
+      "srgb:0.96471,0.83922,0.87451,1.00000",
+      "srgb:0.89804,0.85490,0.96078,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0,
+        "y": 0.5
+      },
+      "stop": {
+        "x": 1,
+        "y": 0.5
+      }
+    }
   },
   "groups": [
     {
@@ -8,36 +21,71 @@
         {
           "image-name": "sparkle.svg",
           "name": "sparkle",
-          "position": { "scale": 3.6, "translation-in-points": [0, 0] }
+          "position": {
+            "scale": 3.6,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
         }
       ],
-      "shadow": { "kind": "neutral", "opacity": 0.4 },
-      "translucency": { "enabled": true, "value": 0.3 }
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
     },
     {
       "layers": [
         {
           "image-name": "pages.svg",
           "name": "pages",
-          "position": { "scale": 3.6, "translation-in-points": [0, 0] }
+          "position": {
+            "scale": 3.6,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
         }
       ],
-      "shadow": { "kind": "neutral", "opacity": 0.5 },
-      "translucency": { "enabled": true, "value": 0.4 }
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.4
+      }
     },
     {
       "layers": [
         {
           "image-name": "cover.svg",
           "name": "cover",
-          "position": { "scale": 3.6, "translation-in-points": [0, 0] }
+          "position": {
+            "scale": 3.6,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
         }
       ],
-      "shadow": { "kind": "neutral", "opacity": 0.5 }
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      }
     }
   ],
   "supported-platforms": {
-    "circles": ["watchOS"],
+    "circles": [
+      "watchOS"
+    ],
     "squares": "shared"
   }
 }
