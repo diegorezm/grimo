@@ -1,140 +1,143 @@
-import type { Profile } from "@grimo/client";
-import { coverUrl, GENRE_LABELS, type Genre } from "@grimo/core";
+import { type Profile, useReaderShelves } from "@grimo/client";
+import { compactCount, DEFAULT_PROFILE_COLOR } from "@grimo/core";
+import { profileCovers } from "@grimo/tokens";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { Sparkle } from "@/components/ui/sparkle";
-import { StaffBadge } from "@/components/ui/staff-badge";
+import { useColorScheme } from "@/lib/theme";
+import { SongCard } from "./song-card";
 
 /**
- * Profile header: a banner (a tilted mosaic of the reader's covers, or the accent gradient),
- * the avatar overlapping it, then name, bio, counts and favorite genres. `linkCounts` turns the
- * follower counts into links to the lists.
+ * Profile top, like a magazine (the web twin of mobile's `ProfileHeader`): the photo ringed in
+ * the reader's color, name with @, pronouns and role, the numbers in two short lines, the bio,
+ * the highlighted quote and the "trilha da leitura". `actions` sit beside the name (Seguir,
+ * Editar); `followsYou` adds a quiet "segue você".
  */
 export function ProfileHeader({
   profile,
-  covers = [],
-  bookCount,
   actions,
   followsYou = false,
-  linkCounts = false,
 }: {
   profile: Profile;
-  covers?: string[];
-  bookCount?: number;
   actions?: ReactNode;
   followsYou?: boolean;
-  linkCounts?: boolean;
 }) {
-  const username = linkCounts ? profile.username : null;
-  // Repeat covers so the mosaic always fills the banner.
-  const tiles =
-    covers.length > 0 ? Array.from({ length: 24 }, (_, i) => covers[i % covers.length]!) : [];
+  // Same query as the Estantes tab (cached once): books read and their pages.
+  const shelves = useReaderShelves(profile.username).data;
+  const scheme = useColorScheme();
+  // Answers cached (or served) before profile colors existed have none.
+  const ring = profileCovers[scheme][profile.profileColor ?? DEFAULT_PROFILE_COLOR].bg;
+  const role =
+    profile.role === "admin" ? "admin" : profile.role === "moderator" ? "moderador" : null;
+  const handle = [profile.username && `@${profile.username}`, profile.pronouns, role]
+    .filter(Boolean)
+    .join(" · ");
+  const quote = profile.featuredQuote;
 
   return (
-    <section className="flex flex-col">
-      <div className="bg-accent-gradient relative h-44 overflow-hidden rounded-xl sm:h-56">
-        {tiles.length > 0 && (
-          <div
-            aria-hidden="true"
-            className="absolute -inset-x-10 -top-24 grid -rotate-6 grid-cols-6 gap-3 opacity-90 sm:grid-cols-12"
-          >
-            {tiles.map((src, i) => (
-              <img
-                key={i}
-                src={coverUrl(src, "M")}
-                alt=""
-                className="aspect-[2/3] w-full rounded-sm object-cover shadow-md"
-              />
-            ))}
-          </div>
-        )}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-linear-to-t from-black/45 via-black/10 to-transparent"
-        />
-        <Sparkle className="absolute top-6 right-10 size-6" />
-        <Sparkle className="absolute top-20 right-28 size-3 fill-surface" />
-      </div>
-
-      <div className="relative z-10 px-2 sm:px-8">
-        <div className="-mt-14 flex flex-wrap items-end justify-between gap-4">
+    <section className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-5">
+        <span className="rounded-full border-[3px] p-0.5" style={{ borderColor: ring }}>
           <Avatar
             src={profile.image}
             name={profile.name}
-            size="size-28"
-            className="bg-accent-gradient text-accent-foreground shadow-lg ring-4 ring-surface"
+            size="size-24"
+            className="bg-glow-a text-3xl text-text"
           />
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
-        </div>
-
-        <h1 className="mt-4 text-4xl font-medium italic lg:text-5xl">{profile.name}</h1>
-        {profile.username && (
-          <p className="mt-1 flex flex-wrap items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-text-muted">
-            @{profile.username}
-            <StaffBadge role={profile.role} />
-            {followsYou && (
-              <span className="rounded-sm bg-surface-muted px-2 py-0.5 text-[10px] tracking-wider">
-                Segue você
-              </span>
-            )}
-          </p>
-        )}
-        {profile.bio && <p className="mt-4 max-w-2xl text-lg leading-relaxed">{profile.bio}</p>}
-
-        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex gap-6">
-            {bookCount !== undefined && <Count value={bookCount} label="livros" />}
-            <Count
-              value={profile.followers}
-              label={profile.followers === 1 ? "seguidor" : "seguidores"}
-              to={username ? { username, kind: "followers" } : undefined}
-            />
-            <Count
-              value={profile.following}
-              label="seguindo"
-              to={username ? { username, kind: "following" } : undefined}
-            />
-          </div>
-          {profile.favoriteGenres.length > 0 && (
-            <ul className="flex flex-wrap gap-2" aria-label="Gêneros favoritos">
-              {profile.favoriteGenres.map((genre) => (
-                <li
-                  key={genre}
-                  className="rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-text-muted"
-                >
-                  {GENRE_LABELS[genre as Genre] ?? genre}
-                </li>
-              ))}
-            </ul>
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h1 className="text-4xl font-medium italic lg:text-5xl">{profile.name}</h1>
+          {handle && (
+            <p className="font-mono text-xs tracking-[0.12em] text-text-muted uppercase">
+              {handle}
+              {followsYou && " · segue você"}
+            </p>
           )}
         </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
+
+      <div className="flex flex-col gap-1 text-[15px] text-text-muted">
+        <p className="flex flex-wrap items-baseline gap-x-2">
+          <Stat value={shelves?.read.count ?? null} label="lidos" />
+          <Dot />
+          <Stat value={shelves?.read.pages ?? null} label="páginas" />
+        </p>
+        <p className="flex flex-wrap items-baseline gap-x-2">
+          <Stat
+            value={profile.followers}
+            label="seguidores"
+            to={{ username: profile.username, kind: "followers" }}
+          />
+          <Dot />
+          <Stat
+            value={profile.following}
+            label="seguindo"
+            to={{ username: profile.username, kind: "following" }}
+          />
+        </p>
+      </div>
+
+      {profile.bio && <p className="max-w-2xl text-lg leading-relaxed">{profile.bio}</p>}
+
+      {quote && (
+        <figure className="flex max-w-2xl gap-2">
+          <span
+            aria-hidden="true"
+            className="font-serif text-4xl leading-none text-ornament italic"
+          >
+            “
+          </span>
+          <div className="flex flex-col gap-1 pt-1">
+            <blockquote className="font-serif text-lg leading-snug italic">{quote.body}</blockquote>
+            {quote.bookTitle && (
+              <figcaption className="text-sm text-text-muted">
+                {quote.bookTitle}
+                {quote.page ? `, pág. ${quote.page}` : ""}
+              </figcaption>
+            )}
+          </div>
+        </figure>
+      )}
+
+      {profile.profileSong && (
+        <div className="max-w-md">
+          <SongCard song={profile.profileSong} />
+        </div>
+      )}
     </section>
   );
 }
 
-function Count({
+function Dot() {
+  return <span aria-hidden="true">·</span>;
+}
+
+/** "10 lidos", "1,9 mil páginas": the number in mono, the label in text, on one line. */
+function Stat({
   value,
   label,
   to,
 }: {
-  value: number;
+  /** `null` while loading (a dash). */
+  value: number | null;
   label: string;
   to?: { username: string; kind: "followers" | "following" };
 }) {
   const content = (
     <>
-      <span className="font-serif text-xl font-medium">{value}</span>
-      <span className="text-sm text-text-muted">{label}</span>
+      <span className="font-mono font-semibold text-text">
+        {value === null ? "–" : compactCount(value)}
+      </span>{" "}
+      {label}
     </>
   );
-  if (!to) return <div className="flex items-baseline gap-1.5">{content}</div>;
+  if (!to?.username) return <span>{content}</span>;
   return (
     <Link
       to={to.kind === "followers" ? "/u/$username/followers" : "/u/$username/following"}
       params={{ username: to.username }}
-      className="flex items-baseline gap-1.5 decoration-border underline-offset-4 hover:underline"
+      className="decoration-border underline-offset-4 hover:text-text hover:underline"
     >
       {content}
     </Link>

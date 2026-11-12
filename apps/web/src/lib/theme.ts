@@ -43,3 +43,21 @@ export function useThemePreference() {
     () => current,
   );
 }
+
+const DARK_QUERY = "(prefers-color-scheme: dark)";
+
+/** The scheme in use ("light" or "dark"): the preference, or the system's when it follows it. */
+export function useColorScheme(): "light" | "dark" {
+  const preference = useThemePreference();
+  const systemDark = useSyncExternalStore(
+    (listener) => {
+      const media = window.matchMedia(DARK_QUERY);
+      media.addEventListener("change", listener);
+      return () => media.removeEventListener("change", listener);
+    },
+    () => window.matchMedia(DARK_QUERY).matches,
+    () => false,
+  );
+  if (preference === "system") return systemDark ? "dark" : "light";
+  return preference;
+}

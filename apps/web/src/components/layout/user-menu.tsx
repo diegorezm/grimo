@@ -68,7 +68,7 @@ export function UserMenu({ me }: { me: Me }) {
       {open && (
         <div
           id={panelId}
-          className="absolute right-0 z-30 mt-2 flex w-64 flex-col gap-0.5 rounded-xl border border-border bg-surface p-2 shadow-lg shadow-shadow"
+          className="absolute right-0 z-50 mt-2 flex w-64 flex-col gap-0.5 rounded-xl border border-border bg-surface p-2 shadow-lg shadow-shadow"
         >
           <div className="px-3 py-2">
             <p className="truncate font-semibold">{me.name}</p>

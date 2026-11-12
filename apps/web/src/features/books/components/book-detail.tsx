@@ -1,6 +1,7 @@
 import {
   type BookDetail,
   bookInputOf,
+  toast,
   useAddToShelf,
   useCreatePost,
   useRemoveFromShelf,
@@ -10,12 +11,15 @@ import {
 import {
   editionPages,
   type Feeling,
+  feelingsSavedMessage,
   formatRating,
   GENRE_LABELS,
   type Genre,
+  ratingSavedMessage,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
+  shelfMoveMessage,
   starShares,
   timeAgo,
 } from "@grimo/core";
@@ -31,6 +35,8 @@ import { cn } from "@/utils/cn";
 import { Book3D } from "./book-3d";
 import { BookQuotes } from "./book-quotes";
 import { EditionPages } from "./edition-pages";
+import { EntryTags } from "./entry-tags";
+import { FinishDialog } from "./finish-dialog";
 import { FriendsWant } from "./friends-want";
 import { OpenReads } from "./open-reads";
 import { PageLogger } from "./page-logger";
@@ -149,6 +155,8 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
         </section>
       )}
 
+      {entry && <EntryTags entryId={entry.id} />}
+
       <div className="flex flex-wrap items-start gap-3">
         {(book.reviewStatus === null || book.reviewStatus === "approved") && (
           <StartGroup book={bookInput} />
@@ -158,6 +166,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
       <OpenReads openLibraryId={book.openLibraryId} />
       {book.description && <Synopsis text={book.description} />}
 
+      <CommunityStatuses community={community} />
       <CommunityFeelings community={community} />
       <Reviews detail={detail} />
       <BookQuotes detail={detail} />
@@ -188,14 +197,20 @@ function RatingRow({
         Sua nota
         <Stars
           rating={rating}
-          onChange={(value) => update.mutate({ id: entryId, rating: value })}
+          onChange={(value) => {
+            update.mutate({ id: entryId, rating: value }, { onError: (e) => toast.failed(e) });
+            toast.saved(ratingSavedMessage(value));
+          }}
           className="text-xl"
         />
       </div>
       <FeelingPicker
         value={feelings}
         suggested={suggested}
-        onChange={(next) => update.mutate({ id: entryId, feelings: next })}
+        onChange={(next) => {
+          update.mutate({ id: entryId, feelings: next }, { onError: (e) => toast.failed(e) });
+          toast.saved(feelingsSavedMessage(next));
+        }}
       />
     </div>
   );
@@ -426,11 +441,16 @@ export function BookShelfActions({ detail }: { detail: BookDetail }) {
   const update = useUpdateShelfEntry();
   const current = detail.entry?.status;
   const book = bookInputOf(detail.book);
+  const [finishing, setFinishing] = useState(false);
 
   function choose(status: ShelfStatus) {
     if (status === current) return;
-    if (detail.entry) update.mutate({ id: detail.entry.id, status });
-    else add.mutate({ book, status });
+    // Finishing a book is a moment: the date, the rating, how it felt ("Terminou?").
+    if (status === "read" && detail.entry) return setFinishing(true);
+    const onError = (error: unknown) => toast.failed(error);
+    if (detail.entry) update.mutate({ id: detail.entry.id, status }, { onError });
+    else add.mutate({ book, status }, { onError });
+    toast.saved(shelfMoveMessage(detail.book.title, status));
   }
 
   return (
@@ -457,6 +477,7 @@ export function BookShelfActions({ detail }: { detail: BookDetail }) {
         </button>
       ))}
       {detail.entry && <RemoveFromShelf entryId={detail.entry.id} />}
+      {finishing && <FinishDialog detail={detail} onClose={() => setFinishing(false)} />}
     </fieldset>
   );
 }
@@ -518,5 +539,39 @@ function RemoveFromShelf({ entryId }: { entryId: string }) {
         Cancelar
       </button>
     </span>
+  );
+}
+
+const STATUS_COLUMNS = [
+  { status: "read", label: "leram" },
+  { status: "reading", label: "lendo" },
+  { status: "want_to_read", label: "querem ler" },
+  { status: "abandoned", label: "pararam" },
+] as const;
+
+/** "Na comunidade": how many readers read the book, are reading it, want to and stopped. */
+function CommunityStatuses({ community }: { community: BookDetail["community"] }) {
+  // Absent in answers cached before the counters existed (or from an older backend).
+  const statuses = community.statuses as typeof community.statuses | undefined;
+  if (!statuses) return null;
+  const shelved = STATUS_COLUMNS.reduce((sum, { status }) => sum + statuses[status], 0);
+  return (
+    <section aria-labelledby="community-title" className="flex flex-col gap-3">
+      <h2 id="community-title" className="text-2xl font-medium italic">
+        Na comunidade
+      </h2>
+      {shelved === 0 ? (
+        <p className="text-text-muted">Ninguém tem este livro na estante ainda.</p>
+      ) : (
+        <dl className="grid max-w-xl grid-cols-4 divide-x divide-edge border-y border-edge">
+          {STATUS_COLUMNS.map(({ status, label }) => (
+            <div key={status} className="flex flex-col-reverse items-center gap-0.5 py-3">
+              <dt className="text-xs text-text-muted">{label}</dt>
+              <dd className="font-mono text-2xl">{statuses[status]}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
   );
 }
