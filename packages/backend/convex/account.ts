@@ -134,7 +134,10 @@ export const exportData = query({
       myShelves: myShelves.map((shelf) => ({
         name: shelf.name,
         isPublic: shelf.isPublic ?? false,
+        style: shelf.style ?? null,
       })),
+      /** How "Todos os meus livros" looks. */
+      allBooksShelfStyle: viewer.shelfStyle ?? null,
       account: {
         email: identity?.email ?? null,
         createdAt: date(viewer._creationTime),

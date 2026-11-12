@@ -1,5 +1,5 @@
 import { api } from "@grimo/backend";
-import { EMPTY_SHELF_FILTER, type ShelfFilter, toggleFilter } from "@grimo/core";
+import { EMPTY_SHELF_FILTER, type ShelfFilter, type ShelfStyle, toggleFilter } from "@grimo/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { FunctionReturnType } from "convex/server";
 import { create } from "zustand";
@@ -52,8 +52,12 @@ export type FullShelf = FunctionReturnType<typeof api.bookshelves.profileShelf>;
 export function useCreateShelf() {
   const { convex } = useConvexCache();
   return useMutation({
-    mutationFn: (input: { name: string; isPublic: boolean; entryIds?: string[] }) =>
-      convex.mutation(api.bookshelves.create, input),
+    mutationFn: (input: {
+      name: string;
+      isPublic: boolean;
+      entryIds?: string[];
+      style?: ShelfStyle;
+    }) => convex.mutation(api.bookshelves.create, input),
   });
 }
 
@@ -76,6 +80,29 @@ export function useSetShelfPublic() {
         ...data,
         items: data.items.map((shelf) => (shelf.id === id ? { ...shelf, isPublic } : shelf)),
       })),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/**
+ * How a shelf looks (no `id`: "Todos os meus livros"). Optimistic: the bookcase changes at
+ * once, offline too.
+ */
+export function useSetShelfStyle() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (input: { id?: string; style: ShelfStyle }) =>
+      convex.mutation(api.bookshelves.setStyle, input),
+    onMutate: ({ id, style }) =>
+      patchQueries<MyShelves>(myShelvesKey, (data) =>
+        id === undefined
+          ? { ...data, all: { style } }
+          : {
+              ...data,
+              items: data.items.map((shelf) => (shelf.id === id ? { ...shelf, style } : shelf)),
+            },
+      ),
     onError: (_error, _input, rollback) => rollback?.(),
   });
 }

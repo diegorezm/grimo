@@ -6,7 +6,10 @@ import {
   MAX_SHELVES_PER_BOOK,
   PUBLIC_SHELF_STATUSES,
   type ShelfStatus,
+  type ShelfStyle,
   shelfNameSchema,
+  shelfStyleOf,
+  shelfStyleSchema,
   yearOf,
 } from "@grimo/core";
 import { v } from "convex/values";
@@ -16,6 +19,7 @@ import { appError, notFound, parse } from "./model/errors";
 import { getViewer, readerByUsername, requireViewer, timeZoneOf } from "./model/readers";
 import { hasBlocked } from "./model/safety";
 import { withBooks } from "./model/shelves";
+import { shelfStyle } from "./schema";
 
 /**
  * The shelves a reader makes ("Física", "Kindle", "Emprestei"). A book is on a shelf when its
@@ -66,13 +70,20 @@ async function newShelf(
   viewer: Doc<"users">,
   rawName: string,
   isPublic: boolean,
+  style?: ShelfStyle,
 ) {
   const name = parse(shelfNameSchema, rawName);
   if ((await shelvesOf(ctx, viewer._id)).length >= MAX_SHELVES) {
     throw appError("INVALID", `Você pode ter até ${MAX_SHELVES} estantes`);
   }
   await assertFreeName(ctx, viewer, name);
-  return ctx.db.insert("shelfTags", { userId: viewer._id, name, isPublic, createdAt: Date.now() });
+  return ctx.db.insert("shelfTags", {
+    userId: viewer._id,
+    name,
+    isPublic,
+    createdAt: Date.now(),
+    ...(style ? { style: parse(shelfStyleSchema, style) } : {}),
+  });
 }
 
 /** Your shelf entries among `entryIds` (any other id is refused). */
@@ -109,7 +120,10 @@ async function setOnShelf(
   }
 }
 
-/** Your shelves with how many books each has, in the order you made them. */
+/**
+ * Your shelves with how many books each has and how each looks, in the order you made them;
+ * `all` is "Todos os meus livros".
+ */
 export const mine = query({
   args: {},
   handler: async (ctx) => {
@@ -123,11 +137,13 @@ export const mine = query({
       for (const id of entry.tagIds ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
     }
     return {
+      all: { style: shelfStyleOf(viewer.shelfStyle) },
       items: shelves.map((shelf) => ({
         id: shelf._id as string,
         name: shelf.name,
         isPublic: shelf.isPublic ?? false,
         count: counts.get(shelf._id) ?? 0,
+        style: shelfStyleOf(shelf.style),
       })),
     };
   },
@@ -135,11 +151,16 @@ export const mine = query({
 
 /** A new shelf, with these books already on it ("Nova estante com estes"). */
 export const create = mutation({
-  args: { name: v.string(), isPublic: v.boolean(), entryIds: v.optional(v.array(v.string())) },
-  handler: async (ctx, { name, isPublic, entryIds = [] }) => {
+  args: {
+    name: v.string(),
+    isPublic: v.boolean(),
+    entryIds: v.optional(v.array(v.string())),
+    style: v.optional(shelfStyle),
+  },
+  handler: async (ctx, { name, isPublic, entryIds = [], style }) => {
     const viewer = await requireViewer(ctx);
     const entries = await ownEntries(ctx, viewer, entryIds);
-    const id = await newShelf(ctx, viewer, name, isPublic);
+    const id = await newShelf(ctx, viewer, name, isPublic, style);
     await setOnShelf(ctx, entries, id, true);
     return { id: id as string };
   },
@@ -167,6 +188,22 @@ export const setPublic = mutation({
   },
 });
 
+/** How a shelf looks; no `id`: "Todos os meus livros". */
+export const setStyle = mutation({
+  args: { id: v.optional(v.string()), style: shelfStyle },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const style = parse(shelfStyleSchema, args.style);
+    if (args.id === undefined) {
+      await ctx.db.patch(viewer._id, { shelfStyle: style });
+      return null;
+    }
+    const shelf = await ownShelf(ctx, viewer, args.id);
+    await ctx.db.patch(shelf._id, { style });
+    return null;
+  },
+});
+
 /** Deletes a shelf: its books stay in your readings, only the grouping goes. */
 export const remove = mutation({
   args: { id: v.string() },
@@ -178,7 +215,11 @@ export const remove = mutation({
     );
     await setOnShelf(ctx, on, shelf._id, false);
     await ctx.db.delete(shelf._id);
-    return { entryIds: on.map((entry) => entry._id as string), name: shelf.name };
+    return {
+      entryIds: on.map((entry) => entry._id as string),
+      name: shelf.name,
+      style: shelfStyleOf(shelf.style),
+    };
   },
 });
 
@@ -191,7 +232,13 @@ export const duplicate = mutation({
     const on = (await entriesOf(ctx, viewer._id)).filter((entry) =>
       entry.tagIds?.includes(shelf._id),
     );
-    const id = await newShelf(ctx, viewer, args.name ?? copyName(shelf.name), false);
+    const id = await newShelf(
+      ctx,
+      viewer,
+      args.name ?? copyName(shelf.name),
+      false,
+      shelfStyleOf(shelf.style),
+    );
     await setOnShelf(ctx, on, id, true);
     return { id: id as string };
   },
@@ -256,6 +303,7 @@ export const profile = query({
           name: shelf.name,
           isPublic: shelf.isPublic ?? false,
           count: on.length,
+          style: shelfStyleOf(shelf.style),
           covers: on.slice(0, SHELF_COVERS).map(({ entry, book }) => ({
             entryId: entry.id,
             openLibraryId: book.openLibraryId,
@@ -286,6 +334,7 @@ export const profileShelf = query({
 
     let name: string;
     let isPublic = true;
+    let style = shelfStyleOf(reader.shelfStyle);
     let picked: Doc<"shelfEntries">[];
     if (shelf === "reading" || shelf === "read") {
       name = shelf === "reading" ? "Lendo" : "Lidos";
@@ -298,6 +347,7 @@ export const profileShelf = query({
       }
       name = made.name;
       isPublic = made.isPublic ?? false;
+      style = shelfStyleOf(made.style);
       picked = entries.filter(
         (entry) =>
           entry.tagIds?.includes(made._id) &&
@@ -321,6 +371,7 @@ export const profileShelf = query({
     return {
       name,
       isPublic,
+      style,
       count: picked.length,
       owner: { username: reader.username, name: reader.name },
       runs:

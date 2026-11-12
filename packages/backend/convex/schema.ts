@@ -8,7 +8,14 @@ import {
   REPORT_REASONS,
   REPORT_STATUSES,
   REPORT_TARGETS,
+  SHELF_DECOR,
+  SHELF_LAYOUTS,
+  SHELF_LIGHTS,
+  SHELF_MATERIALS,
+  SHELF_MODELS,
+  SHELF_SORTS,
   SHELF_STATUSES,
+  SPINE_FINISHES,
 } from "@grimo/core";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -27,6 +34,16 @@ export const notificationKind = literals(NOTIFICATION_KINDS);
 export const reportTarget = literals(REPORT_TARGETS);
 export const reportReason = literals(REPORT_REASONS);
 export const reportStatus = literals(REPORT_STATUSES);
+/** How a shelf looks (`@grimo/core` shelves/style). */
+export const shelfStyle = v.object({
+  model: literals(SHELF_MODELS),
+  material: literals(SHELF_MATERIALS),
+  finish: literals(SPINE_FINISHES),
+  layout: literals(SHELF_LAYOUTS),
+  sort: literals(SHELF_SORTS),
+  decor: v.array(literals(SHELF_DECOR)),
+  light: literals(SHELF_LIGHTS),
+});
 
 export const moderationLogAction = v.union(
   v.literal("dismiss"),
@@ -117,6 +134,8 @@ export default defineSchema({
     profileShows: v.optional(
       v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
     ),
+    /** How "Todos os meus livros" looks (absent: the default style). */
+    shelfStyle: v.optional(shelfStyle),
     /** Denormalized counters, kept by the follow/shelf mutations. */
     followers: v.number(),
     following: v.number(),
@@ -235,6 +254,8 @@ export default defineSchema({
     createdAt: v.number(),
     /** Shown on the profile (only books read or being read); absent or false: only the reader. */
     isPublic: v.optional(v.boolean()),
+    /** How the bookcase looks (absent: the default style). */
+    style: v.optional(shelfStyle),
   }).index("by_user", ["userId"]),
 
   /**

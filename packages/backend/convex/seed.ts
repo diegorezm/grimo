@@ -8,7 +8,7 @@
  * same model functions the app uses, backdated so the feed and stats look lived-in.
  * Re-running is safe: nothing happens once the main reader has books.
  */
-import { type BookInput, PRIVACY_VERSION, TERMS_VERSION } from "@grimo/core";
+import { type BookInput, PRIVACY_VERSION, SHELF_PRESETS, TERMS_VERSION } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -206,12 +206,17 @@ export const populate = internalMutation({
           profileShows: { goal: true, reading: true, streak: true },
         });
 
-        // A shelf of the books on the reader's physical shelf, shown on the profile.
+        // A shelf of the books on the reader's physical shelf, shown on the profile, dressed
+        // as a library; "Todos os meus livros" gets the cottage look.
         const shelfId = await ctx.db.insert("shelfTags", {
           userId: user._id,
           name: "Física",
           isPublic: true,
           createdAt: tick(),
+          style: SHELF_PRESETS.find((preset) => preset.id === "acervo")?.style,
+        });
+        await ctx.db.patch(user._id, {
+          shelfStyle: SHELF_PRESETS.find((preset) => preset.id === "chale")?.style,
         });
         const entries = await ctx.db
           .query("shelfEntries")

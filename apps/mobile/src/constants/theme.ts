@@ -16,7 +16,10 @@ export {
   profileCovers,
   radius,
   shelfBadges,
+  shelfBrass,
   shelfColors,
+  shelfDecorColors,
+  shelfMaterials,
   spacing,
   storyCard,
 } from "@grimo/tokens";

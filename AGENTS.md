@@ -20,6 +20,7 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Landing page (visitante)                 | `apps/web/src/features/landing/` (rota `/welcome`; `/` deslogado cai nela) |
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Juntos (ler em grupo)                    | `convex/groups.ts` + `model/groups.ts`, `@grimo/core` `groups/`, web `features/groups` (`/juntos`, convite público `/j/<código>`), mobile aba `juntos` + `group/[id]` |
+| Visual da estante (modelos, cores, enfeites, estilos prontos) | `@grimo/core` `shelves/style.ts` (opções, presets, `layoutBookcase`), tokens `shelfMaterials`, mobile `features/shelves/bookcase/` + `customize-sheet.tsx`; salvo por `bookshelves.setStyle` |
 | Importar estantes (Goodreads)            | `@grimo/core` `imports/` (lê o CSV), `convex/imports.ts` (Open Library em lotes, `importToShelf` sem feed), web `/importar` |
 | Moderação (denúncias, livros cadastrados) | `convex/moderation.ts` (`queue`, `act`, `decideBook`, `log`; convites de moderador em `convex/moderators.ts` (24 h, só admin convida); papéis também via `npx convex run moderation:setAdmin` / `setModerator`; suspensão com prazo e motivo; limites em `canModerate`), web `/admin` |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |

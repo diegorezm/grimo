@@ -297,6 +297,127 @@ export const profileCovers = {
   },
 } as const;
 
+/**
+ * Shelf materials (`SHELF_MATERIALS` in `@grimo/core`): what the reader paints their bookcase
+ * with. Content, not chrome, so the same in light and dark mode. `room` is the wall behind it,
+ * `side` the furniture, `back` its back panel, `plankTop`/`plank` the shelves, `grain` a
+ * repeating stripe for wood, `ink` text on the panel, and `tones` the spine colors of "Tons do
+ * móvel", "Tecido" and "Couro" (`SPINE_TONES` of them, in rainbow order).
+ */
+export const shelfMaterials = {
+  paper: {
+    room: "#F6ECE2",
+    side: "#EBDBCF",
+    back: "#FFF6EC",
+    plankTop: "#F3E6DC",
+    plank: "#E2CEC2",
+    grain: null,
+    ink: "#6E5F6C",
+    dark: false,
+    tones: ["#E7A1B5", "#F2C6D2", "#D6AE55", "#7FA27A", "#C9B6E8", "#9C7CD6", "#3A2E3F"],
+  },
+  lilac: {
+    room: "#E4D9F4",
+    side: "#D3C1EE",
+    back: "#EFE7FA",
+    plankTop: "#DFD1F3",
+    plank: "#C7B2EA",
+    grain: null,
+    ink: "#5B4A78",
+    dark: false,
+    tones: ["#E7A1B5", "#F2C6D2", "#E5DAF5", "#C9B6E8", "#B79AE6", "#9C7CD6", "#5B4A78"],
+  },
+  rose: {
+    room: "#F6DAE3",
+    side: "#F0C3D1",
+    back: "#FCE8EE",
+    plankTop: "#F6D3DE",
+    plank: "#EAB3C5",
+    grain: null,
+    ink: "#8A4A5E",
+    dark: false,
+    tones: ["#C46F8E", "#D07C97", "#E7A1B5", "#F2C6D2", "#D6AE55", "#F6D6DF", "#9C7CD6"],
+  },
+  sage: {
+    room: "#E1E9D8",
+    side: "#CFDBC4",
+    back: "#EEF2E8",
+    plankTop: "#DCE5D2",
+    plank: "#C2D1B5",
+    grain: null,
+    ink: "#4F6650",
+    dark: false,
+    tones: ["#E7A1B5", "#D6AE55", "#EDE3C8", "#B9CDB0", "#7FA27A", "#5E8259", "#3F5A4A"],
+  },
+  night: {
+    room: "#1C1626",
+    side: "#3A3049",
+    back: "#2A2236",
+    plankTop: "#55476A",
+    plank: "#433754",
+    grain: null,
+    ink: "#CBBEDB",
+    dark: true,
+    tones: ["#E7A1B5", "#D6AE55", "#F3EAF2", "#B79AE6", "#9C7CD6", "#6C5A86", "#4E5D8C"],
+  },
+  oak: {
+    room: "#EFE3D4",
+    side: "#C9A27C",
+    back: "#F4E9DC",
+    plankTop: "#D9B994",
+    plank: "#BF9670",
+    grain: "rgba(120,80,40,0.10)",
+    ink: "#6B4E35",
+    dark: false,
+    tones: ["#8E2F3C", "#7A4E63", "#D6AE55", "#B9A27E", "#2F3B33", "#3F5A6E", "#5B4A78"],
+  },
+  walnut: {
+    room: "#2B211C",
+    side: "#5A4031",
+    back: "#3A2C24",
+    plankTop: "#7A5A44",
+    plank: "#654836",
+    grain: "rgba(0,0,0,0.14)",
+    ink: "#E8D6C4",
+    dark: true,
+    tones: ["#8E2F3C", "#7A4E63", "#D6AE55", "#B9A27E", "#2F3B33", "#3F5A6E", "#5B4A78"],
+  },
+} as const;
+
+/** Gold of leather spines, brass plaques and lamps on the bookcase. */
+export const shelfBrass = {
+  light: "#EBCB7E",
+  base: "#C99B3E",
+  deep: "#8A6239",
+  /** Text on brass and on light spines. */
+  ink: "#3A2E3F",
+  /** Text on dark spines. */
+  paper: "#FFFBF5",
+} as const;
+
+/** The objects on the bookcase (plant, candle, mug…): illustration colors, any theme. */
+export const shelfDecorColors = {
+  leaf: "#7FA27A",
+  leafLight: "#97B98F",
+  leafDark: "#6E946A",
+  pot: "#E7A1B5",
+  potRim: "#D88BA2",
+  blossom: "#F2C6D2",
+  wax: "#FFF6E3",
+  waxDrip: "#EADCC0",
+  glow: "#F6D58A",
+  flame: "#F2B94B",
+  flameCore: "#FFF3C8",
+  lilac: "#9C7CD6",
+  lilacLight: "#B79AE6",
+  blush: "#F6D6DF",
+  mist: "#E5DAF5",
+  steam: "#B9A9C4",
+  ink: "#3A2E3F",
+  sea: "#7FB4D6",
+  rung: "#A47A4C",
+} as const;
+
 /** Brand color of each music service, for the dot beside "Ouvir no …" on the profile song. */
 export const musicServiceColors: Record<string, string> = {
   Spotify: "#1ED760",

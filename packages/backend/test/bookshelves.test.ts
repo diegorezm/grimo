@@ -1,3 +1,4 @@
+import type { ShelfStyle } from "@grimo/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../convex/_generated/api";
 import { onAccountDeleted } from "../convex/account";
@@ -137,7 +138,7 @@ describe("shelves the reader makes", () => {
     const data = await t
       .withIdentity({ subject: "auth-rafa", email: "rafa@grimo.test" })
       .query(api.account.exportData, {});
-    expect(data.myShelves).toEqual([{ name: "Kindle", isPublic: false }]);
+    expect(data.myShelves).toEqual([{ name: "Kindle", isPublic: false, style: null }]);
     expect(data.shelf[0]).toMatchObject({ shelves: ["Kindle"] });
 
     await t.run((ctx) => onAccountDeleted(ctx, "auth-rafa"));
@@ -182,5 +183,63 @@ describe("a whole shelf from the profile", () => {
     await expect(
       bia.as.query(api.bookshelves.profileShelf, { username: "rafa", shelf: secreta }),
     ).rejects.toThrow(/Estante/);
+  });
+});
+
+describe("how a shelf looks", () => {
+  const acervo: ShelfStyle = {
+    model: "library",
+    material: "walnut",
+    finish: "leather",
+    layout: "standing",
+    sort: "height",
+    decor: ["candle", "globe"],
+    light: "lamp",
+  };
+
+  it("starts with the default and keeps each shelf's own style", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const { id } = await rafa.as.mutation(api.bookshelves.create, {
+      name: "Física",
+      isPublic: true,
+    });
+    const before = await rafa.as.query(api.bookshelves.mine, {});
+    expect(before.items[0]?.style.model).toBe("classic");
+    expect(before.all.style.model).toBe("classic");
+
+    await rafa.as.mutation(api.bookshelves.setStyle, { id, style: acervo });
+    await rafa.as.mutation(api.bookshelves.setStyle, { style: { ...acervo, model: "arch" } });
+    const after = await rafa.as.query(api.bookshelves.mine, {});
+    expect(after.items[0]?.style).toEqual(acervo);
+    expect(after.all.style.model).toBe("arch");
+
+    const { id: copy } = await rafa.as.mutation(api.bookshelves.duplicate, { id });
+    const shelves = (await rafa.as.query(api.bookshelves.mine, {})).items;
+    expect(shelves.find((shelf) => shelf.id === copy)?.style).toEqual(acervo);
+
+    const profile = await rafa.as.query(api.bookshelves.profile, { username: "rafa" });
+    expect(profile.items[0]?.style).toEqual(acervo);
+  });
+
+  it("a new shelf can start with a style; nobody styles someone else's shelf", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const { id } = await rafa.as.mutation(api.bookshelves.create, {
+      name: "Kindle",
+      isPublic: false,
+      style: acervo,
+    });
+    expect((await rafa.as.query(api.bookshelves.mine, {})).items[0]?.style).toEqual(acervo);
+    await expect(bia.as.mutation(api.bookshelves.setStyle, { id, style: acervo })).rejects.toThrow(
+      /Estante/,
+    );
+    await expect(
+      rafa.as.mutation(api.bookshelves.setStyle, {
+        id,
+        style: { ...acervo, decor: ["candle", "candle"] },
+      }),
+    ).rejects.toThrow(/repetido/);
   });
 });
