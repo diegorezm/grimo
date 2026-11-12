@@ -13,7 +13,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { emailEnabled } from "./env";
 import { appError, notFound, unauthenticated } from "./errors";
-import { isHidden, isSuspended } from "./safety";
+import { canSeeReader, followRequest, isHidden, isSuspended } from "./safety";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -184,6 +184,8 @@ export async function profileOf(ctx: Ctx, user: Doc<"users">) {
     favoriteBooks,
     featuredQuote,
     profileShows: user.profileShows ?? DEFAULT_PROFILE_SHOWS,
+    /** Only followers see the reading (the page shows a lock to everyone else). */
+    isPrivate: user.isPrivate ?? false,
   };
 }
 
@@ -236,8 +238,12 @@ export async function readerCard(ctx: Ctx, user: Doc<"users">, viewerId: Id<"use
     viewerId ? isFollowing(ctx, viewerId, user._id) : false,
     viewerId ? isFollowing(ctx, user._id, viewerId) : false,
   ]);
-  const books = await Promise.all(recent.map((entry) => ctx.db.get(entry.bookId)));
-  const readingBook = reading ? await ctx.db.get(reading.bookId) : null;
+  // A private reader's card keeps the name and counts, not the books.
+  const open = await canSeeReader(ctx, viewerId, user);
+  const requested =
+    !following && viewerId ? (await followRequest(ctx, viewerId, user._id)) !== null : false;
+  const books = open ? await Promise.all(recent.map((entry) => ctx.db.get(entry.bookId))) : [];
+  const readingBook = open && reading ? await ctx.db.get(reading.bookId) : null;
   return {
     id: user._id,
     name: user.name,
@@ -251,6 +257,9 @@ export async function readerCard(ctx: Ctx, user: Doc<"users">, viewerId: Id<"use
     readingNow: readingBook?.title ?? null,
     isFollowing: following,
     followsYou,
+    isPrivate: user.isPrivate ?? false,
+    /** A pending request to follow this private reader. */
+    requested,
   };
 }
 

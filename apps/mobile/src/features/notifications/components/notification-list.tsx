@@ -1,5 +1,6 @@
 import {
   type NotificationItem,
+  useAnswerFollowRequest,
   useMarkNotificationsRead,
   useMe,
   useNotifications,
@@ -115,6 +116,7 @@ function ReaderRow({ item }: { item: NotificationItem }) {
           {timeAgo(new Date(item.createdAt))}
         </Text>
       </View>
+      {item.kind === "follow_request" && item.requestPending && <AnswerRequest userId={actor.id} />}
       {item.kind === "follow" && item.followingActor !== null && actor.id !== meId && (
         <FollowButton userId={actor.id} isFollowing={item.followingActor} followsYou compact />
       )}
@@ -122,7 +124,29 @@ function ReaderRow({ item }: { item: NotificationItem }) {
   );
 }
 
+/** "Aceitar" / "Recusar" a request to follow your private profile. */
+function AnswerRequest({ userId }: { userId: string }) {
+  const answer = useAnswerFollowRequest();
+  return (
+    <View style={styles.answer}>
+      <Button
+        title="Aceitar"
+        style={styles.compact}
+        onPress={() => answer.mutate({ userId, accept: true })}
+      />
+      <Button
+        title="Recusar"
+        variant="secondary"
+        style={styles.compact}
+        onPress={() => answer.mutate({ userId, accept: false })}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  answer: { gap: spacing[2] },
+  compact: { paddingHorizontal: 14, paddingVertical: 8 },
   bar: { flexDirection: "row" },
   row: {
     flexDirection: "row",

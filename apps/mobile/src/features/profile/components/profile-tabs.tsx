@@ -85,7 +85,7 @@ export function ProfileTabs({
       {tab === "featured" && <ProfileFeatured page={page} streak={streak} />}
       {tab === "year" && (
         <>
-          <YearStats overview={page.stats} />
+          <YearStats overview={page.stats ?? undefined} />
           {isMe && (
             <>
               <Text variant="heading">Card do mês</Text>

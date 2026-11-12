@@ -90,3 +90,30 @@ describe("edition pages", () => {
     expect(planShelfTransition(prev, { status: "read" }, 412, now).set.currentPage).toBe(412);
   });
 });
+
+describe("planShelfTransition rereads", () => {
+  const read = {
+    status: "read" as const,
+    currentPage: 300,
+    maxPage: 300,
+    startedAt: new Date("2025-01-01"),
+  };
+
+  it("moving a read book back to 'reading' starts a new reading from page 0", () => {
+    const result = planShelfTransition(read, { status: "reading" }, 300, now);
+    expect(result.reread).toBe(true);
+    expect(result.set).toMatchObject({ startedAt: now, finishedAt: null, currentPage: 0 });
+    expect(result.maxPage).toBe(0);
+    expect(result.activity).toBe("shelved");
+  });
+
+  it("counts the pages of a reread again", () => {
+    const result = planShelfTransition(read, { status: "reading", currentPage: 40 }, 300, now);
+    expect(result.pagesRead).toBe(40);
+  });
+
+  it("other moves aren't rereads", () => {
+    expect(planShelfTransition(read, { status: "want_to_read" }, 300, now).reread).toBe(false);
+    expect(planShelfTransition(read, { rating: 5 }, 300, now).reread).toBe(false);
+  });
+});

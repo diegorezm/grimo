@@ -16,6 +16,7 @@ import {
   GENRE_LABELS,
   type Genre,
   ratingSavedMessage,
+  rereadLabel,
   SHELF_LABELS,
   SHELF_STATUSES,
   type ShelfStatus,
@@ -102,6 +103,7 @@ export function BookDetailBody({ detail }: { detail: BookDetail }) {
             className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted"
           >
             Sua leitura
+            {rereadLabel(entry.pastReads) && ` · ${rereadLabel(entry.pastReads)}`}
           </h2>
           {entry.status === "reading" ? (
             <>

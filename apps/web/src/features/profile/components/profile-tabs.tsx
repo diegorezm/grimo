@@ -223,7 +223,7 @@ export function ProfileReadingNow({ page }: { page: ReaderPage }) {
 /** Highlights in the side column: the year's goal and the streak (each one the reader can hide). */
 export function ProfileFeatured({ page, streak }: { page: ReaderPage; streak?: number | null }) {
   const { profile, stats } = page;
-  const goal = (profile.profileShows ?? DEFAULT_PROFILE_SHOWS).goal ? stats.goal : null;
+  const goal = (profile.profileShows ?? DEFAULT_PROFILE_SHOWS).goal ? (stats?.goal ?? null) : null;
   const showStreak =
     (profile.profileShows ?? DEFAULT_PROFILE_SHOWS).streak && !!streak && streak > 0;
   if (!goal && !showStreak) return null;
@@ -233,7 +233,7 @@ export function ProfileFeatured({ page, streak }: { page: ReaderPage; streak?: n
         <>
           <div className="flex items-baseline justify-between">
             <span className="font-mono text-[10px] tracking-[0.12em] text-text-muted uppercase">
-              Meta de {stats.year}
+              Meta de {stats?.year}
             </span>
             <span className="font-mono text-lg">
               {goal.done} / {goal.target}

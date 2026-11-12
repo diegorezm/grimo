@@ -25,7 +25,7 @@ import { friendsWantingBook } from "./model/friends";
 import { fetchBook, fetchWork, searchOpenLibrary } from "./model/openLibrary";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer } from "./model/readers";
-import { blockedIds, isBookVisible, isHidden } from "./model/safety";
+import { blockedIds, isBookVisible, isHidden, readerVisibility } from "./model/safety";
 import { addToShelf, bookByOpenLibraryId, bookView, entryView } from "./model/shelves";
 import { bookInput, shelfStatus, workDetails } from "./schema";
 
@@ -254,12 +254,14 @@ export const detail = query({
       blockedIds(ctx, viewer?._id ?? null),
       viewer ? friendsWantingBook(ctx, viewer._id, row._id) : [],
     ]);
+    const canSee = readerVisibility(ctx, viewer?._id ?? null);
     const withAuthors = async (posts: Doc<"posts">[]) => {
       const views = await Promise.all(
         posts.map(async (post) => {
           const author = await ctx.db.get(post.authorId);
-          // Like everywhere else: nothing from hidden readers, or between blocked readers.
-          return author && !isHidden(author) && !blocked.has(author._id)
+          // Like everywhere else: nothing from hidden readers, between blocked readers, or from
+          // a private reader to someone who doesn't follow them.
+          return author && !isHidden(author) && !blocked.has(author._id) && (await canSee(author))
             ? {
                 ...(await postView(ctx, post, viewer?._id ?? null, blocked)),
                 author: authorOf(author),

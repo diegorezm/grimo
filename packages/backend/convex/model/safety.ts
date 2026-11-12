@@ -59,3 +59,44 @@ export const isBookVisible = (book: Doc<"books">, viewerId: Id<"users"> | null) 
   book.reviewStatus === undefined ||
   book.reviewStatus === "approved" ||
   book.createdBy === viewerId;
+
+/**
+ * Private profile ("só seguidores veem minhas leituras"): whether `viewerId` may see `user`'s
+ * shelf, stats, activity, posts and lists. Yes for public readers, for the reader themself and
+ * for approved followers.
+ */
+export async function canSeeReader(ctx: Ctx, viewerId: Id<"users"> | null, user: Doc<"users">) {
+  if (!user.isPrivate || viewerId === user._id) return true;
+  if (!viewerId) return false;
+  const follow = await ctx.db
+    .query("follows")
+    .withIndex("by_follower_following", (q) =>
+      q.eq("followerId", viewerId).eq("followingId", user._id),
+    )
+    .unique();
+  return follow !== null;
+}
+
+/** `canSeeReader` for many readers at once (feeds, reviews), each follow looked up once. */
+export function readerVisibility(ctx: Ctx, viewerId: Id<"users"> | null) {
+  const known = new Map<Id<"users">, Promise<boolean>>();
+  return (user: Doc<"users">) => {
+    if (!user.isPrivate) return Promise.resolve(true);
+    let seen = known.get(user._id);
+    if (!seen) {
+      seen = canSeeReader(ctx, viewerId, user);
+      known.set(user._id, seen);
+    }
+    return seen;
+  };
+}
+
+/** `requesterId`'s pending request to follow `targetId`, if any. */
+export function followRequest(ctx: Ctx, requesterId: Id<"users">, targetId: Id<"users">) {
+  return ctx.db
+    .query("followRequests")
+    .withIndex("by_requester_target", (q) =>
+      q.eq("requesterId", requesterId).eq("targetId", targetId),
+    )
+    .unique();
+}

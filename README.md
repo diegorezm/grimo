@@ -1,57 +1,56 @@
-# Grimo
+<p align="center">
+  <img src="apps/web/public/icon-192.png" width="96" alt="Grimo" />
+</p>
 
-Rede social para leitores: registre o que está lendo, organize suas estantes, escreva resenhas,
-acompanhe outros leitores e compartilhe o resumo do seu mês de leitura.
+<h1 align="center">Grimo</h1>
 
-> O foco é ser **simples, bonito e pessoal**: perfil, estantes, resenhas, feed e compartilhamento
-> de métricas. Não é um catálogo gigante de livros nem um app complexo de estatísticas.
+<p align="center">
+  <strong>Uma rede social pequena e bonita para quem lê.</strong><br />
+  Anote o que está lendo, organize suas estantes e veja o que seus amigos estão lendo.
+</p>
 
-## Stack
+<p align="center">
+  <img src="apps/web/public/og.png" width="720" alt="Grimo" />
+</p>
 
-| Camada       | Tecnologia                                                                         |
-| ------------ | ---------------------------------------------------------------------------------- |
-| Monorepo     | [pnpm workspaces](https://pnpm.io) + [Turborepo](https://turborepo.com)            |
-| Backend      | [Convex](https://convex.dev): banco, funções, tempo real e arquivos                |
-| Autenticação | [Better Auth](https://better-auth.com) no Convex (email/senha e Google)            |
-| Web          | React 19 + Vite + TanStack Router/Query + Tailwind v4 (SPA estática)               |
-| Mobile       | Expo (SDK 58) + Expo Router                                                        |
-| Cache        | TanStack Query persistido (localStorage / MMKV), alimentado pelas subscriptions do Convex |
-| Validação    | Zod (schemas compartilhados entre backend, web e mobile)                           |
-| Lint/format  | [Biome](https://biomejs.dev)                                                       |
+## Por que o Grimo?
 
-## Estrutura
+A maioria dos apps de leitura é um catálogo gigante ou uma planilha de estatísticas. O Grimo é o
+contrário: **simples, bonito e pessoal**. Abre rápido, funciona sem internet e não tem anúncio.
 
-```
-apps/
-  web/       App web (Vite + React), SPA estática (Cloudflare static assets ou qualquer host)
-  mobile/    App mobile (Expo)
-packages/
-  backend/   Convex: schema, queries/mutations/actions, auth (Better Auth), seed e testes
-  core/      Domínio puro: schemas Zod, constantes, regras (estantes, resumo do mês). Sem React.
-  client/    Camada de dados compartilhada por web e mobile: ponte Convex ↔ TanStack Query,
-             cache persistido e hooks (`useFeed`, `useShelf`, `useMe`…)
-  tokens/    Design tokens (cores, espaçamento, fontes) → Tailwind (web) e StyleSheet (mobile)
-  tsconfig/  Configs base de TypeScript
-```
+## O que dá para fazer
 
-O que é compartilhado entre plataformas: schemas e regras (`@grimo/core`), os hooks e o cache
-(`@grimo/client`) e os tokens visuais. Só a camada de UI é por plataforma.
+- 📚 **Estantes**: Quero ler, Lendo, Lidos e Abandonei.
+- 📖 **Marcar a página**: "estou na 142 de 320" e o Grimo acompanha seu ritmo.
+- ✍️ **Resenhas e notas**: de uma frase a um texto longo, com nota de 1 a 5.
+- 👥 **Seguir leitores**: um feed com o que seus amigos leram, terminaram e acharam.
+- 🎯 **Meta do ano**: "12 livros em 2026", com o progresso sempre à vista.
+- 🗓️ **Resumo do mês**: um card pronto para postar nos Stories.
+- 🤝 **Juntos**: leia o mesmo livro com um grupo, convite por link.
+- 📥 **Importar do Goodreads**: traga suas estantes com o CSV de exportação.
 
-**Offline primeiro:** o cache inteiro fica salvo no aparelho por 7 dias. Ao abrir, as telas
-aparecem na hora a partir dele (mesmo sem internet) e o Convex atualiza em tempo real o que está
-na tela. Curtir, seguir e atualizar progresso refletem na hora (otimista) e são desfeitos se o
-servidor recusar.
+## Como é usar
 
-## Desenvolvimento
+> **Rafa** terminou *O Senhor dos Anéis* ★★★★★
+> "Demorei três meses, valeu cada página."
+>
+> **Bia** começou *Torto Arado* · página 12 de 264
+>
+> **Você** · 9 de 12 livros em 2026
 
-Pré-requisitos: Node 22+, pnpm 12+. Para o mobile: um development build ou emulador.
+Um dia típico: você abre o app, marca que chegou na página 180, curte a resenha de um amigo e
+fecha. Leva dez segundos.
+
+## Rodar no seu computador
+
+Precisa de **Node 22+** e **pnpm**.
 
 ```bash
 pnpm install
-pnpm dev:backend        # 1ª vez: cria o deployment Convex (login, ou local sem conta) e fica rodando
+pnpm dev:backend   # na primeira vez, cria o backend (Convex) e pede login
 ```
 
-Na primeira vez, configure o deployment (em outro terminal):
+Em outro terminal, uma vez só:
 
 ```bash
 cd packages/backend
@@ -59,87 +58,27 @@ npx convex env set SITE_URL http://localhost:5173
 npx convex env set BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
 ```
 
-Entrar com Google (opcional): crie um OAuth Client ("Web application") no Google Cloud com o
-redirect URI `<CONVEX_SITE_URL>/api/auth/callback/google` (local: `http://127.0.0.1:3211/...`) e:
+Pronto. A partir daí:
 
 ```bash
-npx convex env set GOOGLE_CLIENT_ID <id>
-npx convex env set GOOGLE_CLIENT_SECRET <secret>
+pnpm dev    # abre em http://localhost:5173
+pnpm seed   # cria leitores de exemplo
 ```
 
-Sem essas variáveis o botão "Continuar com Google" aparece desabilitado, avisando que não está
-disponível no momento.
+Entre com **`rafa@grimo.test`** e senha **`grimo-demo`** para ver o app cheio de dados.
 
-Entrar com Apple (exigido pela App Store quando há login com Google): `APPLE_CLIENT_ID` (Services
-ID), `APPLE_CLIENT_SECRET` (JWT gerado com a chave da Apple) e `APPLE_BUNDLE_ID` (app iOS), com o
-redirect `<CONVEX_SITE_URL>/api/auth/callback/apple`. `auth.providers` diz aos apps se está ligado.
+Quer o app de celular, login com Google, emails ou fazer deploy? Está tudo no
+[AGENTS.md](AGENTS.md#setup-e-deploy).
 
-Email (opcional, Resend): confirmação de email e recuperação de senha. Com `RESEND_API_KEY` e
-`EMAIL_FROM` (ex.: `Grimo <ola@seudominio.com>`, domínio verificado no Resend) no deployment, os
-emails saem e o **email confirmado passa a ser exigido** para comentar, postar, curtir e seguir
-(`requireVerifiedViewer`). Sem elas nada é exigido (ninguém conseguiria confirmar) e o link só vai
-para o log (`npx convex logs`). Depois de ligar, rode `npx convex run migrations:runAll` uma vez.
+## Contribuir
 
-Termos, privacidade, idade mínima (16+), exclusão de conta e moderação: veja
-[docs/legal/README.md](docs/legal/README.md).
-
-Depois, no dia a dia:
-
-```bash
-pnpm dev                # Convex (convex dev) + web em http://localhost:5173
-pnpm seed               # dados de exemplo: entre como rafa@grimo.test / grimo-demo
-```
-
-A web acha o deployment sozinha (lê `packages/backend/.env.local`, escrito pelo `convex dev`);
-para apontar para outro, use `VITE_CONVEX_URL` (veja `apps/web/.env.example`).
-
-Todas as contas de exemplo (`rafa`, `bia.lima`, `caio`, `lu.prado`, `theo`) usam a senha
-`grimo-demo`.
-
-### Mobile
-
-```bash
-cp apps/mobile/.env.example apps/mobile/.env.local  # EXPO_PUBLIC_CONVEX_URL
-pnpm dev:mobile
-```
-
-Com o deployment local, no celular físico use o IP da sua máquina (ex. `http://192.168.0.10:3210`);
-no emulador Android, `http://10.0.2.2:3210`. Um deployment na nuvem funciona igual em todo lugar.
-
-## Scripts
-
-| Comando                  | O que faz                                                    |
-| ------------------------ | ------------------------------------------------------------ |
-| `pnpm dev`               | Convex (`convex dev`) + web                                  |
-| `pnpm dev:backend`       | Só o Convex (aplica schema/funções a cada mudança)           |
-| `pnpm dev:mobile`        | Expo                                                         |
-| `pnpm check`             | Lint + typecheck + testes (rode antes de abrir PR)           |
-| `pnpm seed`              | Dados de exemplo no deployment de dev                        |
-| `pnpm tokens:generate`   | Regenera o `theme.css` do Tailwind a partir dos tokens       |
-| `pnpm deploy`            | Deploy do Convex (produção) e da web (Cloudflare)            |
-
-## Deploy
-
-1. Convex: `pnpm --filter @grimo/backend exec convex deploy` (pede login/projeto na primeira vez).
-   No deployment de produção, defina `SITE_URL` (origem da web, ex. `https://grimo.app`),
-   `BETTER_AUTH_SECRET` e, para o Google, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`.
-2. Web: `VITE_CONVEX_URL=https://<prod>.convex.cloud VITE_SITE_URL=https://grimo.app pnpm --filter @grimo/web build`
-   (`VITE_SITE_URL` gera canonical, `sitemap.xml`, `og:image` e JSON-LD; depois de publicar, envie
-   o sitemap no Google Search Console), depois
-   `pnpm --filter @grimo/web deploy` (Cloudflare static assets, `apps/web/wrangler.jsonc`) ou
-   qualquer host estático com fallback de SPA para `index.html`.
-3. Mobile: `EXPO_PUBLIC_CONVEX_URL` do deployment de produção no build do EAS.
-
-## Roadmap
-
-O que já existe está em [docs/features.md](docs/features.md); tudo o que o Grimo pode ter, por pilar
-e com a ordem sugerida, em [docs/roadmap.md](docs/roadmap.md); bugs e melhorias técnicas em
-[docs/melhorias.md](docs/melhorias.md).
+1. Leia o [AGENTS.md](AGENTS.md) (como o código é organizado).
+2. Rode `pnpm check` antes de abrir o PR.
+3. Ideias e o que vem por aí: [roadmap](docs/roadmap.md) · [o que já existe](docs/features.md) ·
+   [melhorias](docs/melhorias.md).
 
 ## Licença
 
-[GNU AGPL-3.0](LICENSE). Você pode usar, modificar e redistribuir o Grimo, inclusive
-comercialmente, desde que qualquer versão modificada, **inclusive hospedada como serviço**,
-tenha o código-fonte disponibilizado sob a mesma licença.
-
-O nome "Grimo" e a identidade visual não estão cobertos pela licença do código.
+[AGPL-3.0](LICENSE): pode usar, mudar e redistribuir, inclusive comercialmente, desde que o código
+de qualquer versão modificada (mesmo hospedada como serviço) fique aberto sob a mesma licença.
+O nome "Grimo" e a identidade visual não fazem parte da licença.

@@ -26,6 +26,8 @@ export const entryView = (entry: Doc<"shelfEntries">) => ({
   feelings: entry.feelings ?? [],
   startedAt: entry.startedAt,
   finishedAt: entry.finishedAt,
+  /** Times read before this reading (rereads). */
+  pastReads: entry.pastReads ?? 0,
   createdAt: entry._creationTime,
   updatedAt: entry.updatedAt,
   /** The reader's own tags ("Tenho", "Kindle"). */
@@ -121,6 +123,37 @@ export interface UpdateExtras {
   quiet?: boolean;
 }
 
+/** A plain page mark within this long of the last one on the same book moves that one instead. */
+const PROGRESS_MERGE_WINDOW = 24 * 60 * 60 * 1000;
+
+/**
+ * Marking pages through the day keeps one feed line per book: when the reader's latest activity
+ * is a bare progress line on this book from the last 24 h (no note, feelings, session or
+ * reactions), it moves to the new page instead of a new line being added. True if it did.
+ */
+async function mergeProgress(ctx: MutationCtx, entry: Doc<"shelfEntries">, now: number) {
+  const last = await ctx.db
+    .query("activities")
+    .withIndex("by_actor_created", (q) => q.eq("actorId", entry.userId))
+    .order("desc")
+    .first();
+  if (
+    last?.kind !== "progress" ||
+    last.bookId !== entry.bookId ||
+    last.postId !== null ||
+    now - last.createdAt > PROGRESS_MERGE_WINDOW
+  ) {
+    return false;
+  }
+  const data = last.data ?? {};
+  if (data.minutes !== undefined || data.feelings !== undefined) return false;
+  await ctx.db.patch(last._id, {
+    data: { ...data, status: entry.status, page: entry.currentPage },
+    createdAt: now,
+  });
+  return true;
+}
+
 /** Reading log + feed activity for a shelf change, with the reader's note on it. */
 async function recordSideEffects(
   ctx: MutationCtx,
@@ -140,6 +173,10 @@ async function recordSideEffects(
       ...(feelings && { feelings }),
       createdAt: now,
     });
+  }
+  if (!quiet && activity === "progress" && !note && !feelings && sessionMinutes === undefined) {
+    const merged = await mergeProgress(ctx, entry, now);
+    if (merged) return;
   }
   if (activity && !quiet) {
     const activityId = await recordActivity(ctx, {
@@ -189,9 +226,22 @@ export async function updateShelfEntry(
     ),
     new Date(now),
   );
+  // A reread keeps the finished reading apart (`pastReadings`) before the entry starts over.
+  const archived = plan.reread && entry.finishedAt !== null;
+  if (archived) {
+    await ctx.db.insert("pastReadings", {
+      userId,
+      shelfEntryId: entry._id,
+      bookId: entry.bookId,
+      startedAt: entry.startedAt,
+      finishedAt: entry.finishedAt!,
+      rating: entry.rating,
+    });
+  }
   await ctx.db.patch(entryId, {
     ...storedPatch(plan.set),
     maxPage: plan.maxPage,
+    ...(archived && { pastReads: (entry.pastReads ?? 0) + 1 }),
     updatedAt: now,
   });
   const updated = (await ctx.db.get(entryId))!;
@@ -314,7 +364,11 @@ export async function removeFromShelf(
     .query("readingLogs")
     .withIndex("by_entry", (q) => q.eq("shelfEntryId", entryId))
     .collect();
-  for (const log of logs) await ctx.db.delete(log._id);
+  const past = await ctx.db
+    .query("pastReadings")
+    .withIndex("by_entry", (q) => q.eq("shelfEntryId", entryId))
+    .collect();
+  for (const row of [...logs, ...past]) await ctx.db.delete(row._id);
   await ctx.db.delete(entryId);
   await recordBookCounters(ctx, entry.bookId, entry, null);
   const user = await ctx.db.get(userId);

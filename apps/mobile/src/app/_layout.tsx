@@ -12,12 +12,15 @@ import { useEffect, useRef } from "react";
 import { Button, Screen, Text, Toaster } from "@/components/ui";
 import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { captureError, withSentry } from "@/lib/sentry";
 import { useThemeStore } from "@/lib/theme";
 import { AppProviders, useAppCache, useAuthClient } from "@/providers/app-providers";
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+export default withSentry(RootLayout);
+
+function RootLayout() {
   const scheme = useColorScheme();
   return (
     <AppProviders>
@@ -137,7 +140,10 @@ function useClearCacheOnSignOut(sessionId: string | null) {
 }
 
 /** Expo Router's error boundary: a screen that throws shows this instead of a blank screen. */
-export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    captureError(error);
+  }, [error]);
   return (
     <Screen>
       <Text variant="heading">Algo deu errado</Text>

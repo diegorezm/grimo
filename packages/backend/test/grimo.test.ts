@@ -648,7 +648,7 @@ describe("account", () => {
     await rafa.as.mutation(api.legal.accept, agree());
     const data = await t
       .withIdentity({ subject: "auth-rafa", email: "rafa@grimo.test" })
-      .query(api.account.exportData, {});
+      .action(api.account.exportData, {});
     expect(data).toMatchObject({
       account: { email: "rafa@grimo.test" },
       profile: { username: "rafa" },

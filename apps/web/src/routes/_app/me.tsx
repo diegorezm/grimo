@@ -61,7 +61,7 @@ function MePage() {
       }
       activity={<ReaderActivity username={me.username} interactive />}
       isMe
-      year={<YearStats stats={page.stats} />}
+      year={<YearStats stats={page.stats ?? undefined} />}
       aside={
         <section className="flex flex-col items-start gap-3 rounded-2xl bg-surface-muted/70 p-5">
           <div>

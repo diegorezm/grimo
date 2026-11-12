@@ -47,6 +47,7 @@ export function ReaderRow({
           userId={reader.id}
           isFollowing={reader.isFollowing}
           followsYou={reader.followsYou}
+          requested={reader.requested}
           compact
         />
       )}

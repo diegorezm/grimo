@@ -203,14 +203,23 @@ export const FeedIcon = (p: IconProps) => (
   </Icon>
 );
 
-export const BrushIcon = (p: IconProps) => (
+export const SlidersIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M4 20c3 0 5-1.5 5-4a3 3 0 0 0-3-3c-2 0-3 1.5-3 3.5C3 18 3.5 19 4 20zM9.5 12.5 19 3l2 2-9.5 9.5" />
+    <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+    <circle cx="16" cy="7" r="2" />
+    <circle cx="8" cy="17" r="2" />
   </Icon>
 );
 
-export const SlidersIcon = (p: IconProps) => (
+export const LockIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M4 6h16M7 12h10M10 18h4" />
+    <rect x="5" y="11" width="14" height="9" rx="1" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </Icon>
+);
+
+export const BrushIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 20c3 0 5-1.5 5-4a3 3 0 0 0-3-3c-2 0-3 1.5-3 3.5C3 18 3.5 19 4 20zM9.5 12.5 19 3l2 2-9.5 9.5" />
   </Icon>
 );
