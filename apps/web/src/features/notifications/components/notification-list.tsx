@@ -1,5 +1,6 @@
 import {
   type NotificationItem,
+  useAnswerFollowRequest,
   useMarkNotificationsRead,
   useNotifications,
   useUnreadNotifications,
@@ -100,6 +101,7 @@ function Row({ item }: { item: NotificationItem }) {
           {body}
         </Link>
       )}
+      {item.kind === "follow_request" && item.requestPending && <AnswerRequest userId={actor.id} />}
       {item.kind === "follow" && item.followingActor !== null && (
         <FollowButton
           reader={{
@@ -117,6 +119,28 @@ function Row({ item }: { item: NotificationItem }) {
         </span>
       )}
     </div>
+  );
+}
+
+/** "Aceitar" / "Recusar" a request to follow your private profile. */
+function AnswerRequest({ userId }: { userId: string }) {
+  const answer = useAnswerFollowRequest();
+  return (
+    <span className="flex shrink-0 gap-2">
+      <Button
+        className="px-3.5 py-1.5 text-[10px]"
+        onClick={() => answer.mutate({ userId, accept: true })}
+      >
+        Aceitar
+      </Button>
+      <Button
+        className="px-3.5 py-1.5 text-[10px]"
+        variant="secondary"
+        onClick={() => answer.mutate({ userId, accept: false })}
+      >
+        Recusar
+      </Button>
+    </span>
   );
 }
 

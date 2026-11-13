@@ -52,7 +52,7 @@ export const Route = createFileRoute("/_app")({
   },
   component: AppLayout,
   // A screen that throws keeps the shell (navigation) and shows the error inside it.
-  errorComponent: ({ reset }) => <ErrorScreen reset={reset} />,
+  errorComponent: ({ error, reset }) => <ErrorScreen error={error} reset={reset} />,
 });
 
 function AppLayout() {

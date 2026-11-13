@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -114,15 +115,29 @@ export default defineConfig(({ mode }) => {
     "CONVEX_",
   );
   const convexUrl = env.VITE_CONVEX_URL || backend.CONVEX_URL || "";
+  // Source maps go to Sentry only when the build has its token; they are never deployed.
+  const sentry = process.env.SENTRY_AUTH_TOKEN
+    ? sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: { name: env.VITE_SENTRY_RELEASE },
+        sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
+        telemetry: false,
+      })
+    : null;
   return {
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
     define: { "import.meta.env.VITE_CONVEX_URL": JSON.stringify(convexUrl) },
-    server: { port: 5173, host: true },
+    // LAN access is opt-in (`pnpm --filter @grimo/web dev --host`).
+    server: { port: 5173 },
+    build: { sourcemap: sentry ? "hidden" : false },
     plugins: [
       tanstackRouter({ target: "react", autoCodeSplitting: true }),
       react(),
       tailwindcss(),
       seo(env.VITE_SITE_URL ?? ""),
+      sentry,
     ],
   };
 });

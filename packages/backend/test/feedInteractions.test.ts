@@ -168,7 +168,7 @@ describe("feed interactions", () => {
   });
 
   it("takes a post out of the feed, with its likes and comments, when its author deletes it", async () => {
-    const { rafa, bia } = await setup();
+    const { t, rafa, bia } = await setup();
     await follow(bia, rafa);
     const postId = await note(rafa, "Vou apagar");
     await bia.as.mutation(api.posts.setLiked, { postId, like: true });
@@ -186,6 +186,15 @@ describe("feed interactions", () => {
     );
     const notifications = (await rafa.as.query(api.notifications.list, { limit: 20 })).items;
     expect(notifications.filter((n) => n.kind !== "follow")).toEqual([]);
+
+    // Likes, comments and notifications go in batches, after the post.
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const left = await t.run(async (ctx) => [
+      ...(await ctx.db.query("postLikes").collect()),
+      ...(await ctx.db.query("postComments").collect()),
+      ...(await ctx.db.query("notifications").collect()).filter((n) => n.postId === postId),
+    ]);
+    expect(left).toEqual([]);
   });
 
   it("hides a suspended reader from followers and the community until it is lifted", async () => {

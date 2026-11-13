@@ -76,7 +76,7 @@ describe("notifications", () => {
     const rafa = await reader(t, "rafa");
     const bia = await reader(t, "bia");
     await bia.as.mutation(api.users.setFollowing, { userId: rafa.id, follow: true });
-    const data = await rafa.as.query(api.account.exportData, {});
+    const data = await rafa.as.action(api.account.exportData, {});
     expect(data.notifications).toMatchObject([{ kind: "follow", from: "bia" }]);
   });
 });

@@ -2,13 +2,14 @@ import type { ConvexCache } from "@grimo/client";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { ErrorScreen } from "@/components/feedback/error-screen";
+import { Toaster } from "@/components/ui/toaster";
 import { CookieNotice } from "@/features/legal";
 import { useSeo } from "@/lib/seo";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient; cache: ConvexCache }>()(
   {
     component: Root,
-    errorComponent: ({ reset }) => <ErrorScreen reset={reset} />,
+    errorComponent: ({ error, reset }) => <ErrorScreen error={error} reset={reset} />,
   },
 );
 
@@ -18,6 +19,7 @@ function Root() {
     <>
       <Outlet />
       <CookieNotice />
+      <Toaster />
     </>
   );
 }

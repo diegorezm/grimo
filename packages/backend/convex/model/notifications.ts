@@ -32,7 +32,7 @@ export async function notify(ctx: MutationCtx, target: Target, now = Date.now())
   const user = await ctx.db.get(target.userId);
   if (!user || isHidden(user)) return;
   if (await isBlockedBetween(ctx, target.userId, target.actorId)) return;
-  if (target.kind === "like" || target.kind === "follow") {
+  if (target.kind === "like" || target.kind === "follow" || target.kind === "follow_request") {
     if ((await existing(ctx, target)).length > 0) return;
   }
   await ctx.db.insert("notifications", {
@@ -81,15 +81,6 @@ export async function notifyMentions(
       now,
     );
   }
-}
-
-/** Notifications pointing at a post (all kinds), for when the post is deleted. */
-export async function deletePostNotifications(ctx: MutationCtx, postId: Id<"posts">) {
-  const rows = await ctx.db
-    .query("notifications")
-    .withIndex("by_post", (q) => q.eq("postId", postId))
-    .collect();
-  for (const row of rows) await ctx.db.delete(row._id);
 }
 
 /** Notifications pointing at a comment ("comentou", mentions in it), for when it is deleted. */

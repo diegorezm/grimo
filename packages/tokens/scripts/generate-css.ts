@@ -66,6 +66,23 @@ ${vars(dark, "    ")}
 ${vars(dark)}
 }
 
+/*
+ * A region that keeps one scheme whatever the app uses (e.g. the shelves screen follows its
+ * wall): the same tokens, set on the element so its subtree inherits them.
+ */
+[data-scheme="light"] {
+  color-scheme: light;
+  /* Text inherits a computed color: set it here, or it keeps the app scheme's. */
+  color: var(--color-text);
+${vars([...light, ...badges("light")])}
+}
+
+[data-scheme="dark"] {
+  color-scheme: dark;
+  color: var(--color-text);
+${vars(dark)}
+}
+
 ${scenes}
 `;
 

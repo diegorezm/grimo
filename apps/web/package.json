@@ -19,6 +19,7 @@
     "@grimo/client": "workspace:*",
     "@grimo/core": "workspace:*",
     "@grimo/tokens": "workspace:*",
+    "@sentry/react": "^11.11.0",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-persist-client": "catalog:",
     "@tanstack/react-router": "^1.170.45",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@grimo/tsconfig": "workspace:*",
+    "@sentry/vite-plugin": "^11.11.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-cli": "^1.167.45",
     "@tanstack/router-plugin": "^1.168.47",

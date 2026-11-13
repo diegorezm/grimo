@@ -300,3 +300,157 @@
     opacity: 0.4;
   }
 }
+
+/* Shelf room (`features/shelves`): books drop onto the planks, decorations breathe. */
+@keyframes shelf-land-a {
+  from {
+    opacity: 0;
+    transform: translateY(-48px) rotate(-3deg);
+  }
+}
+@keyframes shelf-land-b {
+  from {
+    opacity: 0;
+    transform: translateY(-48px) rotate(3deg);
+  }
+}
+@keyframes shelf-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes shelf-flicker {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(0.88, 1.08);
+  }
+  60% {
+    transform: scale(1.06, 0.94);
+  }
+}
+@keyframes shelf-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+@keyframes shelf-twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+  50% {
+    transform: scale(0.78) rotate(45deg);
+  }
+}
+@keyframes shelf-steam {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+@keyframes shelf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes shelf-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes shelf-pop {
+  0% {
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+}
+
+@layer components {
+  .shelf-land-a {
+    animation: shelf-land-a 0.6s cubic-bezier(0.3, 1.35, 0.5, 1) backwards;
+  }
+  .shelf-land-b {
+    animation: shelf-land-b 0.6s cubic-bezier(0.3, 1.35, 0.5, 1) backwards;
+  }
+  .shelf-spine {
+    transition:
+      transform 0.4s cubic-bezier(0.3, 1.4, 0.5, 1),
+      filter 0.3s ease;
+    &:hover {
+      filter: brightness(1.06);
+      transform: translateY(-6px);
+    }
+  }
+  .shelf-sway {
+    animation: shelf-sway 4.5s ease-in-out infinite;
+  }
+  .shelf-ivy {
+    transform-origin: 50% 0;
+    animation: shelf-sway 6s ease-in-out infinite;
+  }
+  .shelf-flicker {
+    animation: shelf-flicker 1.6s ease-in-out infinite;
+  }
+  .shelf-halo {
+    animation: shelf-halo 2.4s ease-in-out infinite;
+  }
+  .shelf-twinkle {
+    animation: shelf-twinkle 2.6s ease-in-out infinite;
+  }
+  .shelf-steam path {
+    stroke-dasharray: 3 4;
+    animation: shelf-steam 1.8s linear infinite;
+  }
+  .shelf-rise {
+    animation: shelf-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shelf-land-a,
+    .shelf-land-b,
+    .shelf-sway,
+    .shelf-ivy,
+    .shelf-flicker,
+    .shelf-halo,
+    .shelf-twinkle,
+    .shelf-steam path,
+    .shelf-rise {
+      animation: none;
+    }
+    .shelf-spine {
+      transition: none;
+    }
+  }
+}
+
+/* Notices (`Toaster`): spring up; the check draws itself. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.94);
+  }
+}
+@keyframes toast-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}

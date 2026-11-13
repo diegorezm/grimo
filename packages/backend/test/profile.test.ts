@@ -126,7 +126,7 @@ describe("profile personalization", () => {
     });
     const data = await t
       .withIdentity({ subject: "auth-rafa", email: "rafa@grimo.test" })
-      .query(api.account.exportData, {});
+      .action(api.account.exportData, {});
     expect(data.profile).toMatchObject({
       pronouns: "ela/dela",
       profileSong: song,

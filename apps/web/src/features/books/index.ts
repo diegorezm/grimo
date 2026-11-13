@@ -5,9 +5,12 @@ export { BookDetailBody, BookDetailSkeleton, BookShelfActions } from "./componen
 export { BookPeek } from "./components/book-peek";
 export { BookPeekLink } from "./components/book-peek-link";
 export { BookSearch } from "./components/book-search";
+export { EntryTags } from "./components/entry-tags";
 export { OpenReadRow } from "./components/open-reads";
 export { PageLogger } from "./components/page-logger";
 export { QuoteText } from "./components/quote-text";
 export { ReadingFocus } from "./components/reading-focus";
+export { ReadingSession } from "./components/reading-session";
 export { SceneGallery } from "./components/scene-gallery";
+export { useShelfNaming } from "./components/shelf-naming";
 export { StartGroup } from "./components/start-group";

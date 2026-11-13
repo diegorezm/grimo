@@ -46,3 +46,6 @@ export function compactCount(value: number): string {
   if (value >= 1_000) return short(value / 1_000, "mil");
   return String(value);
 }
+/** "2ª leitura" on a book read before (`pastReads` earlier readings); null on the first one. */
+export const rereadLabel = (pastReads: number) =>
+  pastReads > 0 ? `${pastReads + 1}ª leitura` : null;

@@ -55,10 +55,11 @@ export function PrivacyPage() {
             abandonei), as estantes que você cria (como &ldquo;Física&rdquo; ou
             &ldquo;Kindle&rdquo;) e quais livros estão nelas, páginas marcadas, avaliações (nota e
             os sentimentos que o livro deixou), os sentimentos que você marca numa página enquanto
-            lê (seu diário de leitura), datas de início e fim, e as sessões de leitura que você
-            cronometra (quando começou, quando parou e em que página), para a ofensiva e o feed. Os
-            sentimentos são escolhidos numa lista fixa e servem para mostrar a sua leitura e somar,
-            sem identificar ninguém, como os leitores se sentiram com cada livro.
+            lê (seu diário de leitura), datas de início e fim (também das leituras anteriores de um
+            livro que você relê), e as sessões de leitura que você cronometra (quando começou,
+            quando parou e em que página), para a ofensiva e o feed. Os sentimentos são escolhidos
+            numa lista fixa e servem para mostrar a sua leitura e somar, sem identificar ninguém,
+            como os leitores se sentiram com cada livro.
           </li>
           <li>
             <strong>Social:</strong> resenhas, notas, comentários, curtidas, quem você segue,
@@ -138,6 +139,14 @@ export function PrivacyPage() {
           dados técnicos nunca são públicos.
         </p>
         <p>
+          Se você ligar o <strong>perfil privado</strong> (em Conta e privacidade), só quem você
+          aprova vê suas estantes, leituras, estatísticas, resenhas, notas e listas, e sua atividade
+          sai do feed &ldquo;Comunidade&rdquo;. Nome, @, foto, bio e o número de seguidores
+          continuam visíveis, para que as pessoas possam pedir para seguir você. Comentários que
+          você faz em posts de outros leitores continuam aparecendo para quem vê esses posts.
+          Guardamos os pedidos para seguir até você aceitar ou recusar.
+        </p>
+        <p>
           Num grupo do Juntos, os outros participantes veem seu progresso no livro e suas mensagens.
           Quem tiver o link de convite do grupo vê o livro, quem participa e o progresso de cada um,
           mas não as mensagens.
@@ -156,6 +165,11 @@ export function PrivacyPage() {
             como qualquer site, o seu IP ao acessá-las.
           </li>
           <li>
+            <strong>Sentry</strong> (Functional Software, Inc., Estados Unidos): recebe os
+            relatórios de erro do site e do app (o que falhou, em qual tela, navegador ou aparelho e
+            versão), para corrigirmos problemas. Não enviamos seu nome, email, @ nem IP.
+          </li>
+          <li>
             <strong>Google e Apple</strong>: apenas se você escolher entrar com eles. Eles confirmam
             sua identidade e nos enviam nome, email e foto.
           </li>
@@ -172,9 +186,9 @@ export function PrivacyPage() {
 
       <Section title="6. Transferência internacional">
         <p>
-          Como o Convex e o Open Library ficam nos Estados Unidos, seus dados são tratados fora do
-          Brasil. Essa transferência é necessária para executar o contrato com você (art. 33, IX, da
-          LGPD) e se apoia nas garantias contratuais e de segurança desses fornecedores.
+          Como o Convex, o Sentry e o Open Library ficam nos Estados Unidos, seus dados são tratados
+          fora do Brasil. Essa transferência é necessária para executar o contrato com você (art.
+          33, IX, da LGPD) e se apoia nas garantias contratuais e de segurança desses fornecedores.
         </p>
       </Section>
 
@@ -223,7 +237,8 @@ export function PrivacyPage() {
             Denúncias feitas sobre você ou seu conteúdo são mantidas como registro de moderação pelo
             tempo necessário para cumprir a lei ou defender direitos; as denúncias que você fez
             continuam existindo, mas sem identificar você. O histórico de moderação também fica, sem
-            vínculo com a sua conta.
+            vínculo com a sua conta. A cópia do conteúdo denunciado e os detalhes escritos na
+            denúncia são apagados 180 dias depois de ela ser resolvida.
           </li>
         </List>
       </Section>

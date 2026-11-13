@@ -1,3 +1,4 @@
+import { socialSignInError } from "@grimo/core";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
@@ -9,14 +10,17 @@ import { clearCacheForSignIn } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/login")({
-  // Where to go after signing in (e.g. the profile a shared link pointed to). Same-site paths only.
-  validateSearch: (search: Record<string, unknown>): { redirect?: string; ott?: string } => ({
+  // Where to go after signing in (e.g. the profile a shared link pointed to). Same-site paths only
+  // (`//host` and `/\host` are other sites to a browser).
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { redirect?: string; ott?: string; error?: string } => ({
     // One-time token from a Google sign-in (the auth provider exchanges it for the session).
     ott: typeof search.ott === "string" ? search.ott : undefined,
+    // A social sign-in that failed (e.g. `account_not_linked`).
+    error: typeof search.error === "string" ? search.error : undefined,
     redirect:
-      typeof search.redirect === "string" &&
-      search.redirect.startsWith("/") &&
-      !search.redirect.startsWith("//")
+      typeof search.redirect === "string" && /^\/(?![/\\])/.test(search.redirect)
         ? search.redirect
         : undefined,
   }),
@@ -25,7 +29,8 @@ export const Route = createFileRoute("/login")({
 
 /** Full-screen split: illustration on the left (desktop), the form on the right. */
 function LoginPage() {
-  const { redirect, ott } = Route.useSearch();
+  const { redirect, ott, error } = Route.useSearch();
+  const socialError = socialSignInError(error);
   const returning = useGoogleReturn(Boolean(ott), redirect);
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:bg-background">
@@ -57,7 +62,18 @@ function LoginPage() {
           ← Conheça o Grimo
         </Link>
         <ThemeToggle className="absolute top-5 right-5" />
-        {returning ? <Spinner label="Entrando com Google…" /> : <AuthForm redirectTo={redirect} />}
+        {returning ? (
+          <Spinner label="Entrando com Google…" />
+        ) : (
+          <div className="flex w-full flex-col items-center gap-4">
+            {socialError && (
+              <p role="alert" className="max-w-sm text-center text-sm text-danger">
+                {socialError}
+              </p>
+            )}
+            <AuthForm redirectTo={redirect} />
+          </div>
+        )}
       </main>
     </div>
   );
