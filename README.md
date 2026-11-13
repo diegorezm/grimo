@@ -79,6 +79,7 @@ Quer o app de celular, login com Google, emails ou fazer deploy? Está tudo no
 
 ## Licença
 
-[AGPL-3.0](LICENSE): pode usar, mudar e redistribuir, inclusive comercialmente, desde que o código
-de qualquer versão modificada (mesmo hospedada como serviço) fique aberto sob a mesma licença.
+[FSL-1.1-ALv2](LICENSE) (Functional Source License): pode usar, estudar, mudar e redistribuir para
+qualquer fim, exceto um uso concorrente (oferecer o Grimo, ou algo substancialmente igual, como
+produto ou serviço comercial). Cada versão vira Apache 2.0 dois anos após ser publicada.
 O nome "Grimo" e a identidade visual não fazem parte da licença.
