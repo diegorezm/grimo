@@ -32,7 +32,6 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import {
   BrushIcon,
-  CheckIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -187,26 +186,50 @@ export function ShelfScreen() {
   const chrome = selecting ? (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-[18px] border p-1.5 backdrop-blur-xl",
+        "flex items-center gap-3 rounded-full border p-1.5 backdrop-blur-xl animate-[toast-in_.35s_cubic-bezier(.3,1.4,.5,1)_both] motion-reduce:animate-none",
         glass,
         ink,
       )}
     >
-      <ChromeButton
-        glass=""
+      <button
+        type="button"
         onClick={() => (picking ? store.openShelf(picking.id) : store.setSelecting(false))}
+        className="flex min-h-10 items-center gap-2 rounded-full py-1 pr-4 pl-1 font-mono text-xs tracking-wider uppercase transition hover:bg-black/5"
       >
+        <span className="flex size-8 items-center justify-center rounded-full bg-black/5">
+          <BarIcon d="M6 6l12 12M18 6 6 18" />
+        </span>
         Cancelar
-      </ChromeButton>
-      <p className="flex-1 text-center font-serif text-lg italic">
-        {selected.length} {selected.length === 1 ? "escolhido" : "escolhidos"}
-      </p>
-      <ChromeButton
-        glass=""
+      </button>
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-3">
+        <span
+          aria-hidden="true"
+          className="bg-accent-gradient hidden size-9 items-center justify-center rounded-xl text-accent-foreground shadow-md shadow-accent/30 sm:flex"
+        >
+          <BarIcon d="M4 5h16v14H4zM8 12l3 3 5-6" />
+        </span>
+        <span className="flex min-w-0 flex-col leading-tight">
+          <span className="font-mono text-[10px] tracking-[0.14em] uppercase opacity-60">
+            {picking ? `Escolhendo para ${picking.name}` : "Selecionando"}
+          </span>
+          <span className="truncate font-serif text-lg italic">
+            {selected.length === 0
+              ? "Clique nos livros"
+              : `${selected.length} ${selected.length === 1 ? "escolhido" : "escolhidos"}`}
+          </span>
+        </span>
+      </div>
+      <button
+        type="button"
+        aria-pressed={allPicked}
         onClick={() => store.selectAll(allPicked ? [] : page.items.map((row) => row.entry.id))}
+        className="flex min-h-10 items-center gap-2 rounded-full py-1 pr-1 pl-4 font-mono text-xs tracking-wider uppercase transition hover:bg-black/5"
       >
         {allPicked ? "Nenhum" : "Todos"}
-      </ChromeButton>
+        <span className="flex size-8 items-center justify-center rounded-full bg-black/5">
+          <BarIcon d={allPicked ? "M5 12h14" : "M4 12l4 4 8-8M12 16l8-8"} />
+        </span>
+      </button>
     </div>
   ) : (
     <div className="flex flex-wrap items-center gap-2">
@@ -816,52 +839,98 @@ function SelectBar({ page, naming }: { page: Page; naming: ReturnType<typeof use
   );
 
   return (
-    <div className="page fixed inset-x-4 bottom-28 z-30 mx-auto flex max-w-xl items-center gap-1 rounded-2xl p-2 lg:bottom-8">
+    <div className="glass fixed inset-x-4 bottom-28 z-30 mx-auto flex max-w-2xl items-center gap-1 rounded-full p-1.5 animate-[toast-in_.4s_cubic-bezier(.3,1.4,.5,1)_both] motion-reduce:animate-none lg:bottom-8">
+      <span className="flex shrink-0 items-center gap-2 py-1 pr-3 pl-1">
+        <span
+          key={selected.length}
+          className="bg-accent-gradient flex size-10 items-center justify-center rounded-full font-mono text-sm font-semibold text-accent-foreground shadow-md shadow-accent/30 animate-[shelf-pop_.35s_cubic-bezier(.3,1.6,.5,1)_both] motion-reduce:animate-none"
+        >
+          {selected.length}
+        </span>
+        <span className="hidden font-mono text-[10px] leading-tight tracking-[0.12em] text-text-muted uppercase sm:block">
+          {selected.length === 1 ? "livro" : "livros"}
+          <br />
+          {selected.length === 1 ? "escolhido" : "escolhidos"}
+        </span>
+      </span>
+      <span aria-hidden="true" className="h-8 w-px shrink-0 bg-edge" />
       {picking ? (
         <button
           type="button"
           onClick={() => add(picking, () => openShelf(picking.id))}
-          className="bg-accent-gradient min-h-12 flex-1 rounded-full font-mono text-xs tracking-wider text-accent-foreground uppercase"
+          className="bg-accent-gradient ml-auto flex min-h-11 items-center gap-2 rounded-full px-5 font-mono text-xs tracking-wider text-accent-foreground uppercase shadow-md shadow-accent/30 transition active:scale-95"
         >
+          <BarIcon d="M12 5v14M5 12h14" />
           Adicionar a {picking.name}
         </button>
       ) : (
         <>
-          <Popover
-            placement="above"
-            className="w-56"
-            trigger={({ toggle }) => <BarAction label="Adicionar a…" onClick={toggle} />}
-          >
-            {shelfList((target) => add(target))}
-          </Popover>
-          {current && (
+          <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
             <Popover
               placement="above"
               className="w-56"
-              trigger={({ toggle }) => <BarAction label="Mover para…" onClick={toggle} />}
+              trigger={({ toggle }) => (
+                <BarAction icon="M12 5v14M5 12h14" label="Adicionar a…" onClick={toggle} />
+              )}
             >
-              {shelfList(moveTo)}
+              {shelfList((target) => add(target))}
             </Popover>
-          )}
-          {current && <BarAction label="Tirar daqui" onClick={takeOff} />}
-          <BarAction label="Nova estante" onClick={newShelf} />
-          <span className="ml-auto flex items-center gap-1 pr-2 font-mono text-xs text-text-muted">
-            <CheckIcon className="size-4" />
-            {selected.length}
-          </span>
+            {current && (
+              <Popover
+                placement="above"
+                className="w-56"
+                trigger={({ toggle }) => (
+                  <BarAction icon="M5 12h14M13 6l6 6-6 6" label="Mover para…" onClick={toggle} />
+                )}
+              >
+                {shelfList(moveTo)}
+              </Popover>
+            )}
+            {current && (
+              <BarAction icon="M6 6l12 12M18 6 6 18" label="Tirar daqui" onClick={takeOff} />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={newShelf}
+            className="bg-accent-gradient flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 font-mono text-[11px] tracking-wider text-accent-foreground uppercase shadow-md shadow-accent/30 transition active:scale-95"
+          >
+            <BarIcon d="M4 7h16v13H4zM9 3h6v4M12 11v6M9 14h6" />
+            Nova estante
+          </button>
         </>
       )}
     </div>
   );
 }
 
-function BarAction({ label, onClick }: { label: string; onClick: () => void }) {
+function BarIcon({ d }: { d: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-4 shrink-0"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+function BarAction({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="min-h-12 rounded-xl px-3 text-sm transition hover:bg-surface-muted"
+      className="flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm whitespace-nowrap transition hover:bg-surface-muted active:scale-95"
     >
+      <span className="flex size-7 items-center justify-center rounded-full bg-surface-muted text-accent-ink">
+        <BarIcon d={icon} />
+      </span>
       {label}
     </button>
   );
