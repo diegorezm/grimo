@@ -1,5 +1,7 @@
 import {
   applyShelfChoice,
+  isPremiumShelfChoice,
+  isPremiumShelfStyle,
   presetOf,
   SHELF_COMBINATIONS,
   SHELF_DECOR,
@@ -22,13 +24,14 @@ import {
   spineSize,
   toggleDecor,
 } from "@grimo/core";
-import { shelfBrass, shelfMaterials } from "@grimo/tokens";
+import { shelfBrass } from "@grimo/tokens";
 import { type ReactNode, useState } from "react";
 import { CheckIcon, ChevronDownIcon } from "@/components/ui/icons";
 import { MenuItem, Popover } from "@/components/ui/popover";
+import { canDrawShelfChoice, canDrawShelfStyle, premium } from "@/lib/premium";
 import { cn } from "@/utils/cn";
 import { ShelfDecorArt } from "../bookcase/decor";
-import { bindingOf, materialOf, spineColor } from "../bookcase/look";
+import { bindingOf, materialByKey, materialOf, spineColor } from "../bookcase/look";
 import { BookcaseThumb } from "../bookcase/thumb";
 
 const TABS = ["Prontos", "Modelo", "Cores", "Lombadas", "Arrumar", "Enfeites", "Luz"] as const;
@@ -37,11 +40,19 @@ type Tab = (typeof TABS)[number];
 const MAIN_TABS: Tab[] = ["Prontos", "Modelo", "Cores"];
 const MORE_TABS: Tab[] = TABS.filter((name) => !MAIN_TABS.includes(name));
 
-const LIGHT_SWATCH = {
+const LIGHT_SWATCH: Record<string, string> = {
   day: "linear-gradient(180deg, var(--color-surface), var(--color-surface-muted))",
   sunset: `linear-gradient(200deg, ${shelfBrass.light}, var(--color-glow-a) 70%)`,
   lamp: `radial-gradient(ellipse at 50% 0%, ${shelfBrass.light}, ${shelfBrass.ink} 75%)`,
-} as const;
+};
+
+/** What this build can draw (the paid choices need their art; see `@/lib/premium`). */
+const PRESETS = SHELF_PRESETS.filter((preset) => canDrawShelfStyle(preset.style));
+const MODELS = SHELF_MODELS.filter((key) => canDrawShelfChoice("model", key));
+const MATERIALS = SHELF_MATERIALS.filter((key) => canDrawShelfChoice("material", key));
+const FINISHES = SPINE_FINISHES.filter((key) => canDrawShelfChoice("finish", key));
+const DECOR = SHELF_DECOR.filter((key) => canDrawShelfChoice("decor", key));
+const LIGHTS = SHELF_LIGHTS.filter((key) => canDrawShelfChoice("light", key));
 
 /**
  * "Do seu jeito": every layer of the shelf, changed live on the bookcase beside it (the web twin
@@ -124,11 +135,12 @@ export function CustomizePanel({
       <div key={tab} className="min-h-0 flex-1 overflow-y-auto px-5 pb-2">
         <div className="grid grid-cols-6 gap-3">
           {tab === "Prontos" &&
-            SHELF_PRESETS.map((preset, i) => (
+            PRESETS.map((preset, i) => (
               <Option
                 key={preset.id}
                 span={3}
                 index={i}
+                paid={isPremiumShelfStyle(preset.style)}
                 on={current?.id === preset.id}
                 title={preset.name}
                 hint={preset.hint}
@@ -143,11 +155,12 @@ export function CustomizePanel({
             ))}
 
           {tab === "Modelo" &&
-            SHELF_MODELS.map((model, i) => (
+            MODELS.map((model, i) => (
               <Option
                 key={model}
                 span={3}
                 index={i}
+                paid={isPremiumShelfChoice("model", model)}
                 on={style.model === model}
                 title={SHELF_MODEL_LABELS[model].name}
                 hint={SHELF_MODEL_LABELS[model].hint}
@@ -162,14 +175,15 @@ export function CustomizePanel({
             ))}
 
           {tab === "Cores" &&
-            SHELF_MATERIALS.map((material, i) => {
-              const m = shelfMaterials[material];
+            MATERIALS.map((material, i) => {
+              const m = materialByKey(material);
               const on = style.material === material;
               return (
                 <Option
                   key={material}
                   span={2}
                   index={i}
+                  paid={isPremiumShelfChoice("material", material)}
                   on={on}
                   title={SHELF_MATERIAL_LABELS[material].name}
                   hint={SHELF_MATERIAL_LABELS[material].hint}
@@ -185,7 +199,7 @@ export function CustomizePanel({
                     <span className="flex flex-col">
                       <span className="flex-1" style={{ background: m.side }} />
                       <span className="flex-1" style={{ background: m.back }} />
-                      <span className="h-3" style={{ background: m.plank }} />
+                      <span className="h-3" style={{ background: m.trim ?? m.plank }} />
                     </span>
                   </span>
                 </Option>
@@ -193,12 +207,13 @@ export function CustomizePanel({
             })}
 
           {tab === "Lombadas" &&
-            SPINE_FINISHES.map((finish, i) => (
+            FINISHES.map((finish, i) => (
               <Option
                 key={finish}
                 span={3}
                 index={i}
                 boxed
+                paid={isPremiumShelfChoice("finish", finish)}
                 on={style.finish === finish}
                 title={SPINE_FINISH_LABELS[finish].name}
                 hint={SPINE_FINISH_LABELS[finish].hint}
@@ -266,7 +281,7 @@ export function CustomizePanel({
           )}
 
           {tab === "Enfeites" &&
-            SHELF_DECOR.map((decor, i) => {
+            DECOR.map((decor, i) => {
               const on = style.decor.includes(decor);
               return (
                 <Option
@@ -275,6 +290,7 @@ export function CustomizePanel({
                   index={i}
                   boxed
                   center
+                  paid={isPremiumShelfChoice("decor", decor)}
                   on={on}
                   title={SHELF_DECOR_LABELS[decor]}
                   onClick={() => onChange(toggleDecor(style, decor))}
@@ -295,12 +311,13 @@ export function CustomizePanel({
             })}
 
           {tab === "Luz" &&
-            SHELF_LIGHTS.map((light, i) => (
+            LIGHTS.map((light, i) => (
               <Option
                 key={light}
                 span={2}
                 index={i}
                 boxed
+                paid={isPremiumShelfChoice("light", light)}
                 on={style.light === light}
                 title={SHELF_LIGHT_LABELS[light].name}
                 hint={SHELF_LIGHT_LABELS[light].hint}
@@ -308,7 +325,7 @@ export function CustomizePanel({
               >
                 <span
                   className="h-[52px] w-full rounded-[10px]"
-                  style={{ background: LIGHT_SWATCH[light] }}
+                  style={{ background: premium.lights[light]?.swatch ?? LIGHT_SWATCH[light] }}
                 />
               </Option>
             ))}
@@ -368,12 +385,15 @@ function Option({
   index,
   boxed,
   center,
+  paid,
   onClick,
   children,
 }: {
   title: string;
   hint?: string;
   on: boolean;
+  /** A paid choice: marked, so the reader knows before falling for it. */
+  paid?: boolean;
   span: 2 | 3;
   index: number;
   /** On a card (spines, objects): the ring goes around the card. */
@@ -401,6 +421,11 @@ function Option({
     >
       {children}
       <span className="mt-0.5 text-sm font-bold">{title}</span>
+      {paid && (
+        <span className="font-mono text-[9px] font-semibold tracking-[0.14em] text-gold uppercase">
+          ✦ Premium
+        </span>
+      )}
       {hint && <span className="text-xs leading-snug text-text-muted">{hint}</span>}
     </button>
   );

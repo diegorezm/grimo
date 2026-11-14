@@ -3,13 +3,15 @@ import {
   CARD_TEMPLATE_LABELS,
   CARD_TEMPLATES,
   type CardPeriod,
+  isPremiumCardTemplate,
   shiftMonth,
   toMonthKey,
 } from "@grimo/core";
-import { type CardPaletteKey, cardPalettes } from "@grimo/tokens";
+import { cardPalettes } from "@grimo/tokens";
 import { type ReactNode, useRef, useState } from "react";
 import { Spinner } from "@/components/feedback/spinner";
 import { Button } from "@/components/ui/button";
+import { allCardPalettes, canDrawCard, isPremiumCardPalette } from "@/lib/premium";
 import { cn } from "@/utils/cn";
 import { downloadCard, StoryCanvas, shareCard } from "./story-canvas";
 import { CARD_COMPONENTS } from "./templates";
@@ -25,6 +27,13 @@ const PERIODS: CardPeriod[] = [
   })),
   { kind: "year", year: THIS_YEAR - 1 },
 ];
+/** The layouts this build can draw (the paid ones need their art). */
+const TEMPLATES = CARD_TEMPLATES.filter(canDrawCard);
+const Premium = () => (
+  <span className="block font-mono text-[9px] font-semibold tracking-[0.14em] text-gold uppercase">
+    ✦ Premium
+  </span>
+);
 const periodKey = (period: CardPeriod) =>
   period.kind === "month" ? period.month : String(period.year);
 const monthChip = new Intl.DateTimeFormat("pt-BR", {
@@ -43,7 +52,7 @@ export function CardStudio({ year }: { year?: number }) {
   const preview = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
 
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = allCardPalettes[studio.palette] ?? cardPalettes.brasa;
   const Card = CARD_COMPONENTS[studio.template];
   const fileName = `grimo-${periodKey(period)}-${studio.template}.png`;
 
@@ -79,7 +88,7 @@ export function CardStudio({ year }: { year?: number }) {
       <div className="flex min-w-0 flex-col gap-9">
         <Section title="Modelo">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {CARD_TEMPLATES.map((template) => {
+            {TEMPLATES.map((template) => {
               const Thumb = CARD_COMPONENTS[template];
               const active = template === studio.template;
               return (
@@ -108,6 +117,7 @@ export function CardStudio({ year }: { year?: number }) {
                     <span className="block text-xs text-text-muted">
                       {CARD_TEMPLATE_LABELS[template].description}
                     </span>
+                    {isPremiumCardTemplate(template) && <Premium />}
                   </span>
                 </button>
               );
@@ -117,7 +127,7 @@ export function CardStudio({ year }: { year?: number }) {
 
         <Section title="Cores">
           <div className="flex flex-wrap gap-3">
-            {Object.entries(cardPalettes).map(([key, option]) => {
+            {Object.entries(allCardPalettes).map(([key, option]) => {
               const active = key === studio.palette;
               return (
                 <button
@@ -147,7 +157,10 @@ export function CardStudio({ year }: { year?: number }) {
                       style={{ background: option.accent2 }}
                     />
                   </span>
-                  <span className="text-sm">{option.label}</span>
+                  <span className="text-sm">
+                    {option.label}
+                    {isPremiumCardPalette(key) && <span className="text-gold"> ✦</span>}
+                  </span>
                 </button>
               );
             })}

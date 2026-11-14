@@ -1,11 +1,12 @@
 import { useCardStudioStore } from "@grimo/client";
-import { type CardPalette, type CardPaletteKey, cardPalettes } from "@grimo/tokens";
+import { type CardPalette, cardPalettes } from "@grimo/tokens";
 import { router } from "expo-router";
 import { type ReactNode, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Button, Screen, Text } from "@/components/ui";
 import { radius, spacing, storyCard } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { allCardPalettes } from "@/lib/premium";
 import { type CanvasRef, StoryCanvas, shareCard } from "./story-canvas";
 
 /**
@@ -28,7 +29,7 @@ export function PaletteStudio({
   const studio = useCardStudioStore();
   const canvas = useRef<CanvasRef>(null);
   const [busy, setBusy] = useState(false);
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = allCardPalettes[studio.palette] ?? cardPalettes.brasa;
   // Full width (≈1080 real pixels on a 3× iPhone), so the shared image stays sharp.
   const scale = Math.min(width - spacing[4] * 2, 420) / storyCard.width;
 
@@ -76,7 +77,7 @@ export function PaletteStudio({
         Cores
       </Text>
       <View style={styles.wrap}>
-        {Object.entries(cardPalettes).map(([key, option]) => {
+        {Object.entries(allCardPalettes).map(([key, option]) => {
           const active = key === studio.palette;
           return (
             <Pressable

@@ -3,6 +3,7 @@ import {
   applyShelfChoice,
   bookcaseGeometry,
   DEFAULT_SHELF_STYLE,
+  isPremiumShelfStyle,
   layoutBookcase,
   presetOf,
   SHELF_PRESETS,
@@ -22,6 +23,21 @@ const style = (patch: Partial<ShelfStyle> = {}): ShelfStyle => ({
   ...DEFAULT_SHELF_STYLE,
   ...patch,
 });
+describe("paid shelf styles", () => {
+  const paid = (id: string) =>
+    isPremiumShelfStyle(SHELF_PRESETS.find((preset) => preset.id === id)!.style);
+
+  it("keeps the default and the plain styles free", () => {
+    expect(isPremiumShelfStyle(DEFAULT_SHELF_STYLE)).toBe(false);
+    expect(paid("parede")).toBe(false);
+    expect(paid("chale")).toBe(false);
+  });
+
+  it("sells Acervo and the collections", () => {
+    for (const id of ["acervo", "romantasy", "cha", "jardim"]) expect(paid(id)).toBe(true);
+  });
+});
+
 const keysOf = (layout: ReturnType<typeof layoutBookcase<(typeof books)[number]>>) =>
   layout.rows
     .flat(2)

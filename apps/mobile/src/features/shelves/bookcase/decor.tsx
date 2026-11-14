@@ -11,6 +11,8 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle, G, Path, Rect } from "react-native-svg";
 import { shelfBrass, shelfDecorColors } from "@/constants/theme";
+import { premiumTokens } from "@/lib/premium";
+import { ArtSvg } from "./art";
 
 /**
  * The objects that stand between the books. Drawn here (they are the reader's things, in their
@@ -184,6 +186,8 @@ function Globe() {
 }
 
 export function DecorPiece({ decor, still = false }: { decor: ShelfDecor; still?: boolean }) {
+  // A paid object: its drawing comes with the content (nothing without it).
+  const art = premiumTokens.decor[decor];
   return (
     <Animated.View accessible accessibilityLabel={SHELF_DECOR_LABELS[decor]}>
       {decor === "plant" && <Plant still={still} />}
@@ -192,6 +196,7 @@ export function DecorPiece({ decor, still = false }: { decor: ShelfDecor; still?
       {decor === "mug" && <Mug still={still} />}
       {decor === "star" && <Star still={still} />}
       {decor === "globe" && <Globe />}
+      {art && <ArtSvg art={art} />}
     </Animated.View>
   );
 }

@@ -19,7 +19,9 @@
     "seed": "pnpm --filter @grimo/backend seed",
     "tokens:generate": "pnpm --filter @grimo/tokens generate",
     "tokens:icons": "pnpm --filter @grimo/tokens icons",
-    "deploy": "pnpm --filter @grimo/backend deploy && pnpm --filter @grimo/web build && pnpm --filter @grimo/web deploy"
+    "deploy": "pnpm --filter @grimo/backend deploy && pnpm --filter @grimo/web build && pnpm --filter @grimo/web deploy",
+    "postinstall": "node packages/premium/scripts/link.mjs",
+    "premium:link": "node packages/premium/scripts/link.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

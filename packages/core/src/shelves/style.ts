@@ -8,7 +8,15 @@ import { titleHash } from "./spine";
  * (`shelfMaterials`); this file is the choices, the presets and where each book goes.
  */
 
-export const SHELF_MODELS = ["classic", "floating", "arch", "cubbies", "library"] as const;
+export const SHELF_MODELS = [
+  "classic",
+  "floating",
+  "arch",
+  "cubbies",
+  "library",
+  "vitrine",
+  "estufa",
+] as const;
 export type ShelfModel = (typeof SHELF_MODELS)[number];
 export const SHELF_MODEL_LABELS: Record<ShelfModel, { name: string; hint: string }> = {
   classic: { name: "Clássica", hint: "Móvel inteiro, moldura reta" },
@@ -16,6 +24,8 @@ export const SHELF_MODEL_LABELS: Record<ShelfModel, { name: string; hint: string
   arch: { name: "Arco", hint: "Topo redondo e hera, de chalé" },
   cubbies: { name: "Nichos", hint: "Caixinhas, um cantinho por tema" },
   library: { name: "Biblioteca", hint: "Pilastras, escada e luminária" },
+  vitrine: { name: "Vitrine", hint: "Cristaleira com frontão e latão" },
+  estufa: { name: "Estufa", hint: "Jardim de inverno, vidro em leque" },
 };
 
 export const SHELF_MATERIALS = [
@@ -26,6 +36,9 @@ export const SHELF_MATERIALS = [
   "night",
   "oak",
   "walnut",
+  "plum",
+  "pearl",
+  "emerald",
 ] as const;
 export type ShelfMaterial = (typeof SHELF_MATERIALS)[number];
 export const SHELF_MATERIAL_LABELS: Record<ShelfMaterial, { name: string; hint: string }> = {
@@ -36,15 +49,19 @@ export const SHELF_MATERIAL_LABELS: Record<ShelfMaterial, { name: string; hint: 
   night: { name: "Noite", hint: "Céu estrelado" },
   oak: { name: "Carvalho", hint: "Madeira clara" },
   walnut: { name: "Nogueira", hint: "Madeira escura" },
+  plum: { name: "Ameixa", hint: "Veludo escuro e latão" },
+  pearl: { name: "Madrepérola", hint: "Creme furta-cor, friso dourado" },
+  emerald: { name: "Esmeralda", hint: "Verde fundo e latão" },
 };
 
-export const SPINE_FINISHES = ["cover", "tone", "linen", "leather"] as const;
+export const SPINE_FINISHES = ["cover", "tone", "linen", "leather", "special"] as const;
 export type SpineFinish = (typeof SPINE_FINISHES)[number];
 export const SPINE_FINISH_LABELS: Record<SpineFinish, { name: string; hint: string }> = {
   cover: { name: "Capa do livro", hint: "A lombada é a borda da capa" },
   tone: { name: "Tons do móvel", hint: "Tudo combinando" },
   linen: { name: "Tecido", hint: "Trama de linho" },
   leather: { name: "Couro e ouro", hint: "Filetes dourados" },
+  special: { name: "Edição especial", hint: "Tecido e dourado de colecionador" },
 };
 
 export const SHELF_LAYOUTS = ["standing", "stacks", "covers"] as const;
@@ -63,7 +80,19 @@ export const SHELF_SORT_LABELS: Record<ShelfSort, string> = {
   height: "Altura",
 };
 
-export const SHELF_DECOR = ["plant", "candle", "frame", "mug", "star", "globe"] as const;
+export const SHELF_DECOR = [
+  "plant",
+  "candle",
+  "frame",
+  "mug",
+  "star",
+  "globe",
+  "amethyst",
+  "peony",
+  "teacup",
+  "fern",
+  "jar",
+] as const;
 export type ShelfDecor = (typeof SHELF_DECOR)[number];
 export const SHELF_DECOR_LABELS: Record<ShelfDecor, string> = {
   plant: "Planta",
@@ -72,6 +101,11 @@ export const SHELF_DECOR_LABELS: Record<ShelfDecor, string> = {
   mug: "Caneca",
   star: "Estrela",
   globe: "Globo",
+  amethyst: "Ametista",
+  peony: "Peônias",
+  teacup: "Xícara de porcelana",
+  fern: "Samambaia",
+  jar: "Pote de luzinhas",
 };
 /** Width each object takes on a shelf (it stands between the books). */
 export const SHELF_DECOR_WIDTH: Record<ShelfDecor, number> = {
@@ -81,15 +115,60 @@ export const SHELF_DECOR_WIDTH: Record<ShelfDecor, number> = {
   mug: 38,
   star: 32,
   globe: 44,
+  amethyst: 40,
+  peony: 46,
+  teacup: 46,
+  fern: 50,
+  jar: 34,
 };
 
-export const SHELF_LIGHTS = ["day", "sunset", "lamp"] as const;
+export const SHELF_LIGHTS = ["day", "sunset", "lamp", "moon"] as const;
 export type ShelfLight = (typeof SHELF_LIGHTS)[number];
 export const SHELF_LIGHT_LABELS: Record<ShelfLight, { name: string; hint: string }> = {
   day: { name: "Luz do dia", hint: "Clara e neutra" },
   sunset: { name: "Fim de tarde", hint: "Sol dourado entrando de lado" },
   lamp: { name: "Luminária", hint: "Cada prateleira com sua luz" },
+  moon: { name: "Luar", hint: "Prata fria entrando pela janela" },
 };
+
+interface ShelfChoices {
+  model: readonly ShelfModel[];
+  material: readonly ShelfMaterial[];
+  finish: readonly SpineFinish[];
+  decor: readonly ShelfDecor[];
+  light: readonly ShelfLight[];
+}
+
+/** The paid choices of each layer (the shop sells them; see docs/loja/plano.md). */
+export const SHELF_PREMIUM = {
+  model: ["library", "vitrine", "estufa"],
+  material: ["walnut", "plum", "pearl", "emerald"],
+  finish: ["leather", "special"],
+  decor: ["globe", "amethyst", "peony", "teacup", "fern", "jar"],
+  light: ["moon"],
+} as const satisfies ShelfChoices;
+export type ShelfPremiumLayer = keyof typeof SHELF_PREMIUM;
+
+/**
+ * The paid choices this repository draws itself ("Acervo": they were free before the shop).
+ * Every other paid choice has its art in the private `@grimo/premium` content: a build without
+ * it does not offer them, and draws a shelf that uses one with the default look.
+ */
+export const SHELF_PREMIUM_BUILT_IN = {
+  model: ["library"],
+  material: ["walnut"],
+  finish: ["leather"],
+  decor: ["globe"],
+  light: [],
+} as const satisfies ShelfChoices;
+
+/** True for a paid choice whose art is in this repository. */
+export const isBuiltInShelfChoice = (layer: ShelfPremiumLayer, key: string) =>
+  (SHELF_PREMIUM_BUILT_IN[layer] as readonly string[]).includes(key);
+
+/** True for a paid choice of `layer`. */
+export const isPremiumShelfChoice = (layer: ShelfPremiumLayer, key: string) =>
+  (SHELF_PREMIUM[layer] as readonly string[]).includes(key);
 
 export const shelfStyleSchema = z.object({
   model: z.enum(SHELF_MODELS),
@@ -104,6 +183,14 @@ export const shelfStyleSchema = z.object({
   light: z.enum(SHELF_LIGHTS),
 });
 export type ShelfStyle = z.infer<typeof shelfStyleSchema>;
+
+/** True when the style uses any paid choice. */
+export const isPremiumShelfStyle = (style: ShelfStyle) =>
+  isPremiumShelfChoice("model", style.model) ||
+  isPremiumShelfChoice("material", style.material) ||
+  isPremiumShelfChoice("finish", style.finish) ||
+  isPremiumShelfChoice("light", style.light) ||
+  style.decor.some((decor) => isPremiumShelfChoice("decor", decor));
 
 export interface ShelfPreset {
   id: string;
@@ -210,6 +297,48 @@ export const SHELF_PRESETS: readonly ShelfPreset[] = [
       sort: "height",
       decor: ["candle", "star"],
       light: "lamp",
+    },
+  },
+  {
+    id: "romantasy",
+    name: "Romantasy",
+    hint: "Ameixa, dourado e luar",
+    style: {
+      model: "vitrine",
+      material: "plum",
+      finish: "special",
+      layout: "standing",
+      sort: "rainbow",
+      decor: ["amethyst", "candle"],
+      light: "moon",
+    },
+  },
+  {
+    id: "cha",
+    name: "Chá da tarde",
+    hint: "Madrepérola, peônias e porcelana",
+    style: {
+      model: "classic",
+      material: "pearl",
+      finish: "special",
+      layout: "stacks",
+      sort: "added",
+      decor: ["peony", "teacup"],
+      light: "day",
+    },
+  },
+  {
+    id: "jardim",
+    name: "Jardim de inverno",
+    hint: "Estufa verde, linho e luzinhas",
+    style: {
+      model: "estufa",
+      material: "emerald",
+      finish: "linen",
+      layout: "stacks",
+      sort: "added",
+      decor: ["fern", "jar"],
+      light: "sunset",
     },
   },
 ];
@@ -320,7 +449,9 @@ export function bookcaseGeometry(model: ShelfModel, width: number) {
         ? { side: 14, pad: 6, cells: 2, gap: 10 }
         : model === "library"
           ? { side: 26, pad: 10, cells: 1, gap: 0 }
-          : { side: 14, pad: 10, cells: 1, gap: 0 };
+          : model === "vitrine"
+            ? { side: 20, pad: 10, cells: 1, gap: 0 }
+            : { side: 14, pad: 10, cells: 1, gap: 0 };
   const inner = width - g.side * 2 - g.gap * (g.cells - 1);
   return { ...g, capacity: Math.floor(inner / g.cells - g.pad * 2) };
 }

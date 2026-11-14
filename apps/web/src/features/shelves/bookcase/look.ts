@@ -1,6 +1,8 @@
 import { bookcaseGeometry, type ShelfStyle, type SpineFinish } from "@grimo/core";
+import type { Art, MaterialTokens } from "@grimo/premium";
 import { shelfBrass, shelfMaterials } from "@grimo/tokens";
 import type { CSSProperties } from "react";
+import { premium, premiumTokens } from "@/lib/premium";
 
 /**
  * The bookcase's paint as CSS (the web twin of mobile's `bookcase/look.ts`). Colors are the
@@ -8,9 +10,15 @@ import type { CSSProperties } from "react";
  * the same in light and dark mode.
  */
 
-export type Material = (typeof shelfMaterials)[keyof typeof shelfMaterials];
+export type Material = MaterialTokens;
 
-export const materialOf = (style: ShelfStyle): Material => shelfMaterials[style.material];
+const FREE_MATERIALS: Record<string, Material> = shelfMaterials;
+
+/** A material's colors: free ones from the tokens, paid ones from the content (else paper). */
+export const materialByKey = (key: string): Material =>
+  FREE_MATERIALS[key] ?? premiumTokens.shelfMaterials[key] ?? shelfMaterials.paper;
+
+export const materialOf = (style: ShelfStyle): Material => materialByKey(style.material);
 
 function channels(hex: string) {
   const n = Number.parseInt(hex.slice(1), 16);
@@ -32,15 +40,18 @@ export function darken(hex: string, amount: number) {
 /** A spine's color: one of the material's tones (darker for leather). */
 export function spineColor(material: Material, tone: number, finish: SpineFinish) {
   const color = material.tones[tone % material.tones.length]!;
+  const art = premium.finishes[finish];
+  if (art) return darken(color, art.deepen);
   return finish === "leather" ? darken(color, 0.38) : color;
 }
 
 /** Text on a spine of this color. */
 export function spineInk(material: Material, tone: number, finish: SpineFinish) {
   if (finish === "leather") return shelfBrass.light;
-  return lightness(material.tones[tone % material.tones.length]!) > 0.62
-    ? shelfBrass.ink
-    : shelfBrass.paper;
+  const light = lightness(material.tones[tone % material.tones.length]!) > 0.62;
+  const art = premium.finishes[finish];
+  if (art) return art.ink(light);
+  return light ? shelfBrass.ink : shelfBrass.paper;
 }
 
 /** Light on a round spine: bright on the left edge, shadow on the right. */
@@ -64,6 +75,8 @@ const GOLD = (() => {
 
 /** The binding over a spine (gloss first), for each finish. */
 export function bindingOf(finish: SpineFinish) {
+  const art = premium.finishes[finish];
+  if (art) return `${GLOSS}, ${art.binding}`;
   if (finish === "leather") return `${GLOSS}, ${GOLD}`;
   if (finish === "linen") return `${GLOSS}, ${LINEN}, ${BAND}`;
   return `${GLOSS}, ${BAND}`;
@@ -95,6 +108,18 @@ const layers = (...parts: (string | null)[]) => parts.filter(Boolean).join(", ")
 const DEPTH =
   "inset 14px 0 20px -14px rgba(0,0,0,.35), inset -14px 0 20px -14px rgba(0,0,0,.35), inset 0 14px 18px -12px rgba(0,0,0,.3)";
 
+/** The ornament over a paid model (drawn at the foot of the crown), if it has one. */
+export const crownArtOf = (style: ShelfStyle): Art | null =>
+  premium.models[style.model] ? (premiumTokens.crowns[style.model] ?? null) : null;
+
+/** Over the shelves of a paid model (glass, reflections), if it has one. */
+export function modelOver(style: ShelfStyle, width: number): CSSProperties | null {
+  const art = premium.models[style.model];
+  if (!art?.over) return null;
+  const look = modelLook({ ...style, model: "classic" }, width);
+  return art.over({ style, width, top: 56, material: materialOf(style), look });
+}
+
 export interface ModelLook {
   frame: CSSProperties;
   crown: CSSProperties;
@@ -114,11 +139,11 @@ export interface ModelLook {
 export function modelLook(style: ShelfStyle, width: number): ModelLook {
   const m = materialOf(style);
   const g = bookcaseGeometry(style.model, width);
-  const panel: CSSProperties = {
-    background: layers(backPattern(style), m.back),
-    boxShadow: DEPTH,
-  };
-  const look: ModelLook = {
+  const pattern = premium.backPatterns[style.material];
+  const panel: CSSProperties = pattern
+    ? { backgroundColor: m.back, ...pattern, boxShadow: DEPTH }
+    : { background: layers(backPattern(style), m.back), boxShadow: DEPTH };
+  let look: ModelLook = {
     frame: { background: layers(grainOf(m), m.side) },
     crown: {
       height: 56,
@@ -135,7 +160,9 @@ export function modelLook(style: ShelfStyle, width: number): ModelLook {
     plank: {
       height: 14,
       background: m.plank,
-      boxShadow: "0 8px 12px -6px rgba(0,0,0,.35)",
+      boxShadow: m.trim
+        ? `inset 0 2px 0 ${m.trim}, 0 8px 12px -6px rgba(0,0,0,.35)`
+        : "0 8px 12px -6px rgba(0,0,0,.35)",
       position: "relative",
       zIndex: 1,
     },
@@ -196,7 +223,16 @@ export function modelLook(style: ShelfStyle, width: number): ModelLook {
     };
   }
 
-  if (style.light === "lamp") {
+  const model = premium.models[style.model];
+  if (model) {
+    look = { ...look, ...model.look({ style, width, top: 56, material: m, look }) };
+  }
+
+  const light = premium.lights[style.light];
+  if (light) {
+    look.rowLight = light.rowLight;
+    look.light = light.light;
+  } else if (style.light === "lamp") {
     look.rowLight =
       "radial-gradient(ellipse 60% 95% at 50% 0%, rgba(255,205,120,.5), rgba(255,205,120,0) 70%)";
     look.light = {

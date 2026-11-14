@@ -13,13 +13,17 @@ import { Text } from "@/components/ui";
 import { Fonts, shelfBrass } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { landAt } from "@/lib/motion";
+import { ArtSvg } from "./art";
 import { ArchIvy, Bracket, DecorPiece, LibraryLadder, LibraryLamp } from "./decor";
 import {
+  bindingLayers,
+  crownArtOf,
   darken,
   LINEN,
   type Material,
   materialOf,
   modelLook,
+  modelOver,
   SPINE_GLOSS,
   spineColor,
   spineInk,
@@ -69,6 +73,8 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
   const { items, style, width, minHeight, top, bottom, name, empty } = props;
   const material = materialOf(style);
   const look = modelLook(style, width, top);
+  const crownArt = crownArtOf(style);
+  const over = modelOver(style, width, top);
   const layout = useMemo(
     () =>
       layoutBookcase(
@@ -94,6 +100,7 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
             <LibraryLamp />
           </View>
         )}
+        {crownArt && <ArtSvg art={crownArt} width={width} />}
       </View>
       <View style={[styles.grow, look.inner]}>
         {style.model === "arch" && (
@@ -143,6 +150,7 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
             <LibraryLadder height={Math.min(560, (rowHeight + 22) * 3)} />
           </View>
         )}
+        {over && <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.over, over]} />}
       </View>
       <View style={[styles.foot, { height: bottom + 70 }]}>
         <View style={styles.plaque}>
@@ -319,6 +327,9 @@ export function Spine({
       )}
       {finish === "linen" && <View style={[StyleSheet.absoluteFill, LINEN]} />}
       {finish === "leather" && <GoldBands />}
+      {bindingLayers(finish).map((layer, i) => (
+        <View key={i} pointerEvents="none" style={[styles.layer, layer]} />
+      ))}
       <View style={[StyleSheet.absoluteFill, SPINE_GLOSS]} />
       {ownColor && (
         <View
@@ -408,6 +419,8 @@ function Touch({
 }
 
 const styles = StyleSheet.create({
+  layer: { position: "absolute" },
+  over: { zIndex: 3 },
   grow: { flex: 1, minWidth: 0 },
   row: { flexDirection: "row" },
   books: { flexDirection: "row", alignItems: "flex-end" },

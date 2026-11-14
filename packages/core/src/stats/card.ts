@@ -2,7 +2,15 @@ import { GENRE_LABELS, type Genre } from "../books/genres";
 import { percentChange, shiftMonth, toMonthKey } from "../lib/date";
 
 /** Layouts for the shareable monthly card (rendered by each client). */
-export const CARD_TEMPLATES = ["fita", "estante", "diario", "recibo"] as const;
+export const CARD_TEMPLATES = [
+  "fita",
+  "estante",
+  "diario",
+  "recibo",
+  "edicao",
+  "arcano",
+  "carta",
+] as const;
 export type CardTemplate = (typeof CARD_TEMPLATES)[number];
 
 export const CARD_TEMPLATE_LABELS: Record<CardTemplate, { label: string; description: string }> = {
@@ -10,7 +18,19 @@ export const CARD_TEMPLATE_LABELS: Record<CardTemplate, { label: string; descrip
   estante: { label: "Estante", description: "Os livros do mês lado a lado" },
   diario: { label: "Diário", description: "Delicado, com brilhos e capa" },
   recibo: { label: "Recibo", description: "Seu mês em forma de nota fiscal" },
+  edicao: { label: "Edição especial", description: "Capa dura de colecionador, em dourado" },
+  arcano: { label: "Arcano", description: "Sua carta de tarô da leitura" },
+  carta: { label: "Carta", description: "O mês escrito à mão, com selo de cera" },
 };
+
+/** The paid layouts (art in the private `@grimo/premium` content; see docs/loja/plano.md). */
+export const CARD_PREMIUM_TEMPLATES = [
+  "edicao",
+  "arcano",
+  "carta",
+] as const satisfies readonly CardTemplate[];
+export const isPremiumCardTemplate = (template: string) =>
+  (CARD_PREMIUM_TEMPLATES as readonly string[]).includes(template);
 
 /** What a card summarizes: one month (`YYYY-MM`) or a whole year (the "retrospectiva"). */
 export type CardPeriod = { kind: "month"; month: string } | { kind: "year"; year: number };
@@ -33,6 +53,8 @@ export interface CardData {
   previousShort: string;
   /** "mês" · "ano", for copy like "Gênero do mês". */
   unit: string;
+  /** "X" for October (the month as a roman numeral); empty for a year. */
+  numeral: string;
   year: number;
   booksRead: number;
   pagesRead: number;
@@ -62,6 +84,7 @@ const longMonth = new Intl.DateTimeFormat("pt-BR", {
 });
 const monthOnly = new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" });
 const shortMonth = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" });
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 const monthDate = (key: string) => new Date(`${key}-15T12:00:00Z`);
 
 /** The period right before `period` (deltas compare against it). */
@@ -85,6 +108,7 @@ export function buildCardData(
           periodName: monthOnly.format(monthDate(period.month)),
           previousShort: shortMonth.format(monthDate(shiftMonth(period.month, -1))),
           unit: "mês",
+          numeral: ROMAN[Number(period.month.slice(5, 7)) - 1] ?? "",
           year: Number(period.month.slice(0, 4)),
         }
       : {
@@ -92,6 +116,7 @@ export function buildCardData(
           periodName: String(period.year),
           previousShort: String(period.year - 1),
           unit: "ano",
+          numeral: "",
           year: period.year,
         };
   return {

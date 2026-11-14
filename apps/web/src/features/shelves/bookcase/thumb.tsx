@@ -1,5 +1,6 @@
 import { type ShelfStyle, spineSize } from "@grimo/core";
 import type { CSSProperties } from "react";
+import { premium } from "@/lib/premium";
 import { cn } from "@/utils/cn";
 import { darken, materialOf, spineColor } from "./look";
 
@@ -24,8 +25,11 @@ export function BookcaseThumb({
   const cubbies = style.model === "cubbies";
   const cells = cubbies ? 4 : 3;
   const shelf = Math.round((height - 16) / (cubbies ? 2 : 3)) - 4;
-  const frame: CSSProperties =
-    style.model === "floating"
+  const paid = premium.models[style.model];
+  const edge = m.trim ?? m.plank;
+  const frame: CSSProperties = paid
+    ? paid.thumb(m)
+    : style.model === "floating"
       ? { paddingTop: 6 }
       : style.model === "arch"
         ? { background: m.side, padding: "18px 5px 0", borderRadius: "999px 999px 0 0" }
@@ -55,8 +59,8 @@ export function BookcaseThumb({
             style={{
               height: shelf,
               ...(style.model === "floating"
-                ? { borderBottom: `3px solid ${m.plank}`, marginBottom: 6 }
-                : { background: m.back, borderBottom: cubbies ? 0 : `3px solid ${m.plank}` }),
+                ? { borderBottom: `3px solid ${edge}`, marginBottom: 6 }
+                : { background: m.back, borderBottom: cubbies ? 0 : `3px solid ${edge}` }),
             }}
           >
             {Array.from({ length: cubbies ? 3 : 5 }, (_, i) => {
