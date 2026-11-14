@@ -20,7 +20,7 @@ catalog:
   "@types/react-dom": ~19.3.0
   better-auth: ~1.6.33
   stripe: ^23.1.0
-  convex: ^1.47.0
+  convex: ^1.49.0
   react: 19.3.0
   react-dom: 19.3.0
   typescript: ~6.0.3
