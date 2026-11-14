@@ -1,35 +1,47 @@
-import { useFeed, useMe, useShelf, useYearOverview } from "@grimo/client";
-import { editionPages, goalProgress, greetingFor, readingPercent } from "@grimo/core";
+import { type FeedTab, useFeed, useMe, useShelf, useYearOverview } from "@grimo/client";
+import {
+  editionPages,
+  goalProgress,
+  greetingFor,
+  groupActivities,
+  readingPercent,
+} from "@grimo/core";
 import { router } from "expo-router";
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { FlatList, Image, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Card, ProgressBar, Text } from "@/components/ui";
+import { Button, Card, Enter, EnterEach, ProgressBar, Text } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
 import { VerifyEmailBanner } from "@/features/account";
-import { BookCover, BookTile, SessionControl } from "@/features/books";
+import { BookCover, SessionControl } from "@/features/books";
 import { FeedItem } from "@/features/feed";
 import { NotificationBell } from "@/features/notifications";
-import { ShelfTiles } from "@/features/shelves";
 import { RetrospectiveBanner } from "@/features/stats";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTheme } from "@/hooks/use-theme";
+import { useCountUp, useFirstVisit } from "@/lib/motion";
 import { FirstSteps } from "./first-steps";
-import { FriendsWantRow } from "./friends-want-row";
 import { StreakLine } from "./streak-line";
-import { TrendingRow } from "./trending-row";
 
-/** Início / Diário: what you are reading, the yearly goal, your shelves and your network. */
+/** "Feed" (everyone on Grimo) comes first and is where Início opens; "Seguindo" is one tap away. */
+const TABS: { id: FeedTab; label: string }[] = [
+  { id: "community", label: "Feed" },
+  { id: "following", label: "Seguindo" },
+];
+
+/**
+ * Início: the year's goal, the streak, the book you are reading, and then the feed (Feed or
+ * Seguindo), scrolling to the end.
+ */
 export function Dashboard() {
   const theme = useTheme();
-  const dark = useColorScheme() === "dark";
-  const me = useMe();
   const reading = useShelf("reading");
   const year = useYearOverview();
-  const feed = useFeed();
-  const books = reading.data?.items ?? [];
-  const [current, ...others] = books;
-  const activity = (feed.data?.items ?? []).slice(0, 5);
-  const goal = year.data?.goal ? goalProgress(year.data.goal.target, year.data.goal.done) : null;
+  const [tab, setTab] = useState<FeedTab>("community");
+  const feed = useFeed(tab);
+  const groups = groupActivities(feed.data?.items ?? []);
+  // The first time Início opens, its blocks rise in and the numbers fill.
+  const animate = useFirstVisit("home");
 
   function refresh() {
     void Promise.all([reading.refetch(), year.refetch(), feed.refetch()]);
@@ -37,10 +49,64 @@ export function Dashboard() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]} edges={["top"]}>
-      <ScrollView
+      <FlatList
+        data={groups}
+        keyExtractor={(group) => group.id}
+        renderItem={({ item: { items }, index }) => (
+          <Enter index={6 + index} animate={animate && index < 4}>
+            <FeedItem item={items[0]!} more={items.slice(1)} />
+          </Enter>
+        )}
+        ItemSeparatorComponent={Gap}
         contentContainerStyle={styles.content}
+        ListHeaderComponent={<Top tab={tab} onTab={setTab} animate={animate} />}
+        ListEmptyComponent={
+          feed.isPending ? undefined : tab === "following" ? (
+            <View style={styles.empty}>
+              <Text color="textMuted">
+                Ninguém por aqui ainda. Siga leitores para ver o que estão lendo.
+              </Text>
+              <Button variant="secondary" title="Ver o feed" onPress={() => setTab("community")} />
+            </View>
+          ) : (
+            <Text color="textMuted">
+              Nada no Grimo ainda. Que tal começar marcando o que você está lendo?
+            </Text>
+          )
+        }
+        onEndReached={() => feed.hasNextPage && feed.fetchNextPage()}
         refreshControl={<RefreshControl refreshing={reading.isRefetching} onRefresh={refresh} />}
-      >
+      />
+    </SafeAreaView>
+  );
+}
+
+function Gap() {
+  return <View style={styles.gap} />;
+}
+
+/** Everything above the feed: greeting, goal, streak, the book you are reading, the tabs. */
+function Top({
+  tab,
+  onTab,
+  animate,
+}: {
+  tab: FeedTab;
+  onTab: (tab: FeedTab) => void;
+  animate: boolean;
+}) {
+  const theme = useTheme();
+  const dark = useColorScheme() === "dark";
+  const me = useMe();
+  const reading = useShelf("reading");
+  const year = useYearOverview();
+  const current = reading.data?.items[0];
+  const goal = year.data?.goal ? goalProgress(year.data.goal.target, year.data.goal.done) : null;
+  const done = Math.round(useCountUp(goal?.done ?? 0, animate));
+
+  return (
+    <View style={styles.top}>
+      <EnterEach animate={animate}>
         <View style={styles.header}>
           <Image
             source={
@@ -60,13 +126,35 @@ export function Dashboard() {
           <NotificationBell />
         </View>
 
-        <StreakLine />
         <VerifyEmailBanner />
         <FirstSteps />
         <RetrospectiveBanner />
 
+        <View style={styles.status}>
+          {goal && year.data && (
+            <View style={styles.goal}>
+              <View style={styles.between}>
+                <Text variant="label" color="textMuted">
+                  Meta de {year.data.year}
+                </Text>
+                {goal.done >= goal.target ? (
+                  <Text variant="label" color="accentInk">
+                    Meta batida · {done} de {goal.target}
+                  </Text>
+                ) : (
+                  <Text variant="label">
+                    {done} / {goal.target} livros
+                  </Text>
+                )}
+              </View>
+              <ProgressBar percent={goal.percent} height={6} animate={animate} />
+            </View>
+          )}
+          <StreakLine />
+        </View>
+
         {current ? (
-          <CurrentRead item={current} />
+          <CurrentRead item={current} animate={animate} />
         ) : (
           <Card>
             <Text variant="title">Nenhum livro em leitura</Text>
@@ -77,89 +165,49 @@ export function Dashboard() {
           </Card>
         )}
 
-        {others.length > 0 && (
-          <View style={styles.section}>
-            <Text variant="heading">Também lendo</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.row}
-            >
-              {others.map(({ entry, book }) => (
-                <BookTile key={entry.id} book={book} currentPage={entry.currentPage} width={96} />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {goal && year.data && (
-          <Card>
-            <Text variant="label" color="textMuted">
-              Meta de leitura
-            </Text>
-            <Text variant="heading">
-              {goal.done} de {goal.target} livros em {year.data.year}
-            </Text>
-            <ProgressBar percent={goal.percent} color="gold" height={10} />
-          </Card>
-        )}
-
-        <View style={styles.section}>
-          <Text variant="heading">Estantes</Text>
-          <ShelfTiles onSelect={() => router.navigate("/shelves")} />
-        </View>
-
-        <TrendingRow />
-        <FriendsWantRow />
-
-        {activity.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHead}>
-              <Text variant="heading">Da sua rede</Text>
+        <View accessibilityRole="tablist" style={[styles.tabs, { borderColor: theme.edge }]}>
+          {TABS.map((item) => {
+            const active = item.id === tab;
+            return (
               <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push("/feed")}
-                hitSlop={8}
+                key={item.id}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => onTab(item.id)}
+                style={[styles.tab, active && { borderColor: theme.text }]}
               >
-                <Text variant="label" color="accent">
-                  Ver feed →
+                <Text variant="label" color={active ? "text" : "textMuted"}>
+                  {item.label}
                 </Text>
               </Pressable>
-            </View>
-            {activity.map((item) => (
-              <FeedItem key={item.id} item={item} />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+            );
+          })}
+        </View>
+      </EnterEach>
+    </View>
   );
 }
 
 type ReadingItem = NonNullable<ReturnType<typeof useShelf>["data"]>["items"][number];
 
 /** The "Lendo agora" page: cover, progress and the shortcut to log reading. */
-function CurrentRead({ item }: { item: ReadingItem }) {
+function CurrentRead({ item, animate }: { item: ReadingItem; animate: boolean }) {
   const theme = useTheme();
   const { entry, book } = item;
+  const page = Math.round(useCountUp(entry.currentPage, animate));
   const percent = readingPercent(entry.currentPage, book.pageCount);
   const open = () => router.push({ pathname: "/book/[id]", params: { id: book.openLibraryId } });
 
   return (
-    <View
-      style={[
-        styles.page,
-        { backgroundColor: theme.surface, borderColor: theme.edge, shadowColor: theme.shadow },
-      ]}
-    >
+    <View style={[styles.page, { backgroundColor: theme.surface, borderColor: theme.edge }]}>
       <View style={[styles.tape, { backgroundColor: theme.accentStart }]} />
       <Pressable accessibilityRole="button" onPress={open} style={styles.current}>
         <BookCover src={book.coverUrl} title={book.title} width={88} />
         <View style={styles.currentInfo}>
-          <Text variant="label" color="accent">
+          <Text variant="label" color="accentInk">
             Lendo agora
           </Text>
-          <Text variant="title" numberOfLines={2} style={styles.currentTitle}>
+          <Text variant="heading" numberOfLines={2}>
             {book.title}
           </Text>
           <Text variant="small" color="textMuted" numberOfLines={1}>
@@ -167,47 +215,68 @@ function CurrentRead({ item }: { item: ReadingItem }) {
           </Text>
           {percent !== null && (
             <View style={styles.progress}>
-              <ProgressBar percent={percent} height={8} />
-              <Text variant="label" color="textMuted">
-                p.{entry.currentPage} de {book.pageCount} · {percent}%
-              </Text>
+              <View style={styles.pages}>
+                <Text variant="number" style={styles.pageNumber}>
+                  {page}
+                  <Text variant="small" color="textMuted">
+                    {" "}
+                    / {book.pageCount}
+                  </Text>
+                </Text>
+                <Text variant="label" color="textMuted">
+                  {percent}%
+                </Text>
+              </View>
+              <ProgressBar percent={percent} height={6} animate={animate} />
             </View>
           )}
         </View>
       </Pressable>
-      <Button
-        title="Atualizar progresso"
-        onPress={() =>
-          router.push({ pathname: "/progress/[id]", params: { id: book.openLibraryId } })
-        }
-      />
-      <SessionControl
-        entryId={entry.id}
-        page={entry.currentPage}
-        pageCount={editionPages(entry.pageCount, book.pageCount)}
-        book={book}
-      />
+      <View style={styles.actions}>
+        <Button
+          title="Atualizar progresso"
+          style={styles.flex}
+          onPress={() =>
+            router.push({ pathname: "/progress/[id]", params: { id: book.openLibraryId } })
+          }
+        />
+        <SessionControl
+          compact
+          entryId={entry.id}
+          page={entry.currentPage}
+          pageCount={editionPages(entry.pageCount, book.pageCount)}
+          book={book}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: spacing[4], gap: spacing[5], paddingBottom: 120 },
+  content: { paddingHorizontal: spacing[5], paddingTop: spacing[4], paddingBottom: 120 },
+  top: { gap: spacing[6], marginBottom: spacing[4] },
+  gap: { height: spacing[3] },
+  empty: { gap: spacing[3] },
   header: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
   logo: { width: 48, height: 48 },
   flex: { flex: 1 },
-  section: { gap: spacing[3] },
-  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  row: { gap: spacing[4], paddingRight: spacing[4] },
+  status: { gap: spacing[3] },
+  goal: { gap: spacing[2] },
+  between: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  tabs: { flexDirection: "row", gap: spacing[5], borderBottomWidth: 1 },
+  tab: {
+    paddingVertical: spacing[3],
+    borderBottomWidth: 2,
+    borderColor: "transparent",
+    marginBottom: -1,
+  },
+  actions: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   page: {
     borderWidth: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     padding: spacing[4],
     gap: spacing[4],
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
   },
   tape: {
     position: "absolute",
@@ -220,6 +289,7 @@ const styles = StyleSheet.create({
   },
   current: { flexDirection: "row", gap: spacing[4] },
   currentInfo: { flex: 1, gap: spacing[1] },
-  currentTitle: { fontSize: 20, lineHeight: 24 },
-  progress: { marginTop: "auto", gap: spacing[1] },
+  progress: { marginTop: "auto", gap: spacing[2] },
+  pages: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  pageNumber: { fontSize: 22 },
 });

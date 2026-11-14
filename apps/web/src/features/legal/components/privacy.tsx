@@ -43,20 +43,23 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Perfil:</strong> foto, bio, gêneros favoritos, meta de leitura e o fuso horário
-            do seu aparelho (para contar seus meses e anos de leitura).
+            do seu aparelho (para contar seus meses e anos de leitura). Se você quiser, também:
+            pronomes, cor da capa, a música do perfil (nome, artista e o link que você colar), os
+            livros de cabeceira, a citação destacada e quais cartões de leitura aparecem. Para
+            mostrar a capa, o nome e o artista da música, o servidor do Grimo lê a página do link e
+            guarda uma cópia da capa; o seu aparelho não se conecta ao serviço de música, que só
+            recebe você se tocar em ouvir.
           </li>
           <li>
-            <strong>Leitura:</strong> livros nas suas estantes, páginas marcadas, avaliações (nota e
+            <strong>Leitura:</strong> seus livros e a situação de cada um (quero ler, lendo, lido,
+            abandonei), as estantes que você cria (como &ldquo;Física&rdquo; ou
+            &ldquo;Kindle&rdquo;) e quais livros estão nelas, páginas marcadas, avaliações (nota e
             os sentimentos que o livro deixou), os sentimentos que você marca numa página enquanto
             lê (seu diário de leitura), datas de início e fim (também das leituras anteriores de um
             livro que você relê), e as sessões de leitura que você cronometra (quando começou,
             quando parou e em que página), para a ofensiva e o feed. Os sentimentos são escolhidos
             numa lista fixa e servem para mostrar a sua leitura e somar, sem identificar ninguém,
             como os leitores se sentiram com cada livro.
-          </li>
-          <li>
-            <strong>Listas:</strong> as listas de livros que você monta (nome, descrição, livros e a
-            nota de cada um). Ficam públicas no seu perfil.
           </li>
           <li>
             <strong>Social:</strong> resenhas, notas, comentários, curtidas, quem você segue,
@@ -125,10 +128,13 @@ export function PrivacyPage() {
       <Section title="4. O que é público">
         <p>
           O Grimo é uma rede social aberta. <strong>Qualquer pessoa, mesmo sem conta</strong>, pode
-          ver seu nome, @, foto, bio, gêneros favoritos, livros que você está lendo e já leu,
-          avaliações (com os sentimentos), os sentimentos marcados nas páginas, resenhas, notas,
-          comentários, quem você segue e quem segue você, e suas estatísticas de leitura. O que você
-          faz nas estantes (começar, marcar página, terminar, avaliar) também aparece no feed
+          ver seu nome, @, foto, bio, pronomes, gêneros favoritos, a música, os livros de cabeceira
+          e a citação destacada do perfil, livros que você está lendo e já leu, avaliações (com os
+          sentimentos), os sentimentos marcados nas páginas, resenhas, notas, comentários, quem você
+          segue e quem segue você, suas estatísticas de leitura e as estantes que você criar e
+          escolher mostrar no perfil (o nome delas e, dentro, só os livros que você está lendo e já
+          leu). As estantes que você deixar só para você não aparecem para ninguém. O que você faz
+          nas estantes (começar, marcar página, terminar, avaliar) também aparece no feed
           &ldquo;Comunidade&rdquo;, que mostra a atividade de todos os leitores. Seu email e os
           dados técnicos nunca são públicos.
         </p>

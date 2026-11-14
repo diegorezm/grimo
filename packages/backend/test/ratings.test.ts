@@ -104,9 +104,9 @@ describe("rating a book", () => {
     await expect(
       rafa.as.mutation(api.shelves.update, {
         id,
-        feelings: ["alegria", "medo", "raiva", "tedio"],
+        feelings: ["alegria", "medo", "raiva", "tedio", "tensao", "surpresa", "paixao", "conforto"],
       }),
-    ).rejects.toThrow(/até 3/);
+    ).rejects.toThrow(/até 7/);
   });
 
   it("counts a book from before the star bars from its shelves", async () => {
@@ -254,5 +254,29 @@ describe("feelings and personal data", () => {
       feelingReaders: 0,
       feelings: [],
     });
+  });
+});
+
+describe("finishing a book quietly", () => {
+  it("moves it to Lidos without a feed card, and refuses a comment then", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    await bia.as.mutation(api.users.setFollowing, { userId: rafa.id, follow: true });
+    const { id } = await shelve(rafa, "reading");
+    await expect(
+      rafa.as.mutation(api.shelves.update, {
+        id,
+        status: "read",
+        publish: false,
+        note: { body: "Amei.", hasSpoilers: false },
+      }),
+    ).rejects.toThrow(/publique no feed/);
+
+    vi.advanceTimersByTime(60_000);
+    await rafa.as.mutation(api.shelves.update, { id, status: "read", rating: 4, publish: false });
+    expect((await detailOf(rafa)).entry).toMatchObject({ status: "read", rating: 4 });
+    const feed = (await bia.as.query(api.feed.list, { limit: 20 })).items;
+    expect(feed.some((item) => item.kind === "finished")).toBe(false);
   });
 });

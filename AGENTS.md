@@ -20,8 +20,10 @@ Contexto de produto no [README.md](README.md); stack, estrutura, setup completo 
 | Landing page (visitante)                 | `apps/web/src/features/landing/` (rota `/welcome`; `/` deslogado cai nela) |
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Juntos (ler em grupo)                    | `convex/groups.ts` + `model/groups.ts`, `@grimo/core` `groups/`, web `features/groups` (`/juntos`, convite público `/j/<código>`), mobile aba `juntos` + `group/[id]` |
+| Visual da estante (modelos, cores, enfeites, estilos prontos) | `@grimo/core` `shelves/style.ts` (opções, presets, `layoutBookcase`), tokens `shelfMaterials`, mobile `features/shelves/bookcase/` + `customize-sheet.tsx`; salvo por `bookshelves.setStyle` |
 | Importar estantes (Goodreads)            | `@grimo/core` `imports/` (lê o CSV), `convex/imports.ts` (Open Library em lotes, `importToShelf` sem feed), web `/importar` |
 | Moderação (denúncias, livros cadastrados) | `convex/moderation.ts` (`queue`, `act`, `decideBook`, `log`; convites de moderador em `convex/moderators.ts` (24 h, só admin convida); papéis também via `npx convex run moderation:setAdmin` / `setModerator`; suspensão com prazo e motivo; limites em `canModerate`), web `/admin` |
+| Pagamentos (Grimo Plus, lojinha, Stripe) | `@grimo/core` `billing/` (catálogo de preços e itens), `convex/billing.ts` (checkout, portal, webhook `applyEvent`), `model/billing.ts` (`requirePlus`, `requireItem`), `model/stripe.ts`, rota HTTP `/stripe/webhook` em `http.ts`, web `/settings/plan`; ver [Pagamentos](#pagamentos-stripe) |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |
 | LGPD, termos, idade (16+), App Store     | `docs/legal/README.md` (decisões e checklist: leia antes de mexer em cadastro ou dados pessoais) |
 
@@ -96,6 +98,25 @@ O cache forte e persistido é parte central da experiência. **Nenhuma mudança 
   sessão do SecureStore).
 - A sessão fica em cache em memória (`sessionQuery`, 5 min) e **nunca** é persistida no cache de
   queries.
+
+## Pagamentos (Stripe)
+
+- Stripe hospeda o checkout e o portal do cliente; o app **nunca** vê cartão. Plano e compras só
+  mudam pelo webhook (`/stripe/webhook`, assinatura verificada): o cliente não grava nada. `billing.status`
+  é o que as telas leem (`useBillingStatus`).
+- O catálogo mora em `@grimo/core` (`PLUS_PLAN`, `SHOP_ITEMS`). Os preços do Stripe são criados sob
+  demanda por `lookupKey` (`ensurePrice`): não há nada a configurar no dashboard. Mudou um valor?
+  Crie uma `lookupKey` nova (preço do Stripe é imutável) para não mexer em quem já assina.
+- Recurso do Plus: `requirePlus(ctx)`; item da lojinha: `requireItem(ctx, key)` (`model/billing.ts`).
+  Item novo = entrada em `SHOP_ITEMS` + a checagem onde ele vale.
+- Sem `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` o deployment fica com pagamentos desligados
+  (`status.enabled: false`, botões desabilitados, webhook responde 503).
+- Teste local: `npx convex env set STRIPE_SECRET_KEY sk_test_…`, rode
+  `stripe listen --forward-to <CONVEX_SITE_URL>/stripe/webhook`, copie o `whsec_…` que ele imprime
+  para `STRIPE_WEBHOOK_SECRET` e pague com o cartão `4242 4242 4242 4242`. Só web por enquanto
+  (o mobile ainda não vende: a App Store tem regras próprias para compra digital).
+- Exclusão de conta apaga o customer no Stripe (cancela a assinatura); `purchases` fica sem o
+  leitor (registro de venda).
 
 ## Dados pessoais e termos (LGPD)
 

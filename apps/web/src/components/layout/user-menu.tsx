@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import {
   ChevronDownIcon,
+  HeartIcon,
   LockIcon,
   LogOutIcon,
   PencilIcon,
@@ -70,7 +71,7 @@ export function UserMenu({ me }: { me: Me }) {
       {open && (
         <div
           id={panelId}
-          className="absolute right-0 z-30 mt-2 flex w-64 flex-col gap-0.5 rounded-xl border border-border bg-surface p-2 shadow-lg shadow-shadow"
+          className="absolute right-0 z-50 mt-2 flex w-64 flex-col gap-0.5 rounded-xl border border-border bg-surface p-2 shadow-lg shadow-shadow"
         >
           <div className="px-3 py-2">
             <p className="truncate font-semibold">{me.name}</p>
@@ -103,6 +104,13 @@ export function UserMenu({ me }: { me: Me }) {
             onPick={() => setOpen(false)}
           >
             Preferências
+          </MenuLink>
+          <MenuLink
+            to="/settings/plan"
+            icon={<HeartIcon className="size-5" />}
+            onPick={() => setOpen(false)}
+          >
+            Plano e lojinha
           </MenuLink>
           <MenuLink
             to="/settings/account"
@@ -141,7 +149,13 @@ function MenuLink({
   onPick,
   children,
 }: {
-  to: "/me" | "/shelves" | "/settings/preferences" | "/settings/account" | "/admin";
+  to:
+    | "/me"
+    | "/shelves"
+    | "/settings/preferences"
+    | "/settings/account"
+    | "/settings/plan"
+    | "/admin";
   icon?: ReactNode;
   onPick: () => void;
   children: ReactNode;

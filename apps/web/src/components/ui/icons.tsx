@@ -217,3 +217,9 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </Icon>
 );
+
+export const BrushIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 20c3 0 5-1.5 5-4a3 3 0 0 0-3-3c-2 0-3 1.5-3 3.5C3 18 3.5 19 4 20zM9.5 12.5 19 3l2 2-9.5 9.5" />
+  </Icon>
+);

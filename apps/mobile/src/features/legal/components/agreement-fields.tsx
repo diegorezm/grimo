@@ -70,11 +70,11 @@ export function AgreementFields({
         </View>
         <Text variant="small" style={styles.flex}>
           Li e aceito os{" "}
-          <Text variant="small" color="accent" onPress={() => openLegal("terms")}>
+          <Text variant="small" color="accentInk" onPress={() => openLegal("terms")}>
             Termos de Uso
           </Text>{" "}
           e a{" "}
-          <Text variant="small" color="accent" onPress={() => openLegal("privacy")}>
+          <Text variant="small" color="accentInk" onPress={() => openLegal("privacy")}>
             Política de Privacidade
           </Text>
           , e entendo que meu perfil e o que eu publicar ficam públicos.

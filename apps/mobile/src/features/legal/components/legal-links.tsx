@@ -22,7 +22,7 @@ export function LegalLinks() {
     <View style={styles.row}>
       {links.map((link) => (
         <Pressable key={link.label} accessibilityRole="link" onPress={link.open} hitSlop={6}>
-          <Text variant="label" color="accent">
+          <Text variant="label" color="accentInk">
             {link.label}
           </Text>
         </Pressable>

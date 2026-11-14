@@ -379,7 +379,7 @@ async function feelingsDiary(ctx: QueryCtx, entryId: Id<"shelfEntries">) {
  */
 async function communityOf(ctx: QueryCtx, book: Doc<"books">) {
   const counted = communityFromCounters(book);
-  if (counted) return counted;
+  if (counted && book.statusCounts !== undefined) return counted;
   const entries = await ctx.db
     .query("shelfEntries")
     .withIndex("by_book", (q) => q.eq("bookId", book._id))

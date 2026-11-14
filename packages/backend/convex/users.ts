@@ -1,5 +1,7 @@
 import {
   avatarProblem,
+  editionPages,
+  groupByYearRead,
   setupProfileSchema,
   timeZoneSchema,
   USERNAME_REGEX,
@@ -7,6 +9,7 @@ import {
   yearOf,
 } from "@grimo/core";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
 import { listActivities, recordActivity } from "./model/content";
@@ -105,8 +108,47 @@ export const completeSetup = mutation({
 
 /** Profile fields + the current year's reading goal. Used by the seed too. */
 export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch: unknown) {
-  const { name, bio, favoriteGenres, yearlyGoal } = parse(updateProfileSchema, patch);
+  const {
+    name,
+    bio,
+    favoriteGenres,
+    yearlyGoal,
+    pronouns,
+    profileColor,
+    profileSong,
+    favoriteBookIds,
+    featuredQuoteId,
+    profileShows,
+  } = parse(updateProfileSchema, patch);
   const fields: Partial<Doc<"users">> = {};
+  // A cleared field (null) is stored as absent: undefined in a patch removes it.
+  if (pronouns !== undefined) fields.pronouns = pronouns ?? undefined;
+  if (profileColor !== undefined) fields.profileColor = profileColor ?? undefined;
+  if (profileSong !== undefined) {
+    const previous = user.profileSong;
+    const sameLink = previous && profileSong && previous.url === profileSong.url;
+    // Same link: the cover stays. New link or none: the old cover goes, and a new one is copied.
+    if (previous?.coverStorageId && !sameLink) await ctx.storage.delete(previous.coverStorageId);
+    fields.profileSong = profileSong
+      ? sameLink
+        ? { ...profileSong, coverStorageId: previous.coverStorageId, color: previous.color }
+        : profileSong
+      : undefined;
+    if (profileSong && !sameLink) {
+      await ctx.scheduler.runAfter(0, internal.songs.storeCover, {
+        userId: user._id,
+        url: profileSong.url,
+      });
+    }
+  }
+  if (profileShows !== undefined) fields.profileShows = profileShows;
+  if (favoriteBookIds !== undefined) {
+    fields.favoriteBookIds = await existingBooks(ctx, favoriteBookIds);
+  }
+  if (featuredQuoteId !== undefined) {
+    fields.featuredQuoteId =
+      featuredQuoteId === null ? undefined : await ownQuote(ctx, user, featuredQuoteId);
+  }
   if (name !== undefined) {
     fields.name = name;
     fields.searchText = `${name} ${user.username}`;
@@ -131,12 +173,43 @@ export async function updateProfile(ctx: MutationCtx, user: Doc<"users">, patch:
   }
 }
 
+/** Favorite books must exist (ids come from the client). */
+async function existingBooks(ctx: MutationCtx, ids: string[]): Promise<Id<"books">[]> {
+  return Promise.all(
+    ids.map(async (raw) => {
+      const id = ctx.db.normalizeId("books", raw);
+      if (!id || !(await ctx.db.get(id))) throw notFound("Livro");
+      return id;
+    }),
+  );
+}
+
+/** Only one of the reader's own quotes can be highlighted. */
+async function ownQuote(ctx: MutationCtx, user: Doc<"users">, raw: string) {
+  const id = ctx.db.normalizeId("posts", raw);
+  const post = id ? await ctx.db.get(id) : null;
+  if (!id || !post || post.authorId !== user._id || post.kind !== "quote") {
+    throw notFound("Citação");
+  }
+  return id;
+}
+
 export const updateMe = mutation({
   args: {
     name: v.optional(v.string()),
     bio: v.optional(v.union(v.string(), v.null())),
     favoriteGenres: v.optional(v.array(v.string())),
     yearlyGoal: v.optional(v.union(v.number(), v.null())),
+    pronouns: v.optional(v.union(v.string(), v.null())),
+    profileColor: v.optional(v.union(v.string(), v.null())),
+    profileSong: v.optional(
+      v.union(v.object({ title: v.string(), artist: v.string(), url: v.string() }), v.null()),
+    ),
+    favoriteBookIds: v.optional(v.array(v.string())),
+    featuredQuoteId: v.optional(v.union(v.string(), v.null())),
+    profileShows: v.optional(
+      v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
+    ),
   },
   handler: async (ctx, args) => {
     const viewer = await requireViewer(ctx);
@@ -562,5 +635,70 @@ export const setTimeZone = mutation({
     const timeZone = parse(timeZoneSchema, args.timeZone);
     if (viewer.timeZone !== timeZone) await ctx.db.patch(viewer._id, { timeZone });
     return null;
+  },
+});
+
+/** Pages of the books read, counting the reader's edition when they set one. */
+async function pagesOfBooksRead(ctx: QueryCtx, entries: Doc<"shelfEntries">[]) {
+  const pages = await Promise.all(
+    entries.map(async (entry) =>
+      editionPages(entry.pageCount, (await ctx.db.get(entry.bookId))?.pageCount ?? null),
+    ),
+  );
+  return pages.reduce<number>((total, count) => total + (count ?? 0), 0);
+}
+
+/** Covers per shelf on a profile: at most this many books each. */
+const SHELF_COVERS = 60;
+
+/**
+ * A reader's public shelves on their profile, as rows of covers: Lendo, and Lidos in runs by the
+ * year each book was finished ("Lidos '26"). Only these two shelves are public (Privacy Policy).
+ */
+export const shelves = query({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
+    if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
+    // A private reader's shelves are only for their followers (the page shows the lock).
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, reader))) {
+      return {
+        reading: { count: 0, items: [] },
+        read: { count: 0, pages: 0, runs: [] },
+      };
+    }
+    const byStatus = (status: "reading" | "read") =>
+      ctx.db
+        .query("shelfEntries")
+        .withIndex("by_user_status_updated", (q) => q.eq("userId", reader._id).eq("status", status))
+        .order("desc")
+        .collect();
+    const [reading, read] = await Promise.all([byStatus("reading"), byStatus("read")]);
+    const latestRead = [...read]
+      .sort((a, b) => (b.finishedAt ?? -1) - (a.finishedAt ?? -1))
+      .slice(0, SHELF_COVERS);
+    const [readingRows, readRows, pagesRead] = await Promise.all([
+      withBooks(ctx, reading.slice(0, SHELF_COVERS), viewer?._id ?? null),
+      withBooks(ctx, latestRead, viewer?._id ?? null),
+      pagesOfBooksRead(ctx, read),
+    ]);
+    const cover = ({ entry, book }: (typeof readRows)[number]) => ({
+      entryId: entry.id,
+      openLibraryId: book.openLibraryId,
+      title: book.title,
+      coverUrl: book.coverUrl,
+      rating: entry.rating,
+      finishedAt: entry.finishedAt,
+    });
+    const timeZone = timeZoneOf(reader);
+    return {
+      reading: { count: reading.length, items: readingRows.map(cover) },
+      read: {
+        count: read.length,
+        /** Pages of every book read (each in the reader's edition): the profile's "páginas". */
+        pages: pagesRead,
+        runs: groupByYearRead(readRows.map(cover), (date) => yearOf(date, timeZone)),
+      },
+    };
   },
 });

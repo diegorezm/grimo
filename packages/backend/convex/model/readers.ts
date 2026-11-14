@@ -1,4 +1,14 @@
-import { DEFAULT_TIME_ZONE, USERNAME_REGEX, usernameFromName, yearOf } from "@grimo/core";
+import {
+  DEFAULT_PROFILE_COLOR,
+  DEFAULT_PROFILE_SHOWS,
+  DEFAULT_TIME_ZONE,
+  musicService,
+  PROFILE_COLORS,
+  type ProfileColor,
+  USERNAME_REGEX,
+  usernameFromName,
+  yearOf,
+} from "@grimo/core";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { emailEnabled } from "./env";
@@ -139,6 +149,10 @@ export async function profileOf(ctx: Ctx, user: Doc<"users">) {
     .query("readingGoals")
     .withIndex("by_user_year", (q) => q.eq("userId", user._id).eq("year", year))
     .unique();
+  const [favoriteBooks, featuredQuote] = await Promise.all([
+    favoriteBooksOf(ctx, user),
+    featuredQuoteOf(ctx, user),
+  ]);
   return {
     id: user._id,
     name: user.name,
@@ -150,9 +164,59 @@ export async function profileOf(ctx: Ctx, user: Doc<"users">) {
     yearlyGoal: goal?.target ?? null,
     followers: user.followers,
     following: user.following,
+    bookCount: user.bookCount,
+    pronouns: user.pronouns ?? null,
+    profileColor: (isProfileColor(user.profileColor)
+      ? user.profileColor
+      : DEFAULT_PROFILE_COLOR) as ProfileColor,
+    profileSong: user.profileSong
+      ? {
+          title: user.profileSong.title,
+          artist: user.profileSong.artist,
+          url: user.profileSong.url,
+          service: musicService(user.profileSong.url),
+          coverUrl: user.profileSong.coverStorageId
+            ? await ctx.storage.getUrl(user.profileSong.coverStorageId)
+            : null,
+          color: user.profileSong.color ?? null,
+        }
+      : null,
+    favoriteBooks,
+    featuredQuote,
+    profileShows: user.profileShows ?? DEFAULT_PROFILE_SHOWS,
     /** Only followers see the reading (the page shows a lock to everyone else). */
     isPrivate: user.isPrivate ?? false,
   };
+}
+
+const isProfileColor = (value: string | undefined): value is ProfileColor =>
+  (PROFILE_COLORS as readonly (string | undefined)[]).includes(value);
+
+/** "Livros de cabeceira": books under review elsewhere (or gone) are left out. */
+async function favoriteBooksOf(ctx: Ctx, user: Doc<"users">) {
+  const books = await Promise.all((user.favoriteBookIds ?? []).map((id) => ctx.db.get(id)));
+  return books.flatMap((book) =>
+    book && (book.reviewStatus === undefined || book.reviewStatus === "approved")
+      ? [
+          {
+            id: book._id,
+            openLibraryId: book.openLibraryId,
+            title: book.title,
+            authors: book.authors,
+            coverUrl: book.coverUrl,
+          },
+        ]
+      : [],
+  );
+}
+
+/** The highlighted quote, while it is still the reader's own quote. */
+async function featuredQuoteOf(ctx: Ctx, user: Doc<"users">) {
+  if (!user.featuredQuoteId) return null;
+  const post = await ctx.db.get(user.featuredQuoteId);
+  if (!post || post.authorId !== user._id || post.kind !== "quote") return null;
+  const book = post.bookId ? await ctx.db.get(post.bookId) : null;
+  return { id: post._id, body: post.body, page: post.page ?? null, bookTitle: book?.title ?? null };
 }
 
 /**

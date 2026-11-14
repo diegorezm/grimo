@@ -1,16 +1,19 @@
 import {
+  profileShelvesQuery,
   readerActivityQuery,
-  readerListsQuery,
   readerQuery,
+  readerShelvesQuery,
   useMe,
   useReader,
+  useSetBlocked,
 } from "@grimo/client";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
 import { Screen } from "@/components/layout/screen";
-import { ReaderLists } from "@/features/lists";
+import { Button } from "@/components/ui/button";
+import { LockIcon } from "@/components/ui/icons";
 import { ReaderSafetyMenu } from "@/features/moderation";
-import { BookRow, ProfileHeader } from "@/features/profile";
+import { ProfileView } from "@/features/profile";
 import { FollowButton, ReaderActivity, ShareProfileButton } from "@/features/readers";
 import { YearStats } from "@/features/stats";
 
@@ -18,8 +21,9 @@ import { YearStats } from "@/features/stats";
 export const Route = createFileRoute("/_app/u/$username")({
   loader: ({ context: { queryClient }, params }) => {
     void queryClient.prefetchQuery(readerQuery(params.username));
+    void queryClient.prefetchQuery(readerShelvesQuery(params.username));
+    void queryClient.prefetchQuery(profileShelvesQuery(params.username));
     void queryClient.prefetchQuery(readerActivityQuery(params.username));
-    void queryClient.prefetchQuery(readerListsQuery(params.username));
   },
   component: ReaderPage,
 });
@@ -29,6 +33,7 @@ function ReaderPage() {
   const { session } = Route.useRouteContext();
   const reader = useReader(username);
   const me = useMe({ enabled: Boolean(session) });
+  const setBlocked = useSetBlocked();
 
   if (reader.isError) {
     return (
@@ -38,93 +43,63 @@ function ReaderPage() {
     );
   }
   if (!reader.data) return <Spinner />;
-  const { profile, stats, books, isFollowing, followsYou, blockedByMe, requested } = reader.data;
+  const page = reader.data;
+  const { profile, isFollowing, followsYou, blockedByMe, requested, canSeeReading } = page;
   const viewerId = session?.user.id ?? null;
-  // `profile.id` is the reader id (users table), not the auth user id: compare with `me`.
-  const isMe = profile.id === me.data?.id;
+  // Your own page lives at /me (photo, editing, the monthly card).
+  if (me.data && profile.id === me.data.id) return <Navigate to="/me" replace />;
   // Until `me` loads we can not tell whose profile this is: hide the actions instead of flashing.
   const meKnown = !session || me.data !== undefined;
 
   return (
-    <Screen>
-      <ProfileHeader
-        profile={profile}
-        covers={books.covers}
-        bookCount={books.total}
-        followsYou={followsYou}
-        linkCounts
-        actions={
-          <>
-            {viewerId && meKnown && !isMe && !blockedByMe && (
-              <FollowButton reader={{ ...profile, isFollowing, followsYou, requested }} />
-            )}
-            {!viewerId && (
-              <Link
-                to="/login"
-                search={{ redirect: `/u/${username}` }}
-                className="bg-accent-gradient rounded-full px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-accent-foreground shadow-md shadow-accent/30 hover:opacity-90"
-              >
-                Entrar para seguir
-              </Link>
-            )}
-            {isMe && (
-              <Link
-                to="/me"
-                className="inline-flex items-center rounded-full border border-border bg-surface px-5 py-2.5 font-mono text-xs font-medium uppercase tracking-wider shadow-sm shadow-shadow transition hover:border-accent/50 hover:text-accent"
-              >
-                Meu painel
-              </Link>
-            )}
-            {profile.username && (
-              <ShareProfileButton username={profile.username} name={profile.name} own={isMe} />
-            )}
-            {viewerId && meKnown && !isMe && (
-              <ReaderSafetyMenu reader={profile} blocked={blockedByMe} />
-            )}
-          </>
-        }
-      />
-
-      {!reader.data.canSeeReading ? (
-        <section className="flex flex-col items-center gap-2 rounded-xl border border-border px-6 py-12 text-center">
-          <h2 className="text-xl font-medium italic">Perfil privado</h2>
-          <p className="max-w-sm text-text-muted">
-            {requested
-              ? `Você pediu para seguir ${profile.name}. As leituras aparecem quando o pedido for aceito.`
-              : `Só quem segue ${profile.name} vê as estantes, as leituras e as resenhas.`}
-          </p>
-        </section>
-      ) : (
-        <div className="grid grid-cols-1 gap-10 @5xl/main:grid-cols-[minmax(0,1fr)_24rem] @5xl/main:gap-8">
-          <div className="flex min-w-0 flex-col gap-10">
-            <YearStats stats={stats ?? undefined} />
-            <BookRow
-              title="Lendo agora"
-              items={books.reading}
-              empty={`${profile.name} não tem nenhum livro aberto agora.`}
-            />
-            <BookRow
-              title="Favoritos"
-              items={books.favorites}
-              empty="Os livros mais bem avaliados aparecem aqui."
-            />
-            <ReaderLists username={username} isMe={isMe} />
+    <ProfileView
+      page={page}
+      username={username}
+      actions={
+        <>
+          {viewerId && meKnown && !blockedByMe && (
+            <FollowButton reader={{ ...profile, isFollowing, followsYou, requested }} />
+          )}
+          {!viewerId && (
+            <Link
+              to="/login"
+              search={{ redirect: `/u/${username}` }}
+              className="bg-accent-gradient rounded-full px-5 py-2.5 font-mono text-xs font-medium tracking-wider text-accent-foreground uppercase shadow-md shadow-accent/30 hover:opacity-90"
+            >
+              Entrar para seguir
+            </Link>
+          )}
+          <ShareProfileButton username={profile.username} name={profile.name} />
+          {viewerId && meKnown && <ReaderSafetyMenu reader={profile} blocked={blockedByMe} />}
+        </>
+      }
+      blocked={
+        blockedByMe ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-text-muted">
+              Você bloqueou {profile.name}. Vocês não veem o que o outro publica.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => setBlocked.mutate({ userId: profile.id, block: false })}
+            >
+              Desbloquear
+            </Button>
           </div>
-
-          {/* Fixed height, scrolling inside: a long history never stretches the page. */}
-          <section
-            aria-labelledby="activity-title"
-            className="flex max-h-[36rem] min-h-0 flex-col rounded-xl bg-surface-muted/70 @5xl/main:sticky @5xl/main:top-6 @5xl/main:max-h-[calc(100dvh-3rem)] @5xl/main:self-start"
-          >
-            <h2 id="activity-title" className="px-5 pt-5 pb-2 text-xl font-medium italic">
-              Atividade
-            </h2>
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-3 [scrollbar-width:thin]">
-              <ReaderActivity username={username} interactive={Boolean(viewerId)} />
-            </div>
+        ) : !canSeeReading ? (
+          <section className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
+            <LockIcon className="size-6 text-text-muted" />
+            <h2 className="text-xl font-medium italic">Perfil privado</h2>
+            <p className="max-w-sm text-text-muted">
+              {requested
+                ? `Você pediu para seguir ${profile.name}. As leituras aparecem quando o pedido for aceito.`
+                : `Só quem segue ${profile.name} vê as estantes, as leituras e as resenhas.`}
+            </p>
           </section>
-        </div>
-      )}
-    </Screen>
+        ) : undefined
+      }
+      activity={<ReaderActivity username={username} interactive={Boolean(viewerId)} />}
+      year={<YearStats stats={page.stats ?? undefined} />}
+    />
   );
 }

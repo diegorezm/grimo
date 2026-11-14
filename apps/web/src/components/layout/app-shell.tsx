@@ -102,8 +102,14 @@ export function AppShell({
           </div>
         </aside>
 
-        {/* `@container/main`: screens adapt to the space left when a side peek is open. */}
-        <div className="@container/main flex min-w-0 flex-1 flex-col">
+        {/*
+          `@container/main`: screens adapt to the space left when a side peek is open. The
+          shelves screen paints its wall over the whole column, top bar included (`ShelfScreen`).
+        */}
+        <div
+          data-app-column
+          className="@container/main flex min-w-0 flex-1 flex-col has-[[data-shelf-room]]:[background:var(--shelf-room-wall)]"
+        >
           <TopBar actions={actions} />
           <main className="flex-1 pb-32 lg:pb-0">{children}</main>
         </div>
@@ -139,7 +145,8 @@ function TopBar({ actions }: { actions?: ReactNode }) {
   }
 
   return (
-    <header className="flex items-center justify-between gap-4 px-4 py-5 lg:px-8 lg:pt-7 lg:pb-2">
+    // Above the screen below it: the account menu opens over anything (e.g. the shelf editor).
+    <header className="relative z-40 flex items-center justify-between gap-4 px-4 py-5 lg:px-8 lg:pt-7 lg:pb-2">
       <Link to="/" className="flex items-center gap-2.5 lg:hidden">
         <Logo className="h-10" />
         <span className="font-serif text-2xl font-bold">Grimo</span>

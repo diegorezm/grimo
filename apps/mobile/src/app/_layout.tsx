@@ -9,7 +9,7 @@ import {
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
-import { Button, Screen, Text } from "@/components/ui";
+import { Button, Screen, Text, Toaster } from "@/components/ui";
 import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { captureError, withSentry } from "@/lib/sentry";
@@ -26,6 +26,7 @@ function RootLayout() {
     <AppProviders>
       <ThemeProvider value={scheme === "dark" ? DarkTheme : DefaultTheme}>
         <RootNavigator />
+        <Toaster />
       </ThemeProvider>
     </AppProviders>
   );
@@ -68,7 +69,9 @@ function RootNavigator() {
         <Stack.Screen name="post/[id]" />
         <Stack.Screen name="u/[username]/index" />
         <Stack.Screen name="u/[username]/[kind]" />
+        <Stack.Screen name="shelf/[username]/[shelf]" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="settings" />
         <Stack.Screen name="profile-edit" />
         <Stack.Screen name="card" />
         <Stack.Screen name="notifications" />
@@ -77,7 +80,6 @@ function RootNavigator() {
         <Stack.Screen name="group-card/[id]" />
         <Stack.Screen name="book-card/[id]" />
         <Stack.Screen name="quote-card/[id]" />
-        <Stack.Screen name="list/[id]" />
         <Stack.Screen
           name="report"
           options={{
@@ -96,26 +98,18 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
+          name="finish/[id]"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.9],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
           name="review/[id]"
           options={{
             presentation: "formSheet",
             sheetAllowedDetents: [0.85],
-            sheetGrabberVisible: true,
-          }}
-        />
-        <Stack.Screen
-          name="new-list"
-          options={{
-            presentation: "formSheet",
-            sheetAllowedDetents: [0.6],
-            sheetGrabberVisible: true,
-          }}
-        />
-        <Stack.Screen
-          name="add-to-list/[id]"
-          options={{
-            presentation: "formSheet",
-            sheetAllowedDetents: [0.6, 0.9],
             sheetGrabberVisible: true,
           }}
         />

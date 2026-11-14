@@ -1,51 +1,53 @@
-import { useMe } from "@grimo/client";
+import { type Profile, useMe, useReader, useStreak } from "@grimo/client";
 import { router } from "expo-router";
-import { Button, Screen, Text } from "@/components/ui";
-import { ReaderLists } from "@/features/lists";
-import { AppearancePicker, ProfileHeader } from "@/features/profile";
-import { MonthlyCard, YearStats } from "@/features/stats";
-import { useAppCache, useAuthClient } from "@/providers/app-providers";
+import { Share } from "react-native";
+import { Screen } from "@/components/ui";
+import { CoverButton, ProfileHeader, ProfileReadingNow, ProfileTabs } from "@/features/profile";
+import { SITE_URL } from "@/lib/server";
 
+/**
+ * Your profile, as others see it (plus the photo picker and your streak). On the cover: share
+ * the profile, and the gear to edit it (settings are inside the edit screen).
+ */
 export default function ProfileScreen() {
-  const me = useMe();
-  const authClient = useAuthClient();
-  const appCache = useAppCache();
+  const me = useMe().data;
+  return me ? <MyProfile me={me} /> : <Screen>{null}</Screen>;
+}
 
-  async function signOut() {
-    await appCache.clearForSignOut();
-    await authClient.signOut();
-  }
-
+function MyProfile({ me }: { me: Profile }) {
+  const page = useReader(me.username).data;
+  const streak = useStreak().data;
   return (
-    <Screen>
-      {me.data && (
-        <ProfileHeader
-          profile={me.data}
-          editable
-          onPressCount={(kind) =>
-            router.push({
-              pathname: "/u/[username]/[kind]",
-              params: { username: me.data!.username, kind },
-            })
-          }
-        />
+    <Screen enter="profile">
+      <ProfileHeader
+        profile={me}
+        editable
+        onPressCount={(kind) =>
+          router.push({ pathname: "/u/[username]/[kind]", params: { username: me.username, kind } })
+        }
+        corner={
+          <>
+            <CoverButton
+              icon="share"
+              label="Compartilhar perfil"
+              onPress={() =>
+                void Share.share({
+                  message: `Me segue no Grimo: @${me.username} ${SITE_URL}/u/${me.username}`,
+                })
+              }
+            />
+            <CoverButton
+              icon="gear"
+              label="Editar perfil"
+              onPress={() => router.push("/profile-edit")}
+            />
+          </>
+        }
+      />
+      {page && <ProfileReadingNow page={page} />}
+      {page && (
+        <ProfileTabs page={page} username={me.username} isMe streak={streak?.days ?? null} />
       )}
-      <Button
-        variant="secondary"
-        title="Editar perfil"
-        onPress={() => router.push("/profile-edit")}
-      />
-      <YearStats />
-      {me.data?.username && <ReaderLists username={me.data.username} isMe />}
-      <Text variant="heading">Card do mês</Text>
-      <MonthlyCard />
-      <AppearancePicker />
-      <Button
-        variant="secondary"
-        title="Conta e privacidade"
-        onPress={() => router.push("/account")}
-      />
-      <Button variant="ghost" title="Sair" onPress={signOut} />
     </Screen>
   );
 }

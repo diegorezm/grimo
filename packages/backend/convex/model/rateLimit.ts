@@ -24,6 +24,10 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // Open Library lookups made on a reader's behalf.
   bookSearch: { kind: "fixed window", rate: 60, period: MINUTE },
   loadWork: { kind: "fixed window", rate: 60, period: MINUTE },
+  // Music link previews (a page and a cover fetched from the music service).
+  songPreview: { kind: "fixed window", rate: 30, period: MINUTE },
+  // Checkout and portal sessions (each one is a call to Stripe).
+  billing: { kind: "fixed window", rate: 20, period: HOUR },
   // Sign-in (key: the email) and sign-up (key: the caller's IP, plus a ceiling for everyone),
   // enforced in Better Auth's before-hook (auth.ts).
   signIn: { kind: "fixed window", rate: 10, period: 15 * MINUTE },
@@ -43,7 +47,9 @@ type Name =
   | "groupMessage"
   | "addToShelf"
   | "bookSearch"
-  | "loadWork";
+  | "loadWork"
+  | "songPreview"
+  | "billing";
 
 type AuthName = "signIn" | "signUp" | "signUpAll" | "emailOut";
 

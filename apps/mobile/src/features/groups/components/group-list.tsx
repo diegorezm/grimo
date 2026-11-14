@@ -9,7 +9,7 @@ import { friendsWantLabel, membersLabel, parseInviteCode } from "@grimo/core";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { AvatarStack, Button, Card, Input, ProgressBar, Screen, Text } from "@/components/ui";
+import { AvatarStack, Button, Card, Icon, Input, ProgressBar, Screen, Text } from "@/components/ui";
 import { formatFinishBy } from "@/components/ui/finish-picker";
 import { spacing } from "@/constants/theme";
 import { BookCover, BookTile, OpenReadRow } from "@/features/books";
@@ -37,7 +37,7 @@ export function GroupList() {
   const items = groups.data?.items ?? [];
 
   return (
-    <Screen>
+    <Screen enter="juntos">
       <Text variant="display">Juntos</Text>
       <Text color="textMuted">Ler o mesmo livro com outras pessoas, no ritmo de cada um.</Text>
       {groups.isPending ? (
@@ -51,15 +51,19 @@ export function GroupList() {
           </Text>
         </Card>
       ) : (
-        items.map((group) => (
-          <Pressable
-            key={group.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Grupo de ${group.book.title}`}
-            onPress={() => router.push({ pathname: "/group/[id]", params: { id: group.id } })}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-          >
-            <Card style={styles.group}>
+        <View style={[styles.list, { borderColor: theme.edge }]}>
+          {items.map((group, index) => (
+            <Pressable
+              key={group.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Grupo de ${group.book.title}`}
+              onPress={() => router.push({ pathname: "/group/[id]", params: { id: group.id } })}
+              style={({ pressed }) => [
+                styles.group,
+                index > 0 && { borderTopWidth: 1, borderColor: theme.edge },
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
               <BookCover src={group.book.coverUrl} title={group.book.title} width={56} />
               <View style={styles.flex}>
                 <Text variant="title" numberOfLines={2}>
@@ -74,15 +78,16 @@ export function GroupList() {
                     )}
                   </Text>
                 </View>
-                <ProgressBar percent={group.myPercent} height={4} />
+                <ProgressBar percent={group.myPercent} height={6} />
                 <Text variant="label" color="textMuted">
                   Você {group.myPercent}% · grupo {group.groupPercent}%
                   {group.finishBy ? ` · até ${formatFinishBy(group.finishBy)}` : ""}
                 </Text>
               </View>
-            </Card>
-          </Pressable>
-        ))
+              <Icon name="chevronRight" size={16} color="textMuted" />
+            </Pressable>
+          ))}
+        </View>
       )}
       <JoinByCode />
       <OpenRecent />
@@ -112,18 +117,30 @@ function JoinByCode() {
 
   return (
     <View style={styles.section}>
-      <Text variant="heading">Recebeu um convite?</Text>
-      <Input
-        value={text}
-        onChangeText={setText}
-        placeholder="Link ou código do convite"
-        autoCapitalize="none"
-        autoCorrect={false}
-        onSubmitEditing={submit}
-        returnKeyType="go"
-      />
+      <Text variant="label" color="textMuted">
+        Recebeu um convite?
+      </Text>
+      <View style={styles.join}>
+        <View style={styles.flex}>
+          <Input
+            value={text}
+            onChangeText={setText}
+            placeholder="Link ou código"
+            accessibilityLabel="Link ou código do convite"
+            autoCapitalize="none"
+            autoCorrect={false}
+            onSubmitEditing={submit}
+            returnKeyType="go"
+          />
+        </View>
+        <Button
+          variant="secondary"
+          title="Entrar"
+          onPress={submit}
+          disabled={join.isPending || !text.trim()}
+        />
+      </View>
       {error && <Text color="danger">{error}</Text>}
-      <Button title="Entrar no grupo" onPress={submit} disabled={join.isPending || !text.trim()} />
     </View>
   );
 }
@@ -158,7 +175,14 @@ function Ideas() {
 
 const styles = StyleSheet.create({
   openSection: { gap: spacing[3] },
-  group: { flexDirection: "row", gap: spacing[3] },
+  list: { borderTopWidth: 1, borderBottomWidth: 1 },
+  group: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    paddingVertical: spacing[4],
+  },
+  join: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   flex: { flex: 1, gap: spacing[1] },
   people: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   section: { gap: spacing[3] },

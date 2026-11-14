@@ -1,11 +1,14 @@
-import { Screen, Text } from "@/components/ui";
-import { ShelfBoard } from "@/features/shelves";
+import { StyleSheet, View } from "react-native";
+import { ShelfBoard, ShelfSelectBar } from "@/features/shelves";
 
+/** Estantes: the bookcase fills the screen; the selection bar floats over it. */
 export default function ShelvesScreen() {
   return (
-    <Screen>
-      <Text variant="display">Estantes</Text>
+    <View style={styles.root}>
       <ShelfBoard />
-    </Screen>
+      <ShelfSelectBar />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ root: { flex: 1 } });

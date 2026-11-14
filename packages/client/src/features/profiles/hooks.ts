@@ -108,6 +108,19 @@ export function useRemoveAvatar() {
 }
 
 /** Whether an @ is valid and free (yours counts as free). Skipped until it looks valid. */
+/**
+ * Reads a pasted music link (name, artist, cover as a data URL, card color). Fetched by the
+ * backend, so the app never loads the music service.
+ */
+export function useSongPreview() {
+  const { convex } = useConvexCache();
+  return useMutation({
+    mutationFn: (url: string) => convex.action(api.songs.preview, { url }),
+  });
+}
+
+export type SongPreview = FunctionReturnType<typeof api.songs.preview>;
+
 export function useUsernameAvailable(username: string) {
   const value = username.trim().toLowerCase();
   return useQuery({
@@ -147,6 +160,16 @@ export function useReader(username: string) {
 }
 
 /** First pages of the reader lists, for route loaders to prefetch (same keys as the hooks). */
+/** A reader's public shelves as rows of covers (Lendo, Lidos by year). */
+export const readerShelvesQuery = (username: string) =>
+  convexQuery(api.users.shelves, { username }, "optional");
+
+export function useReaderShelves(username: string) {
+  return useQuery(readerShelvesQuery(username));
+}
+
+export type ReaderShelves = FunctionReturnType<typeof api.users.shelves>;
+
 export const readerActivityQuery = (username: string) =>
   convexQuery(api.users.activity, { username, limit: PAGE_SIZE }, "optional");
 export const readerConnectionsQuery = (username: string, kind: ConnectionKind) =>

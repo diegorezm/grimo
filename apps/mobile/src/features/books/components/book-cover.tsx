@@ -18,11 +18,15 @@ export function BookCover({
   const theme = useTheme();
   const size = { width, height: width * 1.5 };
   return (
-    <View style={[styles.frame, size, { shadowColor: theme.shadow }]}>
+    <View style={[styles.frame, size]}>
       {src ? (
         <Image
           source={coverUrl(src, "M")}
-          style={[styles.image, size, { backgroundColor: theme.surfaceMuted }]}
+          style={[
+            styles.image,
+            size,
+            { backgroundColor: theme.surfaceMuted, borderColor: theme.edge },
+          ]}
           contentFit="cover"
           transition={150}
           accessibilityLabel={`Capa de ${title}`}
@@ -43,13 +47,9 @@ export function BookCover({
 }
 
 const styles = StyleSheet.create({
-  frame: {
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    borderRadius: radius.sm,
-  },
-  image: { borderRadius: radius.sm, overflow: "hidden" },
+  frame: { borderRadius: radius.sm },
+  // A hairline keeps white covers apart from the white page (no shadow).
+  image: { borderRadius: radius.sm, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth },
   placeholder: { alignItems: "center", justifyContent: "center", padding: 6 },
   title: { textAlign: "center", fontWeight: "700" },
 });

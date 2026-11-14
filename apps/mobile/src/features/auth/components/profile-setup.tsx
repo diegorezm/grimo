@@ -61,7 +61,7 @@ export function ProfileSetup() {
 
   return (
     <Card>
-      <Text variant="label" color="accent">
+      <Text variant="label" color="accentInk">
         ✓ Conta criada
       </Text>
       <Text variant="display">Como você quer aparecer por aqui?</Text>

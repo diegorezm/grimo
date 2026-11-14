@@ -96,7 +96,7 @@ export function ManualBookForm({
                 active && { backgroundColor: theme.surfaceMuted },
               ]}
             >
-              <Text variant="label" color={active ? "accent" : "textMuted"}>
+              <Text variant="label" color={active ? "accentInk" : "textMuted"}>
                 {SHELF_LABELS[option]}
               </Text>
             </Pressable>

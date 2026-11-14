@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { GENRES } from "../books/genres";
 import { isValidTimeZone } from "../lib/date";
+import {
+  MAX_FAVORITE_BOOKS,
+  PROFILE_COLORS,
+  profileShowsSchema,
+  profileSongSchema,
+  pronounsSchema,
+} from "./personalize";
 
 export const USERNAME_REGEX = /^[a-z0-9_.]{3,30}$/;
 
@@ -40,6 +47,18 @@ export const updateProfileSchema = z.object({
   favoriteGenres: z.array(z.enum(GENRES)).max(5).optional(),
   /** Reading goal (number of books) for the current year. */
   yearlyGoal: z.number().int().min(1).max(1000).nullable().optional(),
+  pronouns: pronounsSchema.nullable().optional(),
+  profileColor: z.enum(PROFILE_COLORS).nullable().optional(),
+  profileSong: profileSongSchema.nullable().optional(),
+  /** Book ids, in order; the backend checks they exist. */
+  favoriteBookIds: z
+    .array(z.string())
+    .max(MAX_FAVORITE_BOOKS, `Escolha até ${MAX_FAVORITE_BOOKS} livros`)
+    .refine((ids) => new Set(ids).size === ids.length, "Esse livro já está na lista")
+    .optional(),
+  /** One of the reader's own quotes (a post id), or null. */
+  featuredQuoteId: z.string().nullable().optional(),
+  profileShows: profileShowsSchema.optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 

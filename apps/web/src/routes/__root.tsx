@@ -2,6 +2,7 @@ import type { ConvexCache } from "@grimo/client";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { ErrorScreen } from "@/components/feedback/error-screen";
+import { Toaster } from "@/components/ui/toaster";
 import { CookieNotice } from "@/features/legal";
 import { useSeo } from "@/lib/seo";
 
@@ -18,6 +19,7 @@ function Root() {
     <>
       <Outlet />
       <CookieNotice />
+      <Toaster />
     </>
   );
 }

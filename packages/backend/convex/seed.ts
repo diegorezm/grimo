@@ -8,7 +8,7 @@
  * same model functions the app uses, backdated so the feed and stats look lived-in.
  * Re-running is safe: nothing happens once the main reader has books.
  */
-import { type BookInput, PRIVACY_VERSION, TERMS_VERSION } from "@grimo/core";
+import { type BookInput, PRIVACY_VERSION, SHELF_PRESETS, TERMS_VERSION } from "@grimo/core";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -183,6 +183,48 @@ export const populate = internalMutation({
         );
       }
       postIds.set(reader.username, ids);
+
+      // The demo account shows the profile personalization: song, favorites and a quote.
+      if (readerIndex === 0) {
+        const favorites = reader.shelves
+          .filter((shelf) => shelf.status === "read")
+          .flatMap((shelf) => {
+            const bookId = bookIds.get(shelf.book);
+            return bookId ? [bookId] : [];
+          })
+          .slice(0, 4);
+        const quoteIndex = reader.posts.findIndex((post) => post.kind === "quote");
+        await updateProfile(ctx, await fresh(user._id), {
+          pronouns: "ele/dele",
+          profileColor: "lilac",
+          profileSong: {
+            title: "Weightless",
+            artist: "Marconi Union",
+            url: "https://open.spotify.com/track/6kkwzB6hXLIONkEk9JciA6",
+          },
+          favoriteBookIds: favorites,
+          featuredQuoteId: quoteIndex >= 0 ? ids[quoteIndex] : null,
+          profileShows: { goal: true, reading: true, streak: true },
+        });
+
+        // A shelf of the books on the reader's physical shelf, shown on the profile, dressed
+        // as a library; "Todos os meus livros" gets the cottage look.
+        const shelfId = await ctx.db.insert("shelfTags", {
+          userId: user._id,
+          name: "Física",
+          isPublic: true,
+          createdAt: tick(),
+          style: SHELF_PRESETS.find((preset) => preset.id === "acervo")?.style,
+        });
+        await ctx.db.patch(user._id, {
+          shelfStyle: SHELF_PRESETS.find((preset) => preset.id === "chale")?.style,
+        });
+        const entries = await ctx.db
+          .query("shelfEntries")
+          .withIndex("by_user_updated", (q) => q.eq("userId", user._id))
+          .take(6);
+        for (const entry of entries) await ctx.db.patch(entry._id, { tagIds: [shelfId] });
+      }
     }
 
     // Others like and comment on the main reader's posts; the main reader likes back.

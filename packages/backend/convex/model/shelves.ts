@@ -30,6 +30,8 @@ export const entryView = (entry: Doc<"shelfEntries">) => ({
   pastReads: entry.pastReads ?? 0,
   createdAt: entry._creationTime,
   updatedAt: entry.updatedAt,
+  /** The reader's own tags ("Tenho", "Kindle"). */
+  tagIds: (entry.tagIds ?? []) as string[],
 });
 
 export const bookView = (book: Doc<"books">) => ({
@@ -117,6 +119,8 @@ export interface UpdateExtras {
   pageFeelings?: Feeling[];
   /** Minutes of the session; the feed says "leu 40 páginas em 35 min". */
   sessionMinutes?: number;
+  /** Keep it off the feed: the shelf and the reading log change, nobody is told. */
+  quiet?: boolean;
 }
 
 /** A plain page mark within this long of the last one on the same book moves that one instead. */
@@ -157,7 +161,7 @@ async function recordSideEffects(
   pagesRead: number,
   activity: Doc<"activities">["kind"] | null,
   now: number,
-  { note, sessionMinutes, pageFeelings = [] }: UpdateExtras = {},
+  { note, sessionMinutes, pageFeelings = [], quiet = false }: UpdateExtras = {},
 ) {
   const feelings = pageFeelings.length > 0 ? pageFeelings : undefined;
   if (pagesRead > 0) {
@@ -170,11 +174,11 @@ async function recordSideEffects(
       createdAt: now,
     });
   }
-  if (activity === "progress" && !note && !feelings && sessionMinutes === undefined) {
+  if (!quiet && activity === "progress" && !note && !feelings && sessionMinutes === undefined) {
     const merged = await mergeProgress(ctx, entry, now);
     if (merged) return;
   }
-  if (activity) {
+  if (activity && !quiet) {
     const activityId = await recordActivity(ctx, {
       actorId: entry.userId,
       kind: activity,
@@ -188,6 +192,8 @@ async function recordSideEffects(
       createdAt: now,
     });
     if (note) await updatePostFor(ctx, (await ctx.db.get(activityId))!, note);
+  } else if (quiet) {
+    if (note) throw appError("INVALID", "Para comentar a leitura, publique no feed.");
   } else if (note || feelings) {
     // Nothing shows in the feed (same page, same shelf), so there's nothing to comment on.
     throw appError("INVALID", "Marque uma página nova para comentar a leitura.");
@@ -240,7 +246,7 @@ export async function updateShelfEntry(
   });
   const updated = (await ctx.db.get(entryId))!;
   const sameFeelings = String(updated.feelings ?? []) === String(entry.feelings ?? []);
-  if (updated.rating !== entry.rating || !sameFeelings) {
+  if (updated.rating !== entry.rating || !sameFeelings || updated.status !== entry.status) {
     await recordBookCounters(ctx, entry.bookId, entry, updated);
   }
   if (updated.rating !== entry.rating) await rateReviews(ctx, updated);
@@ -297,7 +303,7 @@ export async function addToShelf(
   });
   const user = await ctx.db.get(userId);
   if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
-  await recordBookCounters(ctx, bookId, null, { rating: null });
+  await recordBookCounters(ctx, bookId, null, { rating: null, status: input.status });
 
   const entry = (await ctx.db.get(entryId))!;
   // Adding a book is always worth a feed entry ("shelved"/"finished").
@@ -340,7 +346,10 @@ export async function importToShelf(
   });
   const user = await ctx.db.get(userId);
   if (user) await ctx.db.patch(userId, { bookCount: user.bookCount + 1 });
-  await recordBookCounters(ctx, bookId, null, { rating: imported.rating });
+  await recordBookCounters(ctx, bookId, null, {
+    rating: imported.rating,
+    status: imported.status,
+  });
   return true;
 }
 

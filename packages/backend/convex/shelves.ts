@@ -90,8 +90,10 @@ export const update = mutation({
     note: v.optional(v.object({ body: v.string(), hasSpoilers: v.boolean() })),
     /** How you feel at the page you marked: it shows in the feed and in your reading diary. */
     pageFeelings: v.optional(v.array(v.string())),
+    /** False: change the shelf without telling the feed (finishing a book quietly). */
+    publish: v.optional(v.boolean()),
   },
-  handler: async (ctx, { id, note, pageFeelings, ...patch }) => {
+  handler: async (ctx, { id, note, pageFeelings, publish, ...patch }) => {
     // Writing in the feed is social, so it needs a confirmed email (marking pages doesn't).
     const viewer = note ? await requireVerifiedViewer(ctx) : await requireViewer(ctx);
     const input = parse(updateShelfEntrySchema, patch);
@@ -100,6 +102,7 @@ export const update = mutation({
     const entry = await updateShelfEntry(ctx, viewer._id, id, input, Date.now(), {
       note: noteInput,
       pageFeelings: pageFeelings && parse(feelingsSchema, pageFeelings),
+      quiet: publish === false,
     });
     return { entry: entryView(entry) };
   },

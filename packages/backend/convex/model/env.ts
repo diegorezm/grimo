@@ -22,7 +22,14 @@ export const env = {
   RESEND_API_KEY: vars.RESEND_API_KEY,
   /** Sender, e.g. `Grimo <ola@grimo.app>` (a domain verified in Resend). */
   EMAIL_FROM: vars.EMAIL_FROM,
+  /** Stripe secret key (`sk_test_…` locally, `sk_live_…` in production). Unset = payments off. */
+  STRIPE_SECRET_KEY: vars.STRIPE_SECRET_KEY,
+  /** Signing secret of the webhook endpoint (`whsec_…`; `stripe listen` prints it locally). */
+  STRIPE_WEBHOOK_SECRET: vars.STRIPE_WEBHOOK_SECRET,
 };
+
+/** Whether the deployment can take payments (checkout, portal and the webhook). */
+export const billingEnabled = () => Boolean(vars.STRIPE_SECRET_KEY && vars.STRIPE_WEBHOOK_SECRET);
 
 /**
  * Whether the deployment can send email. Only then is a verified email required for the social

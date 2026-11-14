@@ -12,9 +12,14 @@ import { colors } from "@grimo/tokens";
 // Colors/spacing/radius come from @grimo/tokens (shared with web). Only fonts live here.
 export {
   fontSize,
+  musicServiceColors,
+  profileCovers,
   radius,
   shelfBadges,
+  shelfBrass,
   shelfColors,
+  shelfDecorColors,
+  shelfMaterials,
   spacing,
   storyCard,
 } from "@grimo/tokens";

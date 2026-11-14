@@ -34,7 +34,12 @@ function exportHelpers(ctx: QueryCtx) {
   };
   const username = async (id: Id<"users">) => (await ctx.db.get(id))?.username ?? null;
   const groupBook = async (id: Id<"groups">) => bookTitle((await ctx.db.get(id))?.bookId ?? null);
-  return { ctx, bookTitle, username, groupBook };
+  /** Names of the shelves a book is on (the reader's own `shelfTags`). */
+  const shelfNames = async (ids: Id<"shelfTags">[] | undefined) =>
+    (await Promise.all((ids ?? []).map((id) => ctx.db.get(id)))).flatMap((shelf) =>
+      shelf ? [shelf.name] : [],
+    );
+  return { ctx, bookTitle, username, groupBook, shelfNames };
 }
 type Helpers = ReturnType<typeof exportHelpers>;
 
@@ -76,8 +81,19 @@ const sections = {
       editionPages: entry.pageCount ?? null,
       rating: entry.rating,
       feelings: entry.feelings ?? [],
+      shelves: await h.shelfNames(entry.tagIds),
       startedAt: date(entry.startedAt),
       finishedAt: date(entry.finishedAt),
+    }),
+  ),
+  /** The shelves the reader made; each book in `shelf` lists the ones it is on. */
+  myShelves: section(
+    "shelfTags",
+    (ctx, userId) => ctx.db.query("shelfTags").withIndex("by_user", (q) => q.eq("userId", userId)),
+    (shelf) => ({
+      name: shelf.name,
+      isPublic: shelf.isPublic ?? false,
+      style: shelf.style ?? null,
     }),
   ),
   pastReadings: section(
@@ -247,6 +263,28 @@ const sections = {
       notFound: row.notFound,
     }),
   ),
+  subscriptions: section(
+    "subscriptions",
+    (ctx, userId) =>
+      ctx.db.query("subscriptions").withIndex("by_user", (q) => q.eq("userId", userId)),
+    (row) => ({
+      status: row.status,
+      interval: row.interval,
+      currentPeriodEnd: date(row.currentPeriodEnd),
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    }),
+  ),
+  purchases: section(
+    "purchases",
+    (ctx, userId) => ctx.db.query("purchases").withIndex("by_user", (q) => q.eq("userId", userId)),
+    (row) => ({
+      item: row.itemKey,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      at: date(row.createdAt),
+    }),
+  ),
   legalAcceptances: section(
     "legalAcceptances",
     (ctx, userId) =>
@@ -303,6 +341,24 @@ export const exportProfile = internalQuery({
         bio: viewer.bio,
         favoriteGenres: viewer.favoriteGenres,
         isPrivate: viewer.isPrivate ?? false,
+        pronouns: viewer.pronouns ?? null,
+        profileColor: viewer.profileColor ?? null,
+        profileSong: viewer.profileSong
+          ? {
+              title: viewer.profileSong.title,
+              artist: viewer.profileSong.artist,
+              url: viewer.profileSong.url,
+            }
+          : null,
+        favoriteBooks: await Promise.all(
+          (viewer.favoriteBookIds ?? []).map(async (id) => (await ctx.db.get(id))?.title ?? null),
+        ),
+        featuredQuote: viewer.featuredQuoteId
+          ? ((await ctx.db.get(viewer.featuredQuoteId))?.body ?? null)
+          : null,
+        profileShows: viewer.profileShows ?? null,
+        /** How "Todos os meus livros" looks. */
+        allBooksShelfStyle: viewer.shelfStyle ?? null,
       },
       role: viewer.role ?? null,
     };
@@ -318,7 +374,7 @@ type ExportHead = {
     bio: string | null;
     favoriteGenres: string[];
     isPrivate: boolean;
-  };
+  } & Record<string, unknown>;
   role: Doc<"users">["role"] | null;
 };
 
@@ -369,13 +425,26 @@ export async function onAccountDeleted(ctx: MutationCtx, authId: string) {
     .withIndex("by_authId", (q) => q.eq("authId", authId))
     .unique();
   if (!user || user.deletedAt) return;
+  if (user.profileSong?.coverStorageId) await ctx.storage.delete(user.profileSong.coverStorageId);
   await ctx.db.patch(user._id, {
     deletedAt: Date.now(),
     name: "Conta excluída",
     image: null,
     bio: null,
     searchText: "",
+    pronouns: undefined,
+    profileColor: undefined,
+    profileSong: undefined,
+    favoriteBookIds: undefined,
+    featuredQuoteId: undefined,
+    profileShows: undefined,
   });
+  // Stops any charge: the Stripe customer goes (and its subscription with it).
+  if (user.stripeCustomerId) {
+    await ctx.scheduler.runAfter(0, internal.billing.closeAccount, {
+      customerId: user.stripeCustomerId,
+    });
+  }
   await ctx.scheduler.runAfter(0, internal.account.purge, { userId: user._id, step: 0 });
 }
 
@@ -582,6 +651,17 @@ const steps: Step[] = [
       ctx,
       ctx.db.query("readingGoals").withIndex("by_user_year", (q) => q.eq("userId", userId)),
     ),
+  // Personal tags and saved shelves (the shelf entries holding the tags are gone already).
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("savedShelves").withIndex("by_user", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("shelfTags").withIndex("by_user", (q) => q.eq("userId", userId)),
+    ),
   async (ctx, userId) =>
     deleteAll(
       ctx,
@@ -618,6 +698,20 @@ const steps: Step[] = [
       .withIndex("by_invitedBy", (q) => q.eq("invitedBy", userId))
       .take(BATCH);
     for (const row of rows) await ctx.db.patch(row._id, { invitedBy: null });
+    return rows.length === BATCH;
+  },
+  // The subscription mirror goes; purchases stay as the sales record, without the reader.
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("subscriptions").withIndex("by_user", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("purchases")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { userId: null });
     return rows.length === BATCH;
   },
   // Moderation history stays, without the moderator or the reader acted on.

@@ -10,7 +10,7 @@ export function MentionText({ text, ...props }: TextProps & { text: string }) {
         "username" in segment ? (
           <Text
             key={i}
-            color="accent"
+            color="accentInk"
             accessibilityRole="link"
             onPress={() =>
               router.push({ pathname: "/u/[username]", params: { username: segment.username } })

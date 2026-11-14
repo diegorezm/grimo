@@ -12,7 +12,17 @@ import { activityProgress, commentCountLabel, feedHeadline, timeAgo } from "@gri
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
-import { Avatar, Button, Card, Input, MentionText, Screen, Stars, Text } from "@/components/ui";
+import {
+  Avatar,
+  Button,
+  Card,
+  Icon,
+  Input,
+  MentionText,
+  Screen,
+  Stars,
+  Text,
+} from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { BookCover, QuoteText } from "@/features/books";
 import { openReport } from "@/features/moderation";
@@ -100,9 +110,16 @@ function Thread({ detail }: { detail: PostDetail }) {
             accessibilityLabel={post.likedByMe ? "Descurtir" : "Curtir"}
             onPress={() => toggleLike.mutate({ postId: post.id, like: !post.likedByMe })}
             hitSlop={8}
+            style={styles.like}
           >
-            <Text variant="label" color={post.likedByMe ? "accent" : "textMuted"}>
-              {post.likedByMe ? "♥" : "♡"} {post.likeCount} · {commentCountLabel(post.commentCount)}
+            <Icon
+              name="heart"
+              size={16}
+              filled={post.likedByMe}
+              color={post.likedByMe ? "accentInk" : "textMuted"}
+            />
+            <Text variant="label" color={post.likedByMe ? "accentInk" : "textMuted"}>
+              {post.likeCount} · {commentCountLabel(post.commentCount)}
             </Text>
           </Pressable>
           {isMine ? (
@@ -246,6 +263,7 @@ function CommentComposer({ postId }: { postId: string }) {
 }
 
 const styles = StyleSheet.create({
+  like: { flexDirection: "row", alignItems: "center", gap: 6 },
   author: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
   actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   bold: { fontWeight: "700" },

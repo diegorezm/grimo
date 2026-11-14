@@ -8,7 +8,14 @@ import {
   REPORT_REASONS,
   REPORT_STATUSES,
   REPORT_TARGETS,
+  SHELF_DECOR,
+  SHELF_LAYOUTS,
+  SHELF_LIGHTS,
+  SHELF_MATERIALS,
+  SHELF_MODELS,
+  SHELF_SORTS,
   SHELF_STATUSES,
+  SPINE_FINISHES,
 } from "@grimo/core";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -27,6 +34,16 @@ export const notificationKind = literals(NOTIFICATION_KINDS);
 export const reportTarget = literals(REPORT_TARGETS);
 export const reportReason = literals(REPORT_REASONS);
 export const reportStatus = literals(REPORT_STATUSES);
+/** How a shelf looks (`@grimo/core` shelves/style). */
+export const shelfStyle = v.object({
+  model: literals(SHELF_MODELS),
+  material: literals(SHELF_MATERIALS),
+  finish: literals(SPINE_FINISHES),
+  layout: literals(SHELF_LAYOUTS),
+  sort: literals(SHELF_SORTS),
+  decor: v.array(literals(SHELF_DECOR)),
+  light: literals(SHELF_LIGHTS),
+});
 
 export const moderationLogAction = v.union(
   v.literal("dismiss"),
@@ -91,6 +108,34 @@ export default defineSchema({
     avatarStorageId: v.optional(v.id("_storage")),
     bio: v.union(v.string(), v.null()),
     favoriteGenres: v.array(v.string()),
+    /** Profile personalization (`@grimo/core` profile/personalize). All optional. */
+    pronouns: v.optional(v.string()),
+    /** One of `PROFILE_COLORS`: the profile cover. */
+    profileColor: v.optional(v.string()),
+    /**
+     * "Trilha da leitura": a link the apps open (never an embedded player). The cover is copied
+     * into our storage (`songs.storeCover`), so opening a profile loads nothing from the music
+     * service; `color` is the card background taken from it.
+     */
+    profileSong: v.optional(
+      v.object({
+        title: v.string(),
+        artist: v.string(),
+        url: v.string(),
+        coverStorageId: v.optional(v.id("_storage")),
+        color: v.optional(v.string()),
+      }),
+    ),
+    /** "Livros de cabeceira", in order (at most `MAX_FAVORITE_BOOKS`). */
+    favoriteBookIds: v.optional(v.array(v.id("books"))),
+    /** One of the reader's own quotes, highlighted on the profile. */
+    featuredQuoteId: v.optional(v.id("posts")),
+    /** Which reading cards the profile shows (absent: `DEFAULT_PROFILE_SHOWS`). */
+    profileShows: v.optional(
+      v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
+    ),
+    /** How "Todos os meus livros" looks (absent: the default style). */
+    shelfStyle: v.optional(shelfStyle),
     /**
      * Private profile: only approved followers see the reader's shelf, stats, activity, posts
      * and lists (`canSeeReader`); following them is a request (`followRequests`).
@@ -131,8 +176,11 @@ export default defineSchema({
     role: v.optional(v.union(v.literal("admin"), v.literal("moderator"))),
     /** Account deleted: hidden while `account.purge` erases its data (then the row goes too). */
     deletedAt: v.optional(v.number()),
+    /** The reader's Stripe customer, created on the first checkout (`billing.startCheckout`). */
+    stripeCustomerId: v.optional(v.string()),
   })
     .index("by_authId", ["authId"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_username", ["username"])
     .index("by_followers", ["followers"])
     .index("by_role", ["role"])
@@ -165,6 +213,8 @@ export default defineSchema({
     /** Readers who picked each feeling when rating, and how many picked any. */
     feelingCounts: v.optional(v.record(v.string(), v.number())),
     feelingReaders: v.optional(v.number()),
+    /** Shelf entries of the book per status (want_to_read, reading, read, abandoned). */
+    statusCounts: v.optional(v.record(v.string(), v.number())),
     /**
      * Hand-added books (`GR…` ids, `books.addManual`): who added it and the moderation review.
      * Until approved only that reader sees it. Absent on Open Library books.
@@ -195,12 +245,45 @@ export default defineSchema({
     /** Earlier readings of this book (rereads), kept in `pastReadings`. */
     pastReads: v.optional(v.number()),
     updatedAt: v.number(),
+    /** The reader's own tags on this book ("Tenho", "Kindle"): filters of the shelf. */
+    tagIds: v.optional(v.array(v.id("shelfTags"))),
   })
     .index("by_user_book", ["userId", "bookId"])
     .index("by_user_updated", ["userId", "updatedAt"])
     .index("by_user_status_updated", ["userId", "status", "updatedAt"])
     .index("by_user_status_finished", ["userId", "status", "finishedAt"])
     .index("by_book", ["bookId"]),
+
+  /**
+   * A shelf the reader makes ("Física", "Kindle", "Emprestei"). Its books are the shelf entries
+   * whose `tagIds` hold it, so a book can be on many shelves. See `bookshelves.ts`.
+   */
+  shelfTags: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    createdAt: v.number(),
+    /** Shown on the profile (only books read or being read); absent or false: only the reader. */
+    isPublic: v.optional(v.boolean()),
+    /** How the bookcase looks (absent: the default style). */
+    style: v.optional(shelfStyle),
+  }).index("by_user", ["userId"]),
+
+  /**
+   * Removed: named filters, replaced by the shelves the reader makes. Kept only until
+   * `migrations.savedShelvesToShelves` turned each into a shelf on every deployment.
+   */
+  savedShelves: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    filter: v.object({
+      statuses: v.array(shelfStatus),
+      genres: v.array(v.string()),
+      tagIds: v.array(v.id("shelfTags")),
+    }),
+    /** Shown on the profile to everyone (without "Quero ler"); false: only the reader. */
+    isPublic: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   /**
    * A finished reading of a book the reader is reading again (moved from "Lido" back to
@@ -247,7 +330,10 @@ export default defineSchema({
     .index("by_user_started", ["userId", "startedAt"])
     .index("by_entry", ["shelfEntryId"]),
 
-  /** Lists curated by readers ("terror para começar"), public like the profile. */
+  /**
+   * Removed from the app (saved shelves and tags replace them). Kept only until
+   * `migrations.dropLists` has emptied them on every deployment; then both tables go.
+   */
   lists: defineTable({
     ownerId: v.id("users"),
     title: v.string(),
@@ -510,6 +596,49 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"])
     .index("by_actor", ["actorId"])
     .index("by_targetUser", ["targetUserId"]),
+
+  /**
+   * The reader's "Grimo Plus" subscription, mirrored from Stripe by the webhook (`billing.ts`).
+   * One row per Stripe subscription; the plan is on while `status` is active, trialing or past_due.
+   */
+  subscriptions: defineTable({
+    userId: v.id("users"),
+    stripeSubscriptionId: v.string(),
+    status: v.string(),
+    interval: v.union(v.literal("monthly"), v.literal("yearly"), v.null()),
+    currentPeriodEnd: v.union(v.number(), v.null()),
+    cancelAtPeriodEnd: v.boolean(),
+    /** `created` of the last Stripe event applied: older events arriving late are ignored. */
+    eventCreated: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
+
+  /**
+   * One-off shop purchases (what the reader owns). Kept after the account is deleted, without
+   * the reader (`userId: null`): it is the sales record.
+   */
+  purchases: defineTable({
+    userId: v.union(v.id("users"), v.null()),
+    itemKey: v.string(),
+    stripeSessionId: v.string(),
+    stripePaymentIntentId: v.union(v.string(), v.null()),
+    amount: v.number(),
+    currency: v.string(),
+    /** `refunded` takes the item away. */
+    status: v.union(v.literal("paid"), v.literal("refunded")),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_stripeSessionId", ["stripeSessionId"])
+    .index("by_paymentIntent", ["stripePaymentIntentId"]),
+
+  /** Stripe webhook events already applied (Stripe delivers at least once). */
+  stripeEvents: defineTable({
+    eventId: v.string(),
+    type: v.string(),
+    processedAt: v.number(),
+  }).index("by_eventId", ["eventId"]),
 
   /** Open Library search results, reused for 24 h (see `books.search`). */
   bookSearchCache: defineTable({

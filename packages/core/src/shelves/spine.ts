@@ -9,7 +9,8 @@ export interface SpineLook {
   height: number;
 }
 
-function hash(text: string): number {
+/** djb2 of a title: the same book always gets the same spine, on web and mobile. */
+export function titleHash(text: string): number {
   let h = 5381;
   for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
   return h;
@@ -17,7 +18,7 @@ function hash(text: string): number {
 
 /** Deterministic spine look for a book: same book, same spine, on web and mobile. */
 export function spineLook(title: string, pageCount: number | null | undefined): SpineLook {
-  const h = hash(title);
+  const h = titleHash(title);
   const pages = Math.min(Math.max(pageCount ?? 250, 80), 900);
   return {
     variant: h % SPINE_VARIANTS,
