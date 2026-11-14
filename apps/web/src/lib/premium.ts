@@ -1,4 +1,5 @@
 import {
+  isBuiltInShelfChoice,
   isPremiumCardTemplate,
   isPremiumShelfChoice,
   type ShelfPremiumLayer,
@@ -35,7 +36,7 @@ const SHELF_ART: Record<ShelfPremiumLayer, Record<string, unknown>> = {
 
 /** Whether this build can draw the choice: free ones always, paid ones when their art is here. */
 export const canDrawShelfChoice = (layer: ShelfPremiumLayer, key: string) =>
-  !isPremiumShelfChoice(layer, key) || key in SHELF_ART[layer];
+  !isPremiumShelfChoice(layer, key) || isBuiltInShelfChoice(layer, key) || key in SHELF_ART[layer];
 
 /** Whether this build can draw every layer of the style (the ready styles it offers). */
 export const canDrawShelfStyle = (style: ShelfStyle) =>

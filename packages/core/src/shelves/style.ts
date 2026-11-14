@@ -131,25 +131,40 @@ export const SHELF_LIGHT_LABELS: Record<ShelfLight, { name: string; hint: string
   moon: { name: "Luar", hint: "Prata fria entrando pela janela" },
 };
 
-/**
- * The paid choices of each layer (the shop sells them; see docs/loja/plano.md). Their art lives
- * in the private `@grimo/premium` content: a build without it does not offer them, and draws a
- * shelf that uses one with the default look.
- */
-export const SHELF_PREMIUM = {
-  model: ["vitrine", "estufa"],
-  material: ["plum", "pearl", "emerald"],
-  finish: ["special"],
-  decor: ["amethyst", "peony", "teacup", "fern", "jar"],
-  light: ["moon"],
-} as const satisfies {
+interface ShelfChoices {
   model: readonly ShelfModel[];
   material: readonly ShelfMaterial[];
   finish: readonly SpineFinish[];
   decor: readonly ShelfDecor[];
   light: readonly ShelfLight[];
-};
+}
+
+/** The paid choices of each layer (the shop sells them; see docs/loja/plano.md). */
+export const SHELF_PREMIUM = {
+  model: ["library", "vitrine", "estufa"],
+  material: ["walnut", "plum", "pearl", "emerald"],
+  finish: ["leather", "special"],
+  decor: ["globe", "amethyst", "peony", "teacup", "fern", "jar"],
+  light: ["moon"],
+} as const satisfies ShelfChoices;
 export type ShelfPremiumLayer = keyof typeof SHELF_PREMIUM;
+
+/**
+ * The paid choices this repository draws itself ("Acervo": they were free before the shop).
+ * Every other paid choice has its art in the private `@grimo/premium` content: a build without
+ * it does not offer them, and draws a shelf that uses one with the default look.
+ */
+export const SHELF_PREMIUM_BUILT_IN = {
+  model: ["library"],
+  material: ["walnut"],
+  finish: ["leather"],
+  decor: ["globe"],
+  light: [],
+} as const satisfies ShelfChoices;
+
+/** True for a paid choice whose art is in this repository. */
+export const isBuiltInShelfChoice = (layer: ShelfPremiumLayer, key: string) =>
+  (SHELF_PREMIUM_BUILT_IN[layer] as readonly string[]).includes(key);
 
 /** True for a paid choice of `layer`. */
 export const isPremiumShelfChoice = (layer: ShelfPremiumLayer, key: string) =>
