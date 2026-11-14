@@ -262,6 +262,9 @@ importers:
       '@grimo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@grimo/premium':
+        specifier: workspace:*
+        version: link:../../packages/premium
       '@grimo/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -422,6 +425,9 @@ importers:
       '@grimo/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@grimo/premium':
+        specifier: workspace:*
+        version: link:../../packages/premium
       '@grimo/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -600,6 +606,19 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@edge-runtime/vm@5.0.0)(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5))
+
+  packages/premium:
+    dependencies:
+      '@grimo/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@grimo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   packages/tokens:
     devDependencies:

@@ -1,0 +1,24 @@
+{
+  "name": "@grimo/premium",
+  "version": "0.0.0",
+  "private": true,
+  "license": "FSL-1.1-ALv2",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/content/tokens.ts",
+    "./web": "./src/content/web.ts",
+    "./mobile": "./src/content/mobile.ts"
+  },
+  "scripts": {
+    "link": "node scripts/link.mjs",
+    "typecheck": "node scripts/link.mjs && tsc --noEmit"
+  },
+  "dependencies": {
+    "@grimo/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@grimo/tsconfig": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

@@ -1,5 +1,7 @@
 import { SHELF_DECOR_LABELS, type ShelfDecor } from "@grimo/core";
 import { shelfBrass as B, shelfDecorColors as C } from "@grimo/tokens";
+import { premiumTokens } from "@/lib/premium";
+import { ArtSvg } from "./art";
 
 /**
  * Little things on the planks. `still` drops the motion (swaying leaves, flame, steam), for
@@ -141,6 +143,11 @@ export function ShelfDecorArt({ decor, still }: { decor: ShelfDecor; still?: boo
           <path d="M22 42v10M12 56h20" stroke={B.base} strokeWidth="3" strokeLinecap="round" />
         </svg>
       );
+    default: {
+      // A paid object: its drawing comes with the content (nothing without it).
+      const art = premiumTokens.decor[decor];
+      return art ? <ArtSvg art={art} label={label} /> : null;
+    }
   }
 }
 

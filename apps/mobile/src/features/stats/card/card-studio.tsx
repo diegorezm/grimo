@@ -3,10 +3,11 @@ import {
   CARD_TEMPLATE_LABELS,
   CARD_TEMPLATES,
   type CardPeriod,
+  isPremiumCardTemplate,
   shiftMonth,
   toMonthKey,
 } from "@grimo/core";
-import { type CardPaletteKey, cardPalettes } from "@grimo/tokens";
+import { cardPalettes } from "@grimo/tokens";
 import { router } from "expo-router";
 import { type ReactNode, useRef, useState } from "react";
 import {
@@ -21,9 +22,12 @@ import {
 import { Button, Screen, Text } from "@/components/ui";
 import { radius, spacing, storyCard } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { allCardPalettes, canDrawCard, isPremiumCardPalette } from "@/lib/premium";
 import { type CanvasRef, StoryCanvas, shareCard } from "./story-canvas";
 import { CARD_COMPONENTS } from "./templates";
 
+/** The layouts this build can draw (the paid ones need their art). */
+const TEMPLATES = CARD_TEMPLATES.filter(canDrawCard);
 const THIS_MONTH = toMonthKey(new Date());
 const THIS_YEAR = Number(THIS_MONTH.slice(0, 4));
 /** The year so far, the last six months, and last year's retrospectiva. */
@@ -55,7 +59,7 @@ export function CardStudio({ year }: { year?: number }) {
   const canvas = useRef<CanvasRef>(null);
   const [busy, setBusy] = useState(false);
 
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = allCardPalettes[studio.palette] ?? cardPalettes.brasa;
   const Card = CARD_COMPONENTS[studio.template];
   // Full width (≈1080 real pixels on a 3× iPhone), so the shared image stays sharp.
   const scale = Math.min(width - spacing[4] * 2, 420) / storyCard.width;
@@ -114,7 +118,7 @@ export function CardStudio({ year }: { year?: number }) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.row}
         >
-          {CARD_TEMPLATES.map((template) => {
+          {TEMPLATES.map((template) => {
             const Thumb = CARD_COMPONENTS[template];
             const active = template === studio.template;
             return (
@@ -136,6 +140,11 @@ export function CardStudio({ year }: { year?: number }) {
                   </StoryCanvas>
                 )}
                 <Text variant="title">{CARD_TEMPLATE_LABELS[template].label}</Text>
+                {isPremiumCardTemplate(template) && (
+                  <Text variant="label" color="gold" style={styles.paid}>
+                    ✦ Premium
+                  </Text>
+                )}
               </Pressable>
             );
           })}
@@ -144,7 +153,7 @@ export function CardStudio({ year }: { year?: number }) {
 
       <Section title="Cores">
         <View style={styles.wrap}>
-          {Object.entries(cardPalettes).map(([key, option]) => {
+          {Object.entries(allCardPalettes).map(([key, option]) => {
             const active = key === studio.palette;
             return (
               <Pressable
@@ -164,7 +173,10 @@ export function CardStudio({ year }: { year?: number }) {
                   <View style={[styles.swatchCorner, { backgroundColor: option.accent }]} />
                   <View style={[styles.swatchDot, { backgroundColor: option.accent2 }]} />
                 </View>
-                <Text variant="small">{option.label}</Text>
+                <Text variant="small">
+                  {option.label}
+                  {isPremiumCardPalette(key) ? " ✦" : ""}
+                </Text>
               </Pressable>
             );
           })}
@@ -250,6 +262,7 @@ function Toggle({
 }
 
 const styles = StyleSheet.create({
+  paid: { fontSize: 9 },
   bar: { flexDirection: "row" },
   flex: { flex: 1 },
   center: { alignItems: "center" },

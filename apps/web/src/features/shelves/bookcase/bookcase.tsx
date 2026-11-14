@@ -11,15 +11,18 @@ import {
 } from "react";
 import { BookPeekLink } from "@/features/books";
 import { cn } from "@/utils/cn";
+import { ArtSvg } from "./art";
 import { ArchIvy, LibraryLadder, LibraryLamp, PlankBracket, ShelfDecorArt } from "./decor";
 import {
   bindingOf,
+  crownArtOf,
   GLOSS,
   GLOSS_LYING,
   LINEN,
   type Material,
   materialOf,
   modelLook,
+  modelOver,
   spineColor,
   spineInk,
 } from "./look";
@@ -101,6 +104,8 @@ export function Bookcase<T extends ShelfBookItem>({
   const inner = width / scale;
   const look = modelLook(style, inner);
   const material = materialOf(style);
+  const crownArt = crownArtOf(style);
+  const over = modelOver(style, inner);
   const minRows = fill
     ? Math.max(3, Math.floor((viewport / scale - 330) / (style.layout === "covers" ? 150 : 210)))
     : 1;
@@ -163,6 +168,9 @@ export function Bookcase<T extends ShelfBookItem>({
         >
           <div className="relative shrink-0" style={look.crown}>
             {style.model === "library" && <LibraryLamp />}
+            {crownArt && (
+              <ArtSvg art={crownArt} stretch className="absolute inset-x-0 bottom-0 block" />
+            )}
           </div>
           {style.model === "arch" && <ArchIvy />}
 
@@ -204,6 +212,7 @@ export function Bookcase<T extends ShelfBookItem>({
             {/* What's left below the last plank: the back panel. */}
             <div className="flex-1" />
             {style.model === "library" && <LibraryLadder />}
+            {over && <div className="pointer-events-none absolute inset-0 z-[3]" style={over} />}
           </div>
 
           <div className="flex h-16 shrink-0 justify-center pt-3.5">

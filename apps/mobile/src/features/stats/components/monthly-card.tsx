@@ -1,10 +1,11 @@
 import { useCardData, useCardStudioStore } from "@grimo/client";
 import { toMonthKey } from "@grimo/core";
-import { type CardPaletteKey, cardPalettes } from "@grimo/tokens";
+import { cardPalettes } from "@grimo/tokens";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui";
 import { radius, spacing } from "@/constants/theme";
+import { allCardPalettes } from "@/lib/premium";
 import { StoryCanvas } from "../card/story-canvas";
 import { CARD_COMPONENTS } from "../card/templates";
 
@@ -14,7 +15,7 @@ export function MonthlyCard() {
   const data = useCardData({ kind: "month", month: toMonthKey(new Date()) });
   if (!data) return null;
   const Card = CARD_COMPONENTS[studio.template];
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = allCardPalettes[studio.palette] ?? cardPalettes.brasa;
 
   return (
     <View style={styles.root}>

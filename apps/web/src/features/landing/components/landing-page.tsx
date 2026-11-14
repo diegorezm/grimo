@@ -22,6 +22,7 @@ const SAMPLE_MONTH: CardData = {
   periodName: "outubro",
   previousShort: "set.",
   unit: "mês",
+  numeral: "X",
   year: 2026,
   booksRead: 4,
   pagesRead: 1312,

@@ -1,5 +1,6 @@
 import { type ShelfStyle, spineSize } from "@grimo/core";
 import { StyleSheet, View, type ViewStyle } from "react-native";
+import { premium } from "@/lib/premium";
 import { darken, materialOf, spineColor } from "./look";
 
 /**
@@ -23,8 +24,11 @@ export function BookcaseThumb({
   const cubbies = style.model === "cubbies";
   const cells = cubbies ? 4 : 3;
   const shelf = Math.round((height - 16) / (cubbies ? 2 : 3)) - 4;
-  const frame: ViewStyle =
-    style.model === "floating"
+  const paid = premium.models[style.model];
+  const edge = m.trim ?? m.plank;
+  const frame: ViewStyle = paid
+    ? paid.thumb(m)
+    : style.model === "floating"
       ? { paddingTop: 6 }
       : style.model === "arch"
         ? {
@@ -61,11 +65,11 @@ export function BookcaseThumb({
               { height: shelf },
               cubbies && styles.half,
               style.model === "floating"
-                ? { borderBottomWidth: 3, borderBottomColor: m.plank, marginBottom: 6 }
+                ? { borderBottomWidth: 3, borderBottomColor: edge, marginBottom: 6 }
                 : {
                     backgroundColor: m.back,
                     borderBottomWidth: cubbies ? 0 : 3,
-                    borderBottomColor: m.plank,
+                    borderBottomColor: edge,
                   },
             ]}
           >

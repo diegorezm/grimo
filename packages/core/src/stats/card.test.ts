@@ -24,6 +24,7 @@ describe("buildCardData", () => {
       periodLabel: "outubro de 2026",
       periodName: "outubro",
       unit: "mês",
+      numeral: "X",
       year: 2026,
       genre: "Fantasia",
       deltas: { books: 100, pages: -25 },
@@ -39,6 +40,7 @@ describe("buildCardData", () => {
       periodName: "2026",
       previousShort: "2025",
       unit: "ano",
+      numeral: "",
       deltas: { books: null, pages: null },
     });
   });

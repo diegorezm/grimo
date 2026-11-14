@@ -1,5 +1,7 @@
 import {
   applyShelfChoice,
+  isPremiumShelfChoice,
+  isPremiumShelfStyle,
   presetOf,
   SHELF_COMBINATIONS,
   SHELF_DECOR,
@@ -26,15 +28,24 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, Text } from "@/components/ui";
-import { radius, shelfBrass, shelfMaterials, spacing } from "@/constants/theme";
+import { radius, shelfBrass, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { canDrawShelfChoice, canDrawShelfStyle, premium } from "@/lib/premium";
 import { Spine } from "../bookcase/bookcase";
 import { DecorPiece } from "../bookcase/decor";
-import { materialOf } from "../bookcase/look";
+import { materialByKey, materialOf } from "../bookcase/look";
 import { BookcaseThumb } from "../bookcase/thumb";
 
 const TABS = ["Prontos", "Modelo", "Cores", "Lombadas", "Arrumar", "Enfeites", "Luz"] as const;
 type Tab = (typeof TABS)[number];
+
+/** What this build can draw (the paid choices need their art; see `@/lib/premium`). */
+const PRESETS = SHELF_PRESETS.filter((preset) => canDrawShelfStyle(preset.style));
+const MODELS = SHELF_MODELS.filter((key) => canDrawShelfChoice("model", key));
+const MATERIALS = SHELF_MATERIALS.filter((key) => canDrawShelfChoice("material", key));
+const FINISHES = SPINE_FINISHES.filter((key) => canDrawShelfChoice("finish", key));
+const DECOR = SHELF_DECOR.filter((key) => canDrawShelfChoice("decor", key));
+const LIGHTS = SHELF_LIGHTS.filter((key) => canDrawShelfChoice("light", key));
 
 /** Height of the sheet; the bookcase shrinks into the space above it. */
 export const CUSTOMIZE_SHEET_HEIGHT = 450;
@@ -59,7 +70,7 @@ export function CustomizeSheet({
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("Prontos");
   const set = (patch: Partial<ShelfStyle>) => onChange(applyShelfChoice(style, patch));
-  const lights = {
+  const lights: Record<string, string> = {
     day: `linear-gradient(180deg, ${theme.surface} 0%, ${theme.surfaceMuted} 100%)`,
     sunset: `linear-gradient(200deg, ${shelfBrass.light} 0%, ${theme.glowA} 70%)`,
     lamp: `radial-gradient(ellipse at 50% 0%, ${shelfBrass.light} 0%, ${shelfBrass.ink} 75%)`,
@@ -111,10 +122,11 @@ export function CustomizeSheet({
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
           <Animated.View key={tab} entering={FadeIn.duration(180)} style={styles.grid}>
             {tab === "Prontos" &&
-              SHELF_PRESETS.map((preset) => (
+              PRESETS.map((preset) => (
                 <Option
                   key={preset.id}
                   half
+                  paid={isPremiumShelfStyle(preset.style)}
                   active={current?.id === preset.id}
                   title={preset.name}
                   hint={preset.hint}
@@ -124,10 +136,11 @@ export function CustomizeSheet({
                 </Option>
               ))}
             {tab === "Modelo" &&
-              SHELF_MODELS.map((model) => (
+              MODELS.map((model) => (
                 <Option
                   key={model}
                   half
+                  paid={isPremiumShelfChoice("model", model)}
                   active={style.model === model}
                   title={SHELF_MODEL_LABELS[model].name}
                   hint={SHELF_MODEL_LABELS[model].hint}
@@ -137,12 +150,13 @@ export function CustomizeSheet({
                 </Option>
               ))}
             {tab === "Cores" &&
-              SHELF_MATERIALS.map((material) => {
-                const m = shelfMaterials[material];
+              MATERIALS.map((material) => {
+                const m = materialByKey(material);
                 return (
                   <Option
                     key={material}
                     third
+                    paid={isPremiumShelfChoice("material", material)}
                     active={style.material === material}
                     title={SHELF_MATERIAL_LABELS[material].name}
                     hint={SHELF_MATERIAL_LABELS[material].hint}
@@ -153,18 +167,19 @@ export function CustomizeSheet({
                       <View style={styles.grow}>
                         <View style={[styles.grow, { backgroundColor: m.side }]} />
                         <View style={[styles.grow, { backgroundColor: m.back }]} />
-                        <View style={{ height: 12, backgroundColor: m.plank }} />
+                        <View style={{ height: 12, backgroundColor: m.trim ?? m.plank }} />
                       </View>
                     </View>
                   </Option>
                 );
               })}
             {tab === "Lombadas" &&
-              SPINE_FINISHES.map((finish) => (
+              FINISHES.map((finish) => (
                 <Option
                   key={finish}
                   half
                   boxed
+                  paid={isPremiumShelfChoice("finish", finish)}
                   active={style.finish === finish}
                   title={SPINE_FINISH_LABELS[finish].name}
                   hint={SPINE_FINISH_LABELS[finish].hint}
@@ -225,13 +240,14 @@ export function CustomizeSheet({
               </>
             )}
             {tab === "Enfeites" &&
-              SHELF_DECOR.map((decor) => {
+              DECOR.map((decor) => {
                 const on = style.decor.includes(decor);
                 return (
                   <Option
                     key={decor}
                     third
                     boxed
+                    paid={isPremiumShelfChoice("decor", decor)}
                     active={on}
                     checkbox
                     title={SHELF_DECOR_LABELS[decor]}
@@ -244,17 +260,23 @@ export function CustomizeSheet({
                 );
               })}
             {tab === "Luz" &&
-              SHELF_LIGHTS.map((light) => (
+              LIGHTS.map((light) => (
                 <Option
                   key={light}
                   third
                   boxed
+                  paid={isPremiumShelfChoice("light", light)}
                   active={style.light === light}
                   title={SHELF_LIGHT_LABELS[light].name}
                   hint={SHELF_LIGHT_LABELS[light].hint}
                   onPress={() => set({ light })}
                 >
-                  <View style={[styles.light, { backgroundImage: lights[light] }]} />
+                  <View
+                    style={[
+                      styles.light,
+                      { backgroundImage: premium.lights[light]?.swatch ?? lights[light] },
+                    ]}
+                  />
                 </Option>
               ))}
           </Animated.View>
@@ -299,12 +321,15 @@ function Option({
   third,
   boxed,
   checkbox,
+  paid,
   onPress,
   children,
 }: {
   title: string;
   hint?: string;
   active: boolean;
+  /** A paid choice: marked, so the reader knows before falling for it. */
+  paid?: boolean;
   half?: boolean;
   third?: boolean;
   /** On a card (spines, objects): the ring goes around the card. */
@@ -348,6 +373,11 @@ function Option({
         </View>
       )}
       <Text style={styles.optionTitle}>{title}</Text>
+      {paid && (
+        <Text variant="label" color="gold" style={styles.paid}>
+          ✦ Premium
+        </Text>
+      )}
       {hint && (
         <Text variant="small" color="textMuted">
           {hint}
@@ -401,6 +431,7 @@ function LayoutDrawing({ layout }: { layout: (typeof SHELF_LAYOUTS)[number] }) {
 }
 
 const styles = StyleSheet.create({
+  paid: { fontSize: 9 },
   dock: { position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 20 },
   sheet: {
     flex: 1,

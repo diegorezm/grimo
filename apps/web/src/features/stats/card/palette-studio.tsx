@@ -1,7 +1,8 @@
 import { useCardStudioStore } from "@grimo/client";
-import { type CardPalette, type CardPaletteKey, cardPalettes } from "@grimo/tokens";
+import { type CardPalette, cardPalettes } from "@grimo/tokens";
 import { type ReactNode, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { allCardPalettes } from "@/lib/premium";
 import { cn } from "@/utils/cn";
 import { downloadCard, StoryCanvas, shareCard } from "./story-canvas";
 
@@ -23,7 +24,7 @@ export function PaletteStudio({
   const studio = useCardStudioStore();
   const preview = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = allCardPalettes[studio.palette] ?? cardPalettes.brasa;
 
   async function run(action: "share" | "download") {
     if (!preview.current) return;
@@ -55,7 +56,7 @@ export function PaletteStudio({
       <div className="flex min-w-0 flex-col gap-4">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted">Cores</h2>
         <div className="flex flex-wrap gap-3">
-          {Object.entries(cardPalettes).map(([key, option]) => {
+          {Object.entries(allCardPalettes).map(([key, option]) => {
             const active = key === studio.palette;
             return (
               <button
