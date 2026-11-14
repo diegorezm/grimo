@@ -23,6 +23,7 @@
     "better-auth": "catalog:",
     "convex": "catalog:",
     "jpeg-js": "0.4.4",
+    "stripe": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

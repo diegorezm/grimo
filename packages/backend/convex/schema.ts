@@ -176,8 +176,11 @@ export default defineSchema({
     role: v.optional(v.union(v.literal("admin"), v.literal("moderator"))),
     /** Account deleted: hidden while `account.purge` erases its data (then the row goes too). */
     deletedAt: v.optional(v.number()),
+    /** The reader's Stripe customer, created on the first checkout (`billing.startCheckout`). */
+    stripeCustomerId: v.optional(v.string()),
   })
     .index("by_authId", ["authId"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_username", ["username"])
     .index("by_followers", ["followers"])
     .index("by_role", ["role"])
@@ -593,6 +596,49 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"])
     .index("by_actor", ["actorId"])
     .index("by_targetUser", ["targetUserId"]),
+
+  /**
+   * The reader's "Grimo Plus" subscription, mirrored from Stripe by the webhook (`billing.ts`).
+   * One row per Stripe subscription; the plan is on while `status` is active, trialing or past_due.
+   */
+  subscriptions: defineTable({
+    userId: v.id("users"),
+    stripeSubscriptionId: v.string(),
+    status: v.string(),
+    interval: v.union(v.literal("monthly"), v.literal("yearly"), v.null()),
+    currentPeriodEnd: v.union(v.number(), v.null()),
+    cancelAtPeriodEnd: v.boolean(),
+    /** `created` of the last Stripe event applied: older events arriving late are ignored. */
+    eventCreated: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
+
+  /**
+   * One-off shop purchases (what the reader owns). Kept after the account is deleted, without
+   * the reader (`userId: null`): it is the sales record.
+   */
+  purchases: defineTable({
+    userId: v.union(v.id("users"), v.null()),
+    itemKey: v.string(),
+    stripeSessionId: v.string(),
+    stripePaymentIntentId: v.union(v.string(), v.null()),
+    amount: v.number(),
+    currency: v.string(),
+    /** `refunded` takes the item away. */
+    status: v.union(v.literal("paid"), v.literal("refunded")),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_stripeSessionId", ["stripeSessionId"])
+    .index("by_paymentIntent", ["stripePaymentIntentId"]),
+
+  /** Stripe webhook events already applied (Stripe delivers at least once). */
+  stripeEvents: defineTable({
+    eventId: v.string(),
+    type: v.string(),
+    processedAt: v.number(),
+  }).index("by_eventId", ["eventId"]),
 
   /** Open Library search results, reused for 24 h (see `books.search`). */
   bookSearchCache: defineTable({

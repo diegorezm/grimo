@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import {
   ChevronDownIcon,
+  HeartIcon,
   LockIcon,
   LogOutIcon,
   PencilIcon,
@@ -105,6 +106,13 @@ export function UserMenu({ me }: { me: Me }) {
             Preferências
           </MenuLink>
           <MenuLink
+            to="/settings/plan"
+            icon={<HeartIcon className="size-5" />}
+            onPick={() => setOpen(false)}
+          >
+            Plano e lojinha
+          </MenuLink>
+          <MenuLink
             to="/settings/account"
             icon={<LockIcon className="size-5" />}
             onPick={() => setOpen(false)}
@@ -141,7 +149,13 @@ function MenuLink({
   onPick,
   children,
 }: {
-  to: "/me" | "/shelves" | "/settings/preferences" | "/settings/account" | "/admin";
+  to:
+    | "/me"
+    | "/shelves"
+    | "/settings/preferences"
+    | "/settings/account"
+    | "/settings/plan"
+    | "/admin";
   icon?: ReactNode;
   onPick: () => void;
   children: ReactNode;

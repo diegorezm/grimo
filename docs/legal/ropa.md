@@ -25,6 +25,7 @@ Controlador e encarregado: veja "Dados do controlador" em [README.md](README.md)
 | Selo de equipe | papel (`users.role`: admin ou moderador), exibido no perfil e nas publicações | membros da equipe | transparência: todos sabem quem modera | execução de contrato; ciência no convite | Convex `users` | até a pessoa sair da equipe ou excluir a conta |
 | Convites de moderação | convidado, admin que convidou, datas e resposta | usuários | escolher moderadores (convite nominal, vale 24 h) | legítimo interesse (art. 7º IX) | Convex `moderatorInvites` | do convidado: até excluir a conta; o vínculo com o admin cai se ele excluir a conta |
 | Aceites | documento, versão, data, origem | usuários | prova do aceite | exercício regular de direitos | Convex `legalAcceptances` | até excluir a conta |
+| Pagamentos (Grimo Plus e lojinha) | cliente no Stripe (`users.stripeCustomerId`, email e id do leitor); assinatura (estado, plano, fim do período: `subscriptions`); compras da lojinha (item, valor, estado: `purchases`); eventos já processados (`stripeEvents`, sem dados pessoais). Cartão e endereço de cobrança ficam só no Stripe | usuários que compram | cobrar e liberar o que foi comprado | execução de contrato (art. 7º V); guarda de registros de venda (obrigação legal, art. 7º II) | Convex + Stripe | assinatura: até excluir a conta (o customer do Stripe é apagado e a assinatura cancelada); `purchases` ficam sem o leitor como registro de venda; o Stripe guarda faturas pelo prazo legal |
 | Monitoramento de erros | erro, stack trace, tela, navegador/aparelho, versão do app e passos antes do erro; sem nome, email, @, IP nem Session Replay (`sendDefaultPii: false`, `beforeSend` tira `user`) | visitantes e usuários | corrigir falhas e manter o serviço estável | legítimo interesse (art. 7º IX) | Sentry | retenção do plano do Sentry (90 dias no gratuito) |
 | Armazenamento local | sessão, cache, tema, aviso de cookies | visitantes e usuários | funcionamento | legítimo interesse / execução de contrato | navegador / aparelho | ver Política, seção 7 |
 
@@ -37,9 +38,11 @@ Controlador e encarregado: veja "Dados do controlador" em [README.md](README.md)
 | Sentry (Functional Software, Inc.) | monitoramento de erros da web e do mobile (só liga com `VITE_SENTRY_DSN` / `EXPO_PUBLIC_SENTRY_DSN`) | EUA | conferir o DPA; sem PII nem replay |
 | Google / Apple | login social (só se o usuário escolher) | EUA | controladores independentes dos próprios dados |
 | Resend (a definir) | envio de email de confirmação e de recuperação de senha (só o endereço do usuário e o link) | EUA | só liga com `RESEND_API_KEY`; citar na Política (seção de terceiros) antes de ligar e conferir o DPA |
+| Stripe, Inc. (a definir) | pagamentos: checkout e portal hospedados, cobrança e faturas (email do leitor e dados de pagamento, que o Grimo não vê) | EUA | só liga com `STRIPE_SECRET_KEY`; **citar na Política (seção de terceiros) e conferir o DPA antes de ligar em produção** |
 | Open Library (Internet Archive) | catálogo e capas | EUA | buscas via servidor; capas carregadas pelo navegador |
 
 ## Pendências
 
 - [ ] Conferir o DPA do Convex e se oferece cláusulas compatíveis com a Res. CD/ANPD 19/2024.
 - [ ] Definir e registrar o provedor de hospedagem da web.
+- [ ] Antes de ligar pagamentos em produção: Stripe na Política (terceiros e transferência), na Política de reembolso/arrependimento (CDC art. 49) e nos Termos (assinatura, renovação, cancelamento), e nota fiscal.

@@ -263,6 +263,28 @@ const sections = {
       notFound: row.notFound,
     }),
   ),
+  subscriptions: section(
+    "subscriptions",
+    (ctx, userId) =>
+      ctx.db.query("subscriptions").withIndex("by_user", (q) => q.eq("userId", userId)),
+    (row) => ({
+      status: row.status,
+      interval: row.interval,
+      currentPeriodEnd: date(row.currentPeriodEnd),
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    }),
+  ),
+  purchases: section(
+    "purchases",
+    (ctx, userId) => ctx.db.query("purchases").withIndex("by_user", (q) => q.eq("userId", userId)),
+    (row) => ({
+      item: row.itemKey,
+      amount: row.amount,
+      currency: row.currency,
+      status: row.status,
+      at: date(row.createdAt),
+    }),
+  ),
   legalAcceptances: section(
     "legalAcceptances",
     (ctx, userId) =>
@@ -417,6 +439,12 @@ export async function onAccountDeleted(ctx: MutationCtx, authId: string) {
     featuredQuoteId: undefined,
     profileShows: undefined,
   });
+  // Stops any charge: the Stripe customer goes (and its subscription with it).
+  if (user.stripeCustomerId) {
+    await ctx.scheduler.runAfter(0, internal.billing.closeAccount, {
+      customerId: user.stripeCustomerId,
+    });
+  }
   await ctx.scheduler.runAfter(0, internal.account.purge, { userId: user._id, step: 0 });
 }
 
@@ -670,6 +698,20 @@ const steps: Step[] = [
       .withIndex("by_invitedBy", (q) => q.eq("invitedBy", userId))
       .take(BATCH);
     for (const row of rows) await ctx.db.patch(row._id, { invitedBy: null });
+    return rows.length === BATCH;
+  },
+  // The subscription mirror goes; purchases stay as the sales record, without the reader.
+  async (ctx, userId) =>
+    deleteAll(
+      ctx,
+      ctx.db.query("subscriptions").withIndex("by_user", (q) => q.eq("userId", userId)),
+    ),
+  async (ctx, userId) => {
+    const rows = await ctx.db
+      .query("purchases")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(BATCH);
+    for (const row of rows) await ctx.db.patch(row._id, { userId: null });
     return rows.length === BATCH;
   },
   // Moderation history stays, without the moderator or the reader acted on.

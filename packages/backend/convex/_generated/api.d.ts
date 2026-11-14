@@ -10,6 +10,7 @@
 
 import type * as account from "../account.js";
 import type * as auth from "../auth.js";
+import type * as billing from "../billing.js";
 import type * as books from "../books.js";
 import type * as bookshelves from "../bookshelves.js";
 import type * as crons from "../crons.js";
@@ -20,6 +21,7 @@ import type * as http from "../http.js";
 import type * as imports from "../imports.js";
 import type * as legal from "../legal.js";
 import type * as migrations from "../migrations.js";
+import type * as model_billing from "../model/billing.js";
 import type * as model_bookStats from "../model/bookStats.js";
 import type * as model_content from "../model/content.js";
 import type * as model_email from "../model/email.js";
@@ -39,6 +41,7 @@ import type * as model_safety from "../model/safety.js";
 import type * as model_seedData from "../model/seedData.js";
 import type * as model_shelves from "../model/shelves.js";
 import type * as model_stats from "../model/stats.js";
+import type * as model_stripe from "../model/stripe.js";
 import type * as moderation from "../moderation.js";
 import type * as moderators from "../moderators.js";
 import type * as notifications from "../notifications.js";
@@ -59,6 +62,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   account: typeof account;
   auth: typeof auth;
+  billing: typeof billing;
   books: typeof books;
   bookshelves: typeof bookshelves;
   crons: typeof crons;
@@ -69,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   imports: typeof imports;
   legal: typeof legal;
   migrations: typeof migrations;
+  "model/billing": typeof model_billing;
   "model/bookStats": typeof model_bookStats;
   "model/content": typeof model_content;
   "model/email": typeof model_email;
@@ -88,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   "model/seedData": typeof model_seedData;
   "model/shelves": typeof model_shelves;
   "model/stats": typeof model_stats;
+  "model/stripe": typeof model_stripe;
   moderation: typeof moderation;
   moderators: typeof moderators;
   notifications: typeof notifications;
