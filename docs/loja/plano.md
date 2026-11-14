@@ -1,17 +1,21 @@
 # Lojinha: plano de implementação
 
-Status: plano aprovado para implementação (2026-11-14). Nada disto está no código ainda.
+Status: plano aprovado (2026-11-14). Nada disto está no código ainda. **Implementar só a v1**
+(ver [Ordem de entrega](#ordem-de-entrega)); o resto do documento descreve o destino, para a
+v1 não fechar portas.
 Quem implementa: leia o [AGENTS.md](../../AGENTS.md) inteiro antes, em especial "Cache",
 "Pagamentos (Stripe)" e "Dados pessoais e termos (LGPD)".
 
 ## O que é
 
-Uma loja **só de produtos digitais**: cosméticos para personalizar o perfil, no modelo do que o
-Discord faz (decoração de avatar, efeito e tema de perfil, coleções). O leitor compra uma vez e
-guarda para sempre; há também a assinatura **Grimo Plus**. Nada físico, nada com entrega. Pagamento por **Stripe na
-web** e por **compra no app (IAP) no mobile**, via RevenueCat: App Store no iOS, Google Play no
-Android. Quem não
-é dev (admin e "lojista") monta e publica os itens por um painel.
+Uma loja **só de produtos digitais**: cosméticos que o leitor compra uma vez e guarda para
+sempre, no modelo do que o Discord faz com o perfil. Na v1: personalizações da **estante** e
+**designs dos cards de compartilhamento**. Mais adiante: moldura de avatar e outros enfeites de
+perfil. Há também a assinatura **Grimo Plus**. Nada físico, nada com entrega.
+
+Pagamento por **Stripe na web** (v1) e, depois, por **compra no app no mobile** via RevenueCat
+(App Store e Google Play). Quem não é dev (admin e "lojista") monta e publica os itens por um
+painel.
 
 Hoje: `SHOP_ITEMS` é uma constante em `packages/core/src/billing/catalog.ts` com um item de
 exemplo, a compra só existe na web (`/settings/plan`), `requireItem` existe mas nada o usa, e
@@ -20,9 +24,11 @@ todos os estilos de `shelves/style.ts` são grátis.
 ## Princípios (não negociáveis)
 
 1. **Só cosmético na lojinha.** Função (recurso, estatística) é do Plus.
-2. **Ninguém perde o que já tinha.** Parte das opções de estante hoje grátis vira paga (ver
-   [Estante](#estante-o-que-é-grátis-e-o-que-é-pago)), mas quem já tinha conta no dia da virada
-   fica com todas elas. O conjunto grátis precisa, sozinho, render uma estante bonita.
+2. **O grátis precisa ser bom sozinho.** Parte das opções de estante hoje livres vira paga (ver
+   [Estante](#estante-o-que-é-grátis-e-o-que-é-pago)); o que sobra de graça tem que render uma
+   estante bonita e um card que dê vontade de postar. O app ainda não foi lançado, então não há
+   conta antiga para proteger; **se o lançamento vier antes da loja, rever isto** (quem já usa
+   uma opção não pode perdê-la).
 3. **Ver não exige ter.** Qualquer um renderiza o item no perfil de quem tem; a posse só é
    checada ao salvar (`bookshelves.setStyle`).
 4. **Perder o acesso não apaga a escolha.** Plus vencido ou reembolso: a estante mostra o padrão,
@@ -47,41 +53,64 @@ Duas coisas separadas:
   marcada como grátis ou paga.
 - **Item da loja** (banco, admin/lojista): a vitrine. Tabela `shopItems`:
   `key` (slug único e imutável), `name`, `description`, `category`
-  (`molduras | capas | temas | selos | estantes | colecao`), `unlocks: string[]` (chaves de
+  (o espaço do item, ou `colecao`), `unlocks: string[]` (chaves de
   desbloqueáveis; coleção = várias), `priceTier` (ver abaixo), `includedInPlus: boolean`,
   `status` (`draft | published | archived`), `startsAt`/`endsAt` (opcionais), `featured`,
   `sortOrder`, `createdBy`, `updatedAt`. Índices: `by_key`, `by_status`.
 
-### Espaços do perfil (slots)
+### O que se vende (espaços)
 
-Cada cosmético ocupa um **espaço**, e o leitor equipa um por espaço:
+Cada cosmético pertence a um **espaço** (`slot`). O registro, a loja e a checagem de posse são
+genéricos por espaço; o que muda é quais espaços têm conteúdo.
 
-| Espaço | O que é | Onde aparece | Como é feito |
-| ------ | ------- | ------------ | ------------ |
-| `avatarFrame` | Moldura em volta da foto | Em todo lugar onde o avatar aparece (feed, comentários, listas, perfil) | Imagem (dados) |
-| `profileCover` | Capa/fundo do perfil | Perfil | Imagem ou paleta (dados) |
-| `profileTheme` | Cores do perfil (além das `PROFILE_COLORS` grátis) | Perfil | Paleta (dados) |
-| `badge` | Selo ao lado do nome (ex-líbris, carimbo) | Perfil e cartões de leitor | Imagem (dados) |
-| `shelf` | Estante: modelo, material, enfeites, estilo pronto | Perfil ("Todos os meus livros") | Código + tokens |
+| Espaço | O que é | Quando | Como é feito |
+| ------ | ------- | ------ | ------------ |
+| `shelf` | Estante: modelo, material, lombada, enfeites, luz, estilo pronto | **v1** | Código + tokens |
+| `shareCard` | Designs e paletas dos cards de compartilhamento | **v1** | Código (modelo) e tokens (paleta) |
+| `avatarFrame` | Moldura em volta da foto, em todo lugar onde o avatar aparece | Futuro | Imagem (dados) |
+| `profileCover`, `profileTheme`, `badge` | Capa, cores e selo do perfil | Futuro | Imagem ou paleta (dados) |
 
-- O que está equipado fica em `users.equipped` (`{ avatarFrame?, profileCover?, … }`, chaves de
-  desbloqueáveis), gravado por `profile.equip` com a mesma checagem de posse (`canUse`). O estilo
-  da estante continua em `bookshelves.setStyle`.
-- A moldura acompanha o avatar em listas: ela entra no resumo de leitor que as queries já
-  devolvem (um campo a mais, sem leitura extra por item) e o componente de avatar dos dois apps a
-  desenha. É o item mais visível, e por isso o que mais vende.
-- **Cosmético por dados tem arquivo**: imagem enviada pelo lojista para o storage do Convex
-  (`shopAssets`: `unlockKey`, `slot`, `storageId`, variantes claro/escuro). Isso substitui o
-  "sem upload na v1" das telas de admin abaixo para esses espaços; o registro em código
-  (`UNLOCKABLES`) fica só para o que é desenhado em código (estante). Formato, tamanho e peso
-  máximos são validados no envio; só a equipe envia, então não passa pela fila de moderação.
-- **Estático primeiro.** Animação (o "efeito de perfil" do Discord) fica para depois: pesa no
-  mobile e em listas longas. Quando vier, respeita "reduzir movimento" e nunca roda em lista.
-- Tudo precisa funcionar em claro e escuro e caber no visual "arquivo" (papel, tinta, oliva):
-  molduras de ex-líbris, carimbos, marcadores, lombadas, não neon.
-- Do modelo do Discord, **entra**: experimentar antes de comprar, coleções, item exclusivo ou
-  incluso no Plus. **Não entra na v1**: presentear (complica IAP e reembolso), moeda própria
-  (vira saldo pré-pago, com regra à parte) e item por tempo limitado como pressão de compra.
+**Espaços futuros: só a base, nada de implementação.** Quem implementa a v1 **não** cria moldura
+de avatar, capa, tema nem selo: nem componente, nem campo em `users`, nem mudança nas queries
+que devolvem leitores, nem upload de imagem. O que precisa existir para eles entrarem depois
+sem refazer nada:
+
+- `UNLOCKABLES` com o campo `slot` (um tipo aberto a novos valores, não um par fixo);
+- `canUse(ctx, userId, unlockKey)` sem nada específico de estante ou de card;
+- `shopItems.category` e os filtros da loja derivados dos espaços que têm item publicado;
+- nenhuma suposição, na loja ou no painel, de que todo item é de estante.
+
+Notas para quando chegarem (não fazem parte da v1): a moldura entra no resumo de leitor de
+todas as listas (raio de impacto grande: queries, cache persistido, componente de avatar dos
+dois apps); cosmético por imagem pede upload do lojista para o storage (`shopAssets`) e
+variantes claro/escuro; animação só depois do estático, respeitando "reduzir movimento".
+
+Do modelo do Discord, **entra**: experimentar antes de comprar, coleções, item exclusivo ou
+incluso no Plus. **Não entra**: presentear, moeda própria e item por tempo limitado como pressão
+de compra.
+
+### Cards de compartilhamento
+
+Os cards são a imagem que o leitor posta nos Stories: card do mês e retrospectiva
+(`features/stats/card/` nos dois apps, `@grimo/core` `stats/card.ts`), card de livro
+(`stats/book-card.ts`), de sessão de leitura e de grupo (`groups/card.ts`). Hoje há 4 modelos
+(`CARD_TEMPLATES`: Fita, Estante, Diário, Recibo) e as paletas de `cardPalettes` nos tokens,
+tudo grátis. A escolha do leitor fica só no aparelho (`useCardStudioStore`).
+
+- **Vende-se design novo.** Os modelos atuais continuam grátis (ou parte deles; decisão em
+  aberto): card compartilhado é divulgação do Grimo, e travar o card bom reduz o
+  compartilhamento. O que é pago são modelos novos e paletas novas, avulsos ou em coleção
+  (ex.: "Coleção Acervo" = estante Acervo + card e paleta combinando).
+- Cada modelo e cada paleta é um desbloqueável (`slot: "shareCard"`). Modelo novo é código nos
+  dois apps (web e mobile têm os seus `templates`) e pede release; **paleta nova é só dado**
+  (tokens hoje; pode vir do item da loja depois).
+- No estúdio do card, modelo pago aparece com cadeado e pode ser pré-visualizado; compartilhar
+  ou baixar exige ter. Como o card é montado no aparelho e nada é salvo no servidor, **a trava
+  é do cliente** (lê `billing.status`/`shop.list`). É uma trava leve e basta para o caso:
+  o que está em jogo é uma imagem.
+- Todo card, grátis ou pago, mantém a marca do Grimo.
+- A lógica de "posso usar este modelo?" mora em `@grimo/core`/`@grimo/client`, uma vez, para os
+  dois apps.
 
 ### Estante: o que é grátis e o que é pago
 
@@ -109,13 +138,6 @@ de lombada, 3 arrumações, 3 ordens, 6 enfeites, 3 luzes e 7 estilos prontos. P
 - No editor (`customize-sheet` e o equivalente da web), peça paga aparece com cadeado e pode
   ser **experimentada** na prévia; salvar com peça que o leitor não tem é recusado no servidor.
 - Conta nova nasce com "Diário", como hoje.
-
-**Quem já tinha conta (obrigatório).** Uma migração marca todas as contas existentes na virada
-com `users.legacyShelf: true`; `canUse` libera para elas a lista fixa `LEGACY_SHELF_UNLOCKS`
-(tudo o que existia em `style.ts` nesse dia). Vale para sempre e não depende do que estava
-aplicado na estante. Cosmético lançado depois não entra na lista. Motivo: tirar de alguém o que
-já usava é o pior jeito de estrear uma loja, e com a base de hoje a receita perdida é pequena.
-As contas do seed entram com e sem essa marca, para o mockup mostrar os dois casos.
 
 Item que já foi vendido **nunca é apagado**, só arquivado (some da vitrine, quem comprou mantém).
 
@@ -157,7 +179,8 @@ guarda é o nosso servidor, ligado à conta. Isso é o padrão para catálogos g
 
 - Cabeçalho "Lojinha" + "meus itens · N".
 - Faixa do Grimo Plus (assinar, ou estado atual).
-- Filtros por categoria (chips): tudo, molduras, capas, temas, selos, estantes, coleções.
+- Filtros por categoria (chips): tudo, estantes, cards, coleções (derivados dos espaços que
+  têm item publicado).
 - Destaque (item ou coleção `featured`), depois grade de cartões: prévia, nome, e um de
   `R$ 9,90` · `você tem` · `incluso no Plus`.
 - Clique abre **side peek** (`?item=<key>`, mesmo padrão de `?book=`): prévia ao vivo **na
@@ -168,6 +191,9 @@ guarda é o nosso servidor, ligado à conta. Isso é o padrão para catálogos g
 - No perfil de outro leitor, um cosmético pago ganha um link discreto "ver na lojinha".
 
 ### Mobile
+
+Na v1 só valem os cadeados (estante e estúdio do card) e o uso do que já foi comprado; a tela
+da loja e a compra abaixo são das etapas seguintes.
 
 - Tela `loja` (entrada pelo perfil e pelo `customize-sheet`): mesma estrutura em uma coluna,
   chips, destaque, grade de 2 colunas.
@@ -359,40 +385,58 @@ app são dois caminhos que não se citam.
 - Reembolso: compra online tem direito de arrependimento de 7 dias (CDC art. 49). Na web,
   pelo Stripe; nas lojas, o pedido é feito à Apple/Google e chega por notificação. A Política e
   os Termos explicam os dois caminhos.
-- Vender muda os Termos: subir `TERMS_VERSION`. Apple, Google e RevenueCat (que recebe só o id anônimo e os dados da compra) entram como
-  operadores na
-  Política (`privacy.tsx`) e em `docs/legal/ropa.md`.
+- Vender muda os Termos: subir `TERMS_VERSION`. Stripe (v1) e, quando houver compra no app,
+  Apple, Google e RevenueCat (que recebe só o id anônimo e os dados da compra) entram como
+  operadores na Política (`privacy.tsx`) e em `docs/legal/ropa.md`.
+- Fiscal: a empresa tem CNPJ regular. Na web quem vende é a empresa (nas lojas, Apple e Google):
+  combinar com o contador a emissão de nota das vendas pelo Stripe antes de sair do modo de
+  teste.
 - `account.exportData` e `account.purge` passam a cobrir `users.iapAccountToken` e os campos
   novos; `purchases` continua ficando sem o leitor (registro de venda).
 - Revisar com o `docs/legal/README.md` as regras para 16 e 17 anos comprando.
 
 ## Ordem de entrega
 
-Cada fase termina com `pnpm check` verde, testes em `packages/backend/test/`, seed atualizado
+**Fazer em partes pequenas, com o terreno preparado.** Ninguém validou ainda que as pessoas
+pagam por isto, e o app não foi lançado. A v1 é pequena e só na web; o que vem depois só começa
+quando a v1 mostrar venda. Mas a v1 já nasce com o formato final de dados (`source` nas tabelas,
+`slot` nos desbloqueáveis, faixas de preço), para as etapas seguintes serem só acréscimo.
+
+Cada etapa termina com `pnpm check` verde, testes em `packages/backend/test/`, seed atualizado
 e conferência do cold start pelo cache.
 
-1. **Catálogo no banco + papéis + loja web (Stripe).** `UNLOCKABLES`, `PRICE_TIERS`,
-   `shopItems`, `shop.ts`, papel `merchant`, `/loja`, `/admin/loja`, checkout lendo do banco,
-   migração das tabelas para `source`.
-2. **Trava e estilo efetivo.** `canUse` em `setStyle`, fallback ao padrão, chave desconhecida,
-   "ver na lojinha" no perfil. Primeiros cosméticos pagos de verdade (6 a 10 itens e uma
-   coleção).
-3. **Mobile: vitrine e uso.** Tela `loja`, cadeado no `customize-sheet`, "usar na estante".
-   Sem compra ainda.
-4. **Compra no app (iOS), itens.** RevenueCat: SDK, identidade, `shop.startOrder`,
-   `/revenuecat/webhook`, `iap.sync`, crédito de faixa, produtos das faixas, sandbox e submissão
-   (valida a decisão das faixas).
-5. **Compra no app (iOS), Grimo Plus.** Entitlement `plus`, espelho em `subscriptions`, uma
-   assinatura por conta, aviso na exclusão de conta.
-6. **Android.** Mesmos produtos e o mesmo webhook, com as credenciais do Google Play no
-   RevenueCat.
+**v1 (implementar agora)**
+
+1. **Base.** `UNLOCKABLES` com `slot`, `PRICE_TIERS`, tabela `shopItems`, `convex/shop.ts`,
+   `canUse`, papel `merchant`, `purchases`/`subscriptions` com `source`, checkout do Stripe
+   lendo o item do banco.
+2. **Loja na web.** `/loja` com side peek e prévia, `/admin/loja`, `/settings/plan` só com
+   assinatura e faturas.
+3. **Estante paga.** Corte grátis/pago, cadeado e "experimentar" no editor, trava em
+   `setStyle`, estilo efetivo, chave desconhecida cai no padrão. Os cinco estilos prontos pagos
+   viram as coleções de estreia.
+4. **Cards pagos.** Cadeado e prévia no estúdio do card; um ou dois modelos novos e algumas
+   paletas novas para ter o que vender.
+
+O mobile, na v1, **respeita a posse** (usa o que foi comprado na web, mostra cadeado no que não
+tem) mas não vende e não cita a web.
+
+**Depois (não implementar agora; só começar com decisão explícita)**
+
+5. Loja no mobile como vitrine.
+6. Compra no app pelo RevenueCat: itens no iOS. Submeter cedo uma versão mínima para a revisão
+   da Apple, porque é ela que valida o consumível por faixa de preço.
+7. Grimo Plus no app.
+8. Android.
+9. Espaços futuros: moldura de avatar, capa, tema e selo do perfil.
 
 ## Decisões em aberto
 
-- Valores das faixas e do Plus (hoje são provisórios em `PLUS_PLAN`).
+- Valores das faixas e do Plus (nada decidido; `PLUS_PLAN` tem valores provisórios). O plano
+  depende do **mecanismo** de faixas, não dos valores.
+- Quais modelos de card atuais continuam grátis.
 - Preço no mobile igual ao da web ou maior para cobrir a comissão.
 - Quais cosméticos entram como "incluso no Plus".
-- Android junto com o iOS ou depois.
 - Corte final do que é grátis e pago na estante.
 
 ## Pesquisa (novembro de 2026)
