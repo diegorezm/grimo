@@ -45,6 +45,9 @@ export const shelfStyle = v.object({
   light: literals(SHELF_LIGHTS),
 });
 
+/** A spine in its cover's colors (`@grimo/core` `SpineColors`). */
+export const spineColors = v.object({ base: v.string(), band: v.string(), ink: v.string() });
+
 export const moderationLogAction = v.union(
   v.literal("dismiss"),
   v.literal("remove"),
@@ -136,6 +139,8 @@ export default defineSchema({
     ),
     /** How "Todos os meus livros" looks (absent: the default style). */
     shelfStyle: v.optional(shelfStyle),
+    /** The reader's own order of "Todos os meus livros" ("Do meu jeito"). */
+    shelfOrder: v.optional(v.array(v.id("shelfEntries"))),
     /** Denormalized counters, kept by the follow/shelf mutations. */
     followers: v.number(),
     following: v.number(),
@@ -213,8 +218,13 @@ export default defineSchema({
      */
     createdBy: v.optional(v.id("users")),
     reviewStatus: v.optional(bookReviewStatus),
+    /** The spine's colors, read from the cover (`books.paintSpines`); absent: not read yet. */
+    spine: v.optional(spineColors),
+    /** When the cover was looked at for `spine` (also set when it gave nothing). */
+    spineAt: v.optional(v.number()),
   })
     .index("by_openLibraryId", ["openLibraryId"])
+    .index("by_spineAt", ["spineAt"])
     .index("by_createdBy", ["createdBy"])
     .index("by_reviewStatus", ["reviewStatus"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["reviewStatus"] }),
@@ -256,6 +266,8 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()),
     /** How the bookcase looks (absent: the default style). */
     style: v.optional(shelfStyle),
+    /** The reader's own order of the shelf's books ("Do meu jeito"). */
+    order: v.optional(v.array(v.id("shelfEntries"))),
   }).index("by_user", ["userId"]),
 
   /**

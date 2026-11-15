@@ -1,6 +1,7 @@
 import type { ShelfStyle } from "@grimo/core";
+import jpeg from "jpeg-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../convex/_generated/api";
+import { api, internal } from "../convex/_generated/api";
 import { onAccountDeleted } from "../convex/account";
 import { newTest, reader } from "./setup";
 
@@ -138,7 +139,9 @@ describe("shelves the reader makes", () => {
     const data = await t
       .withIdentity({ subject: "auth-rafa", email: "rafa@grimo.test" })
       .query(api.account.exportData, {});
-    expect(data.myShelves).toEqual([{ name: "Kindle", isPublic: false, style: null }]);
+    expect(data.myShelves).toEqual([
+      { name: "Kindle", isPublic: false, style: null, arrangedBooks: 0 },
+    ]);
     expect(data.shelf[0]).toMatchObject({ shelves: ["Kindle"] });
 
     await t.run((ctx) => onAccountDeleted(ctx, "auth-rafa"));
@@ -241,5 +244,89 @@ describe("how a shelf looks", () => {
         style: { ...acervo, decor: ["candle", "candle"] },
       }),
     ).rejects.toThrow(/repetido/);
+  });
+
+  it("keeps the reader's own order of a shelf, without anyone else's books", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    const [a, b, c] = [await shelve(rafa, 1), await shelve(rafa, 2), await shelve(rafa, 3)];
+    const stranger = await shelve(bia, 4);
+    const { id } = await rafa.as.mutation(api.bookshelves.create, {
+      name: "Física",
+      isPublic: true,
+      entryIds: [a, b, c],
+    });
+
+    await rafa.as.mutation(api.bookshelves.setOrder, { id, entryIds: [c, a, stranger, c, b] });
+    await rafa.as.mutation(api.bookshelves.setOrder, { entryIds: [b, a] });
+    const mine = await rafa.as.query(api.bookshelves.mine, {});
+    expect(mine.items[0]?.order).toEqual([c, a, b]);
+    expect(mine.all.order).toEqual([b, a]);
+    expect(
+      (await t.query(api.bookshelves.profileShelf, { username: "rafa", shelf: id })).order,
+    ).toEqual([c, a, b]);
+
+    const { id: copy } = await rafa.as.mutation(api.bookshelves.duplicate, { id });
+    const shelves = (await rafa.as.query(api.bookshelves.mine, {})).items;
+    expect(shelves.find((shelf) => shelf.id === copy)?.order).toEqual([c, a, b]);
+    await expect(bia.as.mutation(api.bookshelves.setOrder, { id, entryIds: [] })).rejects.toThrow(
+      /Estante/,
+    );
+  });
+
+  it("counts what the objects earn: the plant grows, the candle waits for the goal", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    for (let n = 1; n <= 12; n++) {
+      await rafa.as.mutation(api.shelves.add, {
+        book: book(n, [n % 2 === 0 ? "romance" : "fantasia"]),
+        status: n === 12 ? "want_to_read" : "read",
+      });
+    }
+    const { progress } = await rafa.as.query(api.bookshelves.decor, {});
+    expect(progress.plant).toMatchObject({ level: 1, done: 1, target: 10 });
+    expect(progress.candle).toMatchObject({ level: 0, done: 11, target: 12 });
+    expect(progress.globe).toMatchObject({ level: 0, done: 2, target: 5 });
+    expect(progress.star.level).toBe(0);
+
+    await rafa.as.mutation(api.shelves.add, { book: book(13), status: "read" });
+    expect((await rafa.as.query(api.bookshelves.decor, {})).progress.candle.level).toBe(1);
+    const shelf = await rafa.as.query(api.bookshelves.profileShelf, {
+      username: "rafa",
+      shelf: "read",
+    });
+    expect(shelf.decorLevels).toMatchObject({ candle: 1, plant: 1, star: 0 });
+  });
+
+  it("paints each spine in the colors of its cover, once", async () => {
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    await rafa.as.mutation(api.shelves.add, {
+      book: { ...book(1), coverUrl: "https://covers.openlibrary.org/b/id/1-M.jpg" },
+      status: "read",
+    });
+    await shelve(rafa, 2);
+    // A cover that is mostly dark blue.
+    const data = new Uint8Array(16 * 16 * 4);
+    for (let i = 0; i < data.length; i += 4) data.set([20, 40, 120, 255], i);
+    const cover = jpeg.encode({ data, width: 16, height: 16 }, 90).data;
+    const fetched = vi.fn(async () => new Response(new Uint8Array(cover)));
+    vi.stubGlobal("fetch", fetched);
+
+    await t.action(internal.books.paintSpines, {});
+    const spines = async () =>
+      Object.fromEntries(
+        (await rafa.as.query(api.shelves.list, {})).items.map((row) => [row.book.title, row.spine]),
+      );
+    const painted = await spines();
+    expect(painted["Livro 2"]).toBeNull();
+    expect(painted["Livro 1"]?.ink).toBe("#fff7ec");
+    expect(painted["Livro 1"]?.base).toMatch(/^#1[0-9a-f]2[0-9a-f]7[0-9a-f]$/);
+
+    // Both were looked at: nothing left to paint, no cover fetched again.
+    fetched.mockClear();
+    await t.action(internal.books.paintSpines, {});
+    expect(fetched).not.toHaveBeenCalled();
   });
 });

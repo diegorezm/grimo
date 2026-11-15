@@ -1,12 +1,16 @@
 import {
   bookInputSchema,
   bookSearchQuerySchema,
+  coverUrl,
   manualBookSchema,
   newManualBookId,
   type ShelfStatus,
+  type SpineColors,
+  spinePalette,
   suggestFeelings,
 } from "@grimo/core";
 import { v } from "convex/values";
+import jpeg from "jpeg-js";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -27,7 +31,7 @@ import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer } from "./model/readers";
 import { blockedIds, isBookVisible, isHidden } from "./model/safety";
 import { addToShelf, bookByOpenLibraryId, bookView, entryView } from "./model/shelves";
-import { bookInput, shelfStatus, workDetails } from "./schema";
+import { bookInput, shelfStatus, spineColors, workDetails } from "./schema";
 
 /** The signed-in reader's auth id: Open Library lookups are for readers only. */
 async function requireIdentity(ctx: {
@@ -176,7 +180,13 @@ export const saveBook = internalMutation({
       .query("books")
       .withIndex("by_openLibraryId", (q) => q.eq("openLibraryId", book.openLibraryId))
       .unique();
-    if (existing) await ctx.db.patch(existing._id, book);
+    if (!existing) return null;
+    // A new cover: its spine is painted again (`paintSpines`).
+    const repaint = book.coverUrl !== existing.coverUrl;
+    await ctx.db.patch(existing._id, {
+      ...book,
+      ...(repaint ? { spine: undefined, spineAt: undefined } : {}),
+    });
     return null;
   },
 });
@@ -349,6 +359,75 @@ export const purgeExpiredCaches = internalMutation({
     for (const row of [...searches, ...works]) await ctx.db.delete(row._id);
     if (searches.length === PURGE_BATCH || works.length === PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.books.purgeExpiredCaches, {});
+    }
+    return null;
+  },
+});
+
+/** Books painted per run of `paintSpines` (each is one small image). */
+const PAINT_BATCH = 12;
+/** Covers bigger than this are skipped (a medium cover is ~15 KB). */
+const MAX_COVER_BYTES = 1024 * 1024;
+
+/** Books whose cover hasn't been looked at yet. */
+export const unpaintedBooks = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const books = await ctx.db
+      .query("books")
+      .withIndex("by_spineAt", (q) => q.eq("spineAt", undefined))
+      .take(PAINT_BATCH);
+    return books.map((book) => ({ id: book._id, coverUrl: book.coverUrl }));
+  },
+});
+
+export const saveSpines = internalMutation({
+  args: {
+    spines: v.array(v.object({ id: v.id("books"), spine: v.union(spineColors, v.null()) })),
+  },
+  handler: async (ctx, { spines }) => {
+    const spineAt = Date.now();
+    for (const { id, spine } of spines) {
+      if (!(await ctx.db.get(id))) continue;
+      await ctx.db.patch(id, spine ? { spine, spineAt } : { spineAt });
+    }
+    return null;
+  },
+});
+
+/** The spine's colors from a book's cover (JPEG, as Open Library serves); null when unreadable. */
+async function spineOf(cover: string | null): Promise<SpineColors | null> {
+  if (!cover?.startsWith("https://")) return null;
+  try {
+    const response = await fetch(coverUrl(cover, "M"));
+    if (!response.ok) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > MAX_COVER_BYTES) return null;
+    const { data } = jpeg.decode(bytes, { useTArray: true, maxMemoryUsageInMB: 64 });
+    return spinePalette(data);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cron: reads the colors of the covers not looked at yet, so each spine on a bookcase is
+ * painted like its book. Goes on by itself while there are more.
+ */
+export const paintSpines = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const books: { id: Id<"books">; coverUrl: string | null }[] = await ctx.runQuery(
+      internal.books.unpaintedBooks,
+      {},
+    );
+    if (books.length === 0) return null;
+    const spines = await Promise.all(
+      books.map(async (book) => ({ id: book.id, spine: await spineOf(book.coverUrl) })),
+    );
+    await ctx.runMutation(internal.books.saveSpines, { spines });
+    if (books.length === PAINT_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.books.paintSpines, {});
     }
     return null;
   },

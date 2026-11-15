@@ -135,6 +135,8 @@ export const exportData = query({
         name: shelf.name,
         isPublic: shelf.isPublic ?? false,
         style: shelf.style ?? null,
+        /** How many books you put in your own order ("Do meu jeito"). */
+        arrangedBooks: shelf.order?.length ?? 0,
       })),
       /** How "Todos os meus livros" looks. */
       allBooksShelfStyle: viewer.shelfStyle ?? null,

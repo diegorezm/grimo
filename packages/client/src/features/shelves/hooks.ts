@@ -102,7 +102,7 @@ export function useUpdateShelfEntry() {
             return { ...item, entry: pageCount === null ? { ...entry, pageCount } : entry };
           }
           entry.currentPage = Math.min(entry.currentPage, pageCount);
-          return { entry: { ...entry, pageCount }, book: { ...item.book, pageCount } };
+          return { ...item, entry: { ...entry, pageCount }, book: { ...item.book, pageCount } };
         }),
       }));
       return () => {

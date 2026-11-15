@@ -9,6 +9,7 @@ import {
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Button, Screen, Text, Toaster } from "@/components/ui";
 import { fontAssets } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -20,12 +21,14 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const scheme = useColorScheme();
   return (
-    <AppProviders>
-      <ThemeProvider value={scheme === "dark" ? DarkTheme : DefaultTheme}>
-        <RootNavigator />
-        <Toaster />
-      </ThemeProvider>
-    </AppProviders>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppProviders>
+        <ThemeProvider value={scheme === "dark" ? DarkTheme : DefaultTheme}>
+          <RootNavigator />
+          <Toaster />
+        </ThemeProvider>
+      </AppProviders>
+    </GestureHandlerRootView>
   );
 }
 

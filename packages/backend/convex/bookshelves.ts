@@ -1,5 +1,7 @@
 import {
   copyName,
+  decorLevelsOf,
+  decorProgress,
   groupByYearRead,
   MAX_BULK_BOOKS,
   MAX_SHELVES,
@@ -15,6 +17,7 @@ import {
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/server";
+import { decorFactsOf } from "./model/decor";
 import { appError, notFound, parse } from "./model/errors";
 import { getViewer, readerByUsername, requireViewer, timeZoneOf } from "./model/readers";
 import { hasBlocked } from "./model/safety";
@@ -26,6 +29,9 @@ import { shelfStyle } from "./schema";
  * shelf entry's `tagIds` hold the shelf, so a book can be on many. Status and genre are filters
  * inside a shelf, not shelves (`@grimo/core` shelves/filters).
  */
+
+/** Books a reader can put in their own order on one shelf ("Do meu jeito"). */
+const MAX_SHELF_ORDER = 2000;
 
 /** Covers per shelf on a profile. */
 const SHELF_COVERS = 60;
@@ -137,15 +143,31 @@ export const mine = query({
       for (const id of entry.tagIds ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
     }
     return {
-      all: { style: shelfStyleOf(viewer.shelfStyle) },
+      all: {
+        style: shelfStyleOf(viewer.shelfStyle),
+        order: (viewer.shelfOrder ?? []) as string[],
+      },
       items: shelves.map((shelf) => ({
         id: shelf._id as string,
         name: shelf.name,
         isPublic: shelf.isPublic ?? false,
         count: counts.get(shelf._id) ?? 0,
         style: shelfStyleOf(shelf.style),
+        order: (shelf.order ?? []) as string[],
       })),
     };
+  },
+});
+
+/**
+ * What the objects on your shelves earn with your reading (the candle lights with the year's
+ * goal, the plant grows every ten books…) and how far each is.
+ */
+export const decor = query({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await requireViewer(ctx);
+    return { progress: decorProgress(await decorFactsOf(ctx, viewer)) };
   },
 });
 
@@ -204,6 +226,29 @@ export const setStyle = mutation({
   },
 });
 
+/**
+ * The reader's own order of a shelf's books ("Do meu jeito"), as entry ids; no `id`: "Todos os
+ * meus livros". Ids that aren't the reader's books are left out.
+ */
+export const setOrder = mutation({
+  args: { id: v.optional(v.string()), entryIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    if (args.entryIds.length > MAX_SHELF_ORDER) {
+      throw appError("INVALID", `Arrume até ${MAX_SHELF_ORDER} livros numa estante`);
+    }
+    const mine = new Set<string>((await entriesOf(ctx, viewer._id)).map((entry) => entry._id));
+    const order = [...new Set(args.entryIds)].filter((id) => mine.has(id)) as Id<"shelfEntries">[];
+    if (args.id === undefined) {
+      await ctx.db.patch(viewer._id, { shelfOrder: order });
+      return null;
+    }
+    const shelf = await ownShelf(ctx, viewer, args.id);
+    await ctx.db.patch(shelf._id, { order });
+    return null;
+  },
+});
+
 /** Deletes a shelf: its books stay in your readings, only the grouping goes. */
 export const remove = mutation({
   args: { id: v.string() },
@@ -239,6 +284,7 @@ export const duplicate = mutation({
       false,
       shelfStyleOf(shelf.style),
     );
+    if (shelf.order) await ctx.db.patch(id, { order: shelf.order });
     await setOnShelf(ctx, on, id, true);
     return { id: id as string };
   },
@@ -304,6 +350,7 @@ export const profile = query({
           isPublic: shelf.isPublic ?? false,
           count: on.length,
           style: shelfStyleOf(shelf.style),
+          order: (shelf.order ?? []) as string[],
           covers: on.slice(0, SHELF_COVERS).map(({ entry, book }) => ({
             entryId: entry.id,
             openLibraryId: book.openLibraryId,
@@ -335,6 +382,7 @@ export const profileShelf = query({
     let name: string;
     let isPublic = true;
     let style = shelfStyleOf(reader.shelfStyle);
+    let order: string[] = [];
     let picked: Doc<"shelfEntries">[];
     if (shelf === "reading" || shelf === "read") {
       name = shelf === "reading" ? "Lendo" : "Lidos";
@@ -348,6 +396,7 @@ export const profileShelf = query({
       name = made.name;
       isPublic = made.isPublic ?? false;
       style = shelfStyleOf(made.style);
+      order = made.order ?? [];
       picked = entries.filter(
         (entry) =>
           entry.tagIds?.includes(made._id) &&
@@ -358,20 +407,29 @@ export const profileShelf = query({
       picked.sort((a, b) => (b.finishedAt ?? -1) - (a.finishedAt ?? -1));
     }
     const rows = await withBooks(ctx, picked.slice(0, FULL_SHELF), viewer?._id ?? null);
-    const items = rows.map(({ entry, book }) => ({
-      entry: { id: entry.id, finishedAt: entry.finishedAt },
+    const items = rows.map(({ entry, book, spine }) => ({
+      entry: {
+        id: entry.id,
+        status: entry.status,
+        currentPage: entry.currentPage,
+        finishedAt: entry.finishedAt,
+      },
       book: {
         title: book.title,
         coverUrl: book.coverUrl,
         openLibraryId: book.openLibraryId,
         pageCount: book.pageCount,
       },
+      spine,
     }));
     const timeZone = timeZoneOf(reader);
     return {
       name,
       isPublic,
       style,
+      order,
+      /** What the reader's objects have earned (the lit candle, the grown plant…). */
+      decorLevels: decorLevelsOf(await decorFactsOf(ctx, reader, entries)),
       count: picked.length,
       owner: { username: reader.username, name: reader.name },
       runs:

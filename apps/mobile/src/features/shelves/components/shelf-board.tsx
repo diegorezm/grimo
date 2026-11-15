@@ -5,24 +5,30 @@ import {
   useCreateShelf,
   useMyShelves,
   useRemoveShelf,
+  useSetShelfOrder,
   useSetShelfPublic,
   useSetShelfStyle,
   useShelf,
+  useShelfDecor,
   useShelfScreenStore,
 } from "@grimo/client";
 import {
   countByShelf,
   DEFAULT_SHELF_STYLE,
+  type DecorLevels,
   GENRE_LABELS,
   type Genre,
   matchesShelfFilter,
+  moveInOrder,
   SHELF_LABELS,
   SHELF_MATERIAL_LABELS,
   SHELF_MODEL_LABELS,
   SHELF_STATUSES,
   type ShelfStyle,
   sameStyle,
+  shelfOrderOf,
 } from "@grimo/core";
+import { useIsFocused } from "expo-router";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -34,7 +40,19 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  SensorType,
+  type SharedValue,
+  useAnimatedReaction,
+  useAnimatedSensor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Button, Chip, Glass, Icon, SelectSheet, Text } from "@/components/ui";
@@ -47,27 +65,43 @@ import { materialOf } from "../bookcase/look";
 import { BookcaseThumb } from "../bookcase/thumb";
 import { BookPeek } from "./book-peek";
 import { CUSTOMIZE_SHEET_HEIGHT, CustomizeSheet } from "./customize-sheet";
+import { ShelfieSheet } from "./shelfie-sheet";
 
 /** One page of the pager: "Todos os meus livros" (no id) or a shelf you made. */
 interface Page {
   id: string | null;
   name: string;
   style: ShelfStyle;
+  /** The reader's own order of its books ("Do meu jeito"). */
+  order: string[];
   shelf: MyShelf | null;
   items: ShelfItem[];
 }
 
 /** Height of the floating header (under the status bar). */
 const HEADER = 64;
+/** The shelves beside the open one show this much at the screen's edges, after a gap. */
+const PEEK = 14;
+const PAGE_GAP = 6;
+/** Seen from afar (a pinch): the bookcase at this scale, so more shelves fit. */
+const FAR = 0.6;
+
+const bookOf = (row: ShelfItem) => ({
+  key: row.entry.id,
+  title: row.book.title,
+  pageCount: row.book.pageCount,
+  color: row.spine?.base,
+});
 
 const booksLabel = (n: number) => `${n} ${n === 1 ? "livro" : "livros"}`;
 
 /**
  * Estantes: the bookcase is the screen. Swipe sideways between your shelves ("Todos os meus
- * livros" first), scroll down a tall one. Floating on top: the shelf's name (opens the list of
- * shelves), filters, ⋯ and "Personalizar", which shrinks the bookcase over the editor so every
- * change shows on the whole piece. Tapping a book takes it off the shelf; holding one starts
- * selecting.
+ * livros" first; the ones beside show at the edges), scroll down a tall one, pinch to see it
+ * from afar. Floating on top: the shelf's name (opens the list of shelves), filters, ⋯ (arrange
+ * by hand, share a picture, the shelf's options) and "Personalizar", which shrinks the bookcase
+ * over the editor so every change shows on the whole piece. Tapping a book takes it off the
+ * shelf; holding one starts selecting.
  */
 export function ShelfBoard() {
   const theme = useTheme();
@@ -81,6 +115,26 @@ export function ShelfBoard() {
   const { shelfId, filter, selecting, selected, pickingFor } = store;
   const naming = useShelfNaming();
   const setStyle = useSetShelfStyle();
+  const setOrder = useSetShelfOrder();
+  const decor = useShelfDecor().data?.progress;
+  const decorLevels = useMemo(
+    () =>
+      decor &&
+      (Object.fromEntries(
+        Object.entries(decor).map(([name, progress]) => [name, progress.level]),
+      ) as DecorLevels),
+    [decor],
+  );
+  // "Arrumar com a mão": the order being made (entry ids) and the steps to undo.
+  const [arranging, setArranging] = useState<string[] | null>(null);
+  const [undo, setUndo] = useState<string[][]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [far, setFar] = useState(false);
+  const [tall, setTall] = useState<Record<string, number>>({});
+  const [sharing, setSharing] = useState(false);
+  const focused = useIsFocused();
+  const reduceMotion = useReducedMotion();
+  const tilt = useSharedValue(0);
   const [sheet, setSheet] = useState<"shelf" | "filters" | null>(null);
   const [editing, setEditing] = useState<ShelfStyle | null>(null);
   const [customizeNext, setCustomizeNext] = useState<string | null>(null);
@@ -97,6 +151,7 @@ export function ShelfBoard() {
         id: null,
         name: "Todos os meus livros",
         style: mine.data?.all?.style ?? DEFAULT_SHELF_STYLE,
+        order: mine.data?.all?.order ?? [],
         shelf: null,
         items: visible(rows),
       },
@@ -104,6 +159,7 @@ export function ShelfBoard() {
         id: shelf.id,
         name: shelf.name,
         style: shelf.style ?? DEFAULT_SHELF_STYLE,
+        order: shelf.order ?? [],
         shelf,
         items: visible(rows.filter((row) => row.entry.tagIds.includes(shelf.id))),
       })),
@@ -121,10 +177,24 @@ export function ShelfBoard() {
     page.items.length > 0 && page.items.every((row) => selected.includes(row.entry.id));
   const picking = shelves.find((shelf) => shelf.id === pickingFor) ?? null;
 
+  // Each shelf is a little narrower than the screen, so its neighbors show at the edges.
+  const pageWidth = width - PEEK * 2;
+  const step = pageWidth + PAGE_GAP;
+  const zoom = far && !editing && !arranging ? FAR : 1;
+  const readThisYear = useMemo(() => {
+    const year = new Date().getFullYear();
+    return rows.filter(
+      ({ entry }) =>
+        entry.status === "read" &&
+        entry.finishedAt !== null &&
+        new Date(entry.finishedAt).getFullYear() === year,
+    ).length;
+  }, [rows]);
+
   // The pager follows the open shelf when it changes elsewhere (the list, a new shelf).
   useEffect(() => {
-    pager.current?.scrollToOffset({ offset: index * width, animated: false });
-  }, [index, width]);
+    pager.current?.scrollToOffset({ offset: index * step, animated: false });
+  }, [index, step]);
 
   // A new shelf opens straight into "Personalizar" once it arrives.
   useEffect(() => {
@@ -171,6 +241,46 @@ export function ShelfBoard() {
     setEditing(null);
   }
 
+  function startArranging() {
+    store.clearFilter();
+    store.setSelecting(false);
+    setArranging(shelfOrderOf(inPage.map(bookOf), page.style, page.order));
+    setUndo([]);
+  }
+
+  function moveBook(key: string, before: string | null) {
+    if (!arranging) return;
+    const next = moveInOrder(arranging, key, before);
+    if (next.every((id, i) => id === arranging[i])) return;
+    setUndo([...undo, arranging]);
+    setArranging(next);
+  }
+
+  function doneArranging() {
+    if (arranging && undo.length > 0) {
+      const id = page.id ?? undefined;
+      const failed = { onError: (error: unknown) => toast.failed(error) };
+      setOrder.mutate({ id, entryIds: arranging }, failed);
+      if (page.style.sort !== "manual") {
+        setStyle.mutate({ id, style: { ...page.style, sort: "manual" } }, failed);
+      }
+      toast.saved("Estante arrumada do seu jeito");
+    }
+    setArranging(null);
+    setUndo([]);
+    setDragging(false);
+  }
+
+  // Two fingers apart or together: the bookcase from near or from afar.
+  const pinch = useMemo(
+    () =>
+      Gesture.Pinch().onEnd((event) => {
+        if (event.scale < 0.85) runOnJS(setFar)(true);
+        else if (event.scale > 1.15) runOnJS(setFar)(false);
+      }),
+    [],
+  );
+
   function emptyFor(target: Page): ReactNode {
     if (all.isPending) return <ActivityIndicator color={theme.accent} />;
     const ink = { color: materialOf(target.style).ink };
@@ -195,70 +305,133 @@ export function ShelfBoard() {
 
   return (
     <View style={[styles.root, { backgroundColor: materialOf(editing ?? page.style).room }]}>
-      <Animated.View style={[styles.root, styles.clip, pagerMotion]}>
-        <FlatList
-          ref={pager}
-          data={pages}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={!selecting && !editing}
-          keyExtractor={(item) => item.id ?? "all"}
-          initialScrollIndex={index}
-          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
-          windowSize={3}
-          onMomentumScrollEnd={(event) => {
-            const next = pages[Math.round(event.nativeEvent.contentOffset.x / width)];
-            if (next && next.id !== shelfId) store.openShelf(next.id);
-          }}
-          renderItem={({ item, index: i }) => {
-            const active = i === index;
-            const style = active && editing ? editing : item.style;
-            return (
-              <ScrollView
-                style={{ width, backgroundColor: materialOf(style).room }}
-                showsVerticalScrollIndicator={false}
-                contentInsetAdjustmentBehavior="never"
-              >
-                <Bookcase
-                  key={active ? `${item.id}-${landing}` : (item.id ?? "all")}
-                  items={item.items}
-                  style={style}
-                  width={width}
-                  minHeight={height}
-                  top={top}
-                  bottom={insets.bottom + 40}
-                  name={item.name}
-                  selecting={active && selecting}
-                  selected={selected}
-                  animate={active && (firstVisit || landing > 0)}
-                  empty={emptyFor(item)}
-                  onPress={(row) => (selecting ? store.toggleSelected(row.entry.id) : setPeek(row))}
-                  onLongPress={(row) =>
-                    selecting
-                      ? store.toggleSelected(row.entry.id)
-                      : store.startSelecting(row.entry.id)
-                  }
-                />
-              </ScrollView>
-            );
-          }}
-        />
-        {editing && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Pronto"
-            onPress={doneEditing}
-            style={StyleSheet.absoluteFill}
+      {focused && !reduceMotion && <Tilt value={tilt} />}
+      <GestureDetector gesture={pinch}>
+        <Animated.View style={[styles.root, styles.clip, pagerMotion]}>
+          <FlatList
+            ref={pager}
+            data={pages}
+            horizontal
+            snapToInterval={step}
+            decelerationRate="fast"
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={!selecting && !editing && !arranging}
+            keyExtractor={(item) => item.id ?? "all"}
+            initialScrollIndex={index}
+            contentContainerStyle={{ paddingHorizontal: PEEK, gap: PAGE_GAP }}
+            getItemLayout={(_, i) => ({ length: step, offset: step * i, index: i })}
+            windowSize={3}
+            onMomentumScrollEnd={(event) => {
+              const next = pages[Math.round(event.nativeEvent.contentOffset.x / step)];
+              if (next && next.id !== shelfId) store.openShelf(next.id);
+            }}
+            renderItem={({ item, index: i }) => {
+              const active = i === index;
+              const sorting = active && arranging !== null;
+              const base = active && editing ? editing : item.style;
+              const style = sorting ? { ...base, sort: "manual" as const } : base;
+              const key = item.id ?? "all";
+              const scaled = zoom !== 1;
+              return (
+                <ScrollView
+                  style={{ width: pageWidth, backgroundColor: materialOf(style).room }}
+                  showsVerticalScrollIndicator={false}
+                  contentInsetAdjustmentBehavior="never"
+                  scrollEnabled={!dragging}
+                >
+                  {/* From afar the bookcase is drawn wider and scaled down to the page. */}
+                  <View
+                    style={
+                      scaled
+                        ? { height: (tall[key] ?? height / zoom) * zoom, overflow: "hidden" }
+                        : undefined
+                    }
+                  >
+                    <View
+                      onLayout={
+                        scaled
+                          ? ({ nativeEvent }) => {
+                              const measured = Math.round(nativeEvent.layout.height);
+                              if (tall[key] !== measured) setTall({ ...tall, [key]: measured });
+                            }
+                          : undefined
+                      }
+                      style={
+                        scaled
+                          ? {
+                              width: pageWidth / zoom,
+                              transform: [{ scale: zoom }],
+                              transformOrigin: "left top",
+                            }
+                          : undefined
+                      }
+                    >
+                      <Bookcase
+                        key={active ? `${item.id}-${landing}` : key}
+                        items={item.items}
+                        style={style}
+                        order={sorting ? arranging : item.order}
+                        decorLevels={decorLevels}
+                        tilt={active ? tilt : undefined}
+                        width={pageWidth / zoom}
+                        minHeight={height / zoom}
+                        top={top / zoom}
+                        bottom={(insets.bottom + 40) / zoom}
+                        name={item.name}
+                        selecting={active && selecting}
+                        selected={selected}
+                        arranging={sorting}
+                        onMove={moveBook}
+                        onDragging={setDragging}
+                        animate={active && (firstVisit || landing > 0)}
+                        empty={emptyFor(item)}
+                        onPress={(row) =>
+                          selecting ? store.toggleSelected(row.entry.id) : setPeek(row)
+                        }
+                        onLongPress={(row) =>
+                          selecting
+                            ? store.toggleSelected(row.entry.id)
+                            : store.startSelecting(row.entry.id)
+                        }
+                      />
+                    </View>
+                  </View>
+                </ScrollView>
+              );
+            }}
           />
-        )}
-      </Animated.View>
+          {editing && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Pronto"
+              onPress={doneEditing}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+        </Animated.View>
+      </GestureDetector>
 
       <Animated.View
         pointerEvents={editing ? "none" : "box-none"}
         style={[styles.header, { paddingTop: insets.top + spacing[2] }, chrome]}
       >
-        {selecting ? (
+        {arranging ? (
+          <Glass style={styles.selectionBar}>
+            <Button
+              variant="ghost"
+              title="Desfazer"
+              disabled={undo.length === 0}
+              onPress={() => {
+                setArranging(undo[undo.length - 1] ?? arranging);
+                setUndo(undo.slice(0, -1));
+              }}
+            />
+            <Text variant="title" style={styles.center}>
+              Do meu jeito
+            </Text>
+            <Button title="Pronto" onPress={doneArranging} />
+          </Glass>
+        ) : selecting ? (
           <Glass style={styles.selectionBar}>
             <Button
               variant="ghost"
@@ -306,7 +479,16 @@ export function ShelfBoard() {
             >
               <Path d="M4 6h16M7 12h10M10 18h4" />
             </RoundButton>
-            {page.shelf && <ShelfMenu shelf={page.shelf} naming={naming} />}
+            <BoardMenu
+              name={page.name}
+              shelf={page.shelf}
+              naming={naming}
+              far={far}
+              canArrange={inPage.length > 1}
+              onArrange={startArranging}
+              onShare={() => setSharing(true)}
+              onZoom={() => setFar(!far)}
+            />
             <RoundButton
               label="Personalizar estante"
               primary
@@ -316,6 +498,11 @@ export function ShelfBoard() {
             </RoundButton>
           </View>
         )}
+        {arranging && (
+          <Glass style={styles.note}>
+            <Text variant="small">Segure um livro e arraste até o lugar dele.</Text>
+          </Glass>
+        )}
         {picking && (
           <Glass style={styles.note}>
             <Text variant="small">
@@ -323,7 +510,7 @@ export function ShelfBoard() {
             </Text>
           </Glass>
         )}
-        {!selecting && activeFilters > 0 && (
+        {!selecting && !arranging && activeFilters > 0 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -350,7 +537,7 @@ export function ShelfBoard() {
         )}
       </Animated.View>
 
-      {pages.length > 1 && !selecting && (
+      {pages.length > 1 && !selecting && !arranging && (
         <Animated.View
           pointerEvents="none"
           style={[styles.dotsDock, { bottom: insets.bottom + 64 }, chrome]}
@@ -376,6 +563,7 @@ export function ShelfBoard() {
         <CustomizeSheet
           style={editing}
           titles={inPage.slice(0, 15).map((row) => row.book.title)}
+          decor={decor}
           onChange={changeStyle}
           onDone={doneEditing}
         />
@@ -484,9 +672,36 @@ export function ShelfBoard() {
       </SelectSheet>
 
       <BookPeek item={peek} onClose={() => setPeek(null)} />
+      <ShelfieSheet
+        shelf={sharing ? page : null}
+        decorLevels={decorLevels}
+        readThisYear={readThisYear}
+        onClose={() => setSharing(false)}
+      />
       {naming.dialog}
     </View>
   );
+}
+
+/**
+ * How the phone is tilted sideways, -1..1, eased: the shelves shift a little inside the frame
+ * (depth). Mounted only while the screen shows, so the sensor rests otherwise.
+ */
+function Tilt({ value }: { value: SharedValue<number> }) {
+  const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: 60 });
+  useAnimatedReaction(
+    () => Math.max(-1, Math.min(1, gravity.sensor.value.x / 4)),
+    (lean) => {
+      value.value = withSpring(lean, { damping: 22, stiffness: 80 });
+    },
+  );
+  useEffect(
+    () => () => {
+      value.value = 0;
+    },
+    [value],
+  );
+  return null;
 }
 
 /** A round glass button in the header; `primary` is the rose → lavender one. */
@@ -551,13 +766,28 @@ function RoundButton({
   );
 }
 
-/** ⋯ on a shelf you made: rename, duplicate, show on the profile or not, delete. */
-function ShelfMenu({
+/**
+ * ⋯ on a shelf: arrange it by hand, share its picture, see it from afar; on a shelf you made,
+ * also rename, duplicate, show on the profile or not, delete.
+ */
+function BoardMenu({
+  name,
   shelf,
   naming,
+  far,
+  canArrange,
+  onArrange,
+  onShare,
+  onZoom,
 }: {
-  shelf: MyShelf;
+  name: string;
+  shelf: MyShelf | null;
   naming: ReturnType<typeof useShelfNaming>;
+  far: boolean;
+  canArrange: boolean;
+  onArrange: () => void;
+  onShare: () => void;
+  onZoom: () => void;
 }) {
   const setPublic = useSetShelfPublic();
   const remove = useRemoveShelf();
@@ -565,7 +795,17 @@ function ShelfMenu({
   const store = useShelfScreenStore();
 
   function menu() {
+    const board = [
+      ...(canArrange ? [{ text: "Arrumar com a mão", onPress: onArrange }] : []),
+      { text: "Compartilhar estante", onPress: onShare },
+      { text: far ? "Ver de perto" : "Ver de longe", onPress: onZoom },
+    ];
+    if (!shelf) {
+      Alert.alert(name, undefined, [...board, { text: "Cancelar", style: "cancel" }]);
+      return;
+    }
     Alert.alert(shelf.name, undefined, [
+      ...board,
       { text: "Renomear", onPress: () => naming.askRename(shelf) },
       {
         text: "Duplicar",
@@ -612,7 +852,7 @@ function ShelfMenu({
   }
 
   return (
-    <RoundButton label={`Opções da estante ${shelf.name}`} onPress={menu}>
+    <RoundButton label={`Opções da estante ${name}`} onPress={menu}>
       <Path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth={3} />
     </RoundButton>
   );

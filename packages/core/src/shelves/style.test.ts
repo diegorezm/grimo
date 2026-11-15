@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyManualOrder,
   applyShelfChoice,
   bookcaseGeometry,
   DEFAULT_SHELF_STYLE,
   layoutBookcase,
+  moveInOrder,
   presetOf,
   SHELF_PRESETS,
   type ShelfStyle,
@@ -56,18 +58,16 @@ describe("shelf style", () => {
     expect(presetOf(toggleDecor(SHELF_PRESETS[2]!.style, "plant"))).toBeNull();
   });
 
-  it("keeps the rainbow with the shelf's own tones", () => {
-    expect(applyShelfChoice(style({ finish: "cover" }), { sort: "rainbow" }).finish).toBe("tone");
-    expect(
-      applyShelfChoice(style({ sort: "rainbow", finish: "tone" }), { finish: "cover" }).sort,
-    ).toBe("added");
+  it("applies one choice and keeps the rest", () => {
+    const next = applyShelfChoice(style({ finish: "cover" }), { sort: "rainbow" });
+    expect(next).toEqual(style({ finish: "cover", sort: "rainbow" }));
   });
 });
 
 describe("layoutBookcase", () => {
   it("places every book once, in every model and layout", () => {
     for (const model of ["classic", "floating", "arch", "cubbies", "library"] as const) {
-      for (const layout of ["standing", "stacks", "covers"] as const) {
+      for (const layout of ["standing", "stacks", "mixed", "covers"] as const) {
         const result = layoutBookcase(books, style({ model, layout }), 390);
         expect(keysOf(result).sort()).toEqual(books.map((book) => book.key).sort());
       }
@@ -108,6 +108,41 @@ describe("layoutBookcase", () => {
       .filter((piece) => piece.kind === "stack");
     expect(piles.length).toBeGreaterThan(0);
     for (const pile of piles) if (pile.kind === "stack") expect(pile.books).toHaveLength(3);
+  });
+
+  it("mixes spines, a cover facing out and piles", () => {
+    const kinds = new Set(
+      layoutBookcase(books, style({ layout: "mixed" }), 390)
+        .rows.flat(2)
+        .map((piece) => piece.kind),
+    );
+    expect([...kinds].sort()).toEqual(["book", "cover", "decor", "stack"]);
+  });
+
+  it("keeps the reader's own order, new books in front", () => {
+    const order = ["e3", "e1", "e2"];
+    const few = books.slice(0, 4);
+    const result = layoutBookcase(
+      few,
+      style({ sort: "manual", layout: "standing" }),
+      390,
+      4,
+      order,
+    );
+    expect(keysOf(result)).toEqual(["e0", "e3", "e1", "e2"]);
+    expect(moveInOrder(["a", "b", "c"], "c", "a")).toEqual(["c", "a", "b"]);
+    expect(moveInOrder(["a", "b", "c"], "a", null)).toEqual(["b", "c", "a"]);
+    expect(applyManualOrder(few, [])).toEqual(few);
+  });
+
+  it("orders the rainbow by the covers' own colors", () => {
+    const colored = [
+      { key: "blue", title: "B", color: "#2244cc" },
+      { key: "red", title: "R", color: "#cc2222" },
+      { key: "green", title: "G", color: "#22aa44" },
+    ];
+    const result = layoutBookcase(colored, style({ sort: "rainbow", layout: "standing" }), 390);
+    expect(keysOf(result as never)).toEqual(["red", "green", "blue"]);
   });
 
   it("gives the same book the same spine", () => {

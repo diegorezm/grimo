@@ -128,7 +128,7 @@ export function BookPeek({ item, onClose }: { item: ShelfItem | null; onClose: (
                 ]}
               >
                 <Text variant="label" color="accentForeground">
-                  Abrir livro
+                  {entry.status === "reading" ? "Continuar lendo" : "Abrir livro"}
                 </Text>
               </Pressable>
             </View>

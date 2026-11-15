@@ -1,5 +1,6 @@
 import {
   applyShelfChoice,
+  type DecorProgress,
   presetOf,
   SHELF_COMBINATIONS,
   SHELF_DECOR,
@@ -15,6 +16,7 @@ import {
   SHELF_PRESETS,
   SHELF_SORT_LABELS,
   SHELF_SORTS,
+  type ShelfDecor,
   type ShelfStyle,
   SPINE_FINISH_LABELS,
   SPINE_FINISHES,
@@ -30,7 +32,7 @@ import { radius, shelfBrass, shelfMaterials, spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { Spine } from "../bookcase/bookcase";
 import { DecorPiece } from "../bookcase/decor";
-import { materialOf } from "../bookcase/look";
+import { materialOf, spinePaint } from "../bookcase/look";
 import { BookcaseThumb } from "../bookcase/thumb";
 
 const TABS = ["Prontos", "Modelo", "Cores", "Lombadas", "Arrumar", "Enfeites", "Luz"] as const;
@@ -46,12 +48,15 @@ export const CUSTOMIZE_SHEET_HEIGHT = 450;
 export function CustomizeSheet({
   style,
   titles,
+  decor,
   onChange,
   onDone,
 }: {
   style: ShelfStyle;
   /** Titles of the shelf's books, for the drawings. */
   titles: readonly string[];
+  /** What each object earns with your reading, and how far it is. */
+  decor?: Record<ShelfDecor, DecorProgress>;
   onChange: (style: ShelfStyle) => void;
   onDone: () => void;
 }) {
@@ -179,11 +184,9 @@ export function CustomizeSheet({
                           <Spine
                             key={`${title}-${i}`}
                             title=""
-                            cover={null}
                             width={Math.round(size.width * 0.55)}
                             height={Math.round(size.height * 0.42)}
-                            tone={size.tone}
-                            material={materialOf(style)}
+                            paint={spinePaint(materialOf(style), size.tone, finish)}
                             finish={finish}
                           />
                         );
@@ -215,9 +218,11 @@ export function CustomizeSheet({
                     active={style.sort === sort}
                     title={SHELF_SORT_LABELS[sort]}
                     hint={
-                      sort === "rainbow" && style.finish === "cover"
-                        ? "Usa os tons do móvel"
-                        : undefined
+                      sort === "manual"
+                        ? "Segure e arraste"
+                        : sort === "rainbow"
+                          ? "Pela cor das capas"
+                          : undefined
                     }
                     onPress={() => set({ sort })}
                   />
@@ -225,21 +230,42 @@ export function CustomizeSheet({
               </>
             )}
             {tab === "Enfeites" &&
-              SHELF_DECOR.map((decor) => {
-                const on = style.decor.includes(decor);
+              SHELF_DECOR.map((item) => {
+                const on = style.decor.includes(item);
+                const progress = decor?.[item];
+                const earned = (progress?.level ?? 0) > 0;
                 return (
                   <Option
-                    key={decor}
-                    third
+                    key={item}
+                    half
                     boxed
                     active={on}
                     checkbox
-                    title={SHELF_DECOR_LABELS[decor]}
-                    onPress={() => onChange(toggleDecor(style, decor))}
+                    title={SHELF_DECOR_LABELS[item]}
+                    hint={
+                      progress
+                        ? earned
+                          ? progress.earned
+                          : `${progress.hint} · ${progress.done} de ${progress.target}`
+                        : undefined
+                    }
+                    onPress={() => onChange(toggleDecor(style, item))}
                   >
                     <View style={[styles.object, { opacity: on ? 1 : 0.45 }]}>
-                      <DecorPiece decor={decor} still />
+                      <DecorPiece decor={item} still level={progress?.level ?? 0} />
                     </View>
+                    {progress && (
+                      <View style={[styles.track, { backgroundColor: theme.surfaceMuted }]}>
+                        <View
+                          style={{
+                            width: `${Math.round((progress.done / progress.target) * 100)}%`,
+                            height: 4,
+                            borderRadius: 2,
+                            backgroundImage: `linear-gradient(90deg, ${theme.accentStart} 0%, ${theme.accent} 100%)`,
+                          }}
+                        />
+                      </View>
+                    )}
                   </Option>
                 );
               })}
@@ -367,20 +393,27 @@ function LayoutDrawing({ layout }: { layout: (typeof SHELF_LAYOUTS)[number] }) {
           { w: 18, h: 27 },
           { w: 18, h: 27 },
         ]
-      : layout === "stacks"
+      : layout === "mixed"
         ? [
             { w: 7, h: 34 },
-            { w: 9, h: 30 },
-            { w: 22, h: 8 },
+            { w: 18, h: 27 },
+            { w: 20, h: 8 },
             { w: 7, h: 32, lean: true },
           ]
-        : [
-            { w: 7, h: 34 },
-            { w: 9, h: 30 },
-            { w: 6, h: 36 },
-            { w: 8, h: 32 },
-            { w: 7, h: 28 },
-          ];
+        : layout === "stacks"
+          ? [
+              { w: 7, h: 34 },
+              { w: 9, h: 30 },
+              { w: 22, h: 8 },
+              { w: 7, h: 32, lean: true },
+            ]
+          : [
+              { w: 7, h: 34 },
+              { w: 9, h: 30 },
+              { w: 6, h: 36 },
+              { w: 8, h: 32 },
+              { w: 7, h: 28 },
+            ];
   return (
     <View style={[styles.drawing, { borderBottomColor: theme.edge }]}>
       {shapes.map((shape, i) => (
@@ -439,6 +472,7 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   spines: { height: 66, flexDirection: "row", alignItems: "flex-end", gap: 2 },
   object: { height: 64, justifyContent: "flex-end", transform: [{ scale: 0.8 }] },
+  track: { width: 96, height: 4, borderRadius: 2, marginTop: 6, overflow: "hidden" },
   light: { width: "100%", height: 52, borderRadius: 10 },
   drawing: {
     height: 44,

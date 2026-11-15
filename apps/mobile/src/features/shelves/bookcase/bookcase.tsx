@@ -1,14 +1,28 @@
 import {
   type BookcasePiece,
   coverUrl,
+  type DecorLevels,
+  isJustRead,
   layoutBookcase,
+  readingProgress,
   type ShelfStyle,
+  type SpineColors,
   type SpineFinish,
+  type SpineLettering,
+  spineLettering,
 } from "@grimo/core";
 import { Image } from "expo-image";
-import { type ReactNode, useMemo } from "react";
+import { type ComponentRef, type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
-import Animated from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  type DerivedValue,
+  runOnJS,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { Text } from "@/components/ui";
 import { Fonts, shelfBrass } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
@@ -21,25 +35,33 @@ import {
   materialOf,
   modelLook,
   SPINE_GLOSS,
-  spineColor,
-  spineInk,
+  type SpinePaint,
+  spinePaint,
 } from "./look";
 
 /** What a book on the bookcase needs: your own shelf rows and a profile's shelf both fit. */
 export interface ShelfBookItem {
-  entry: { id: string };
+  entry: {
+    id: string;
+    /** With these, a book being read shows its ribbon and one just read shines. */
+    status?: string;
+    currentPage?: number;
+    finishedAt?: number | null;
+  };
   book: {
     title: string;
     coverUrl: string | null;
     openLibraryId: string;
     pageCount?: number | null;
   };
+  /** The spine in its cover's colors, once the backend read them. */
+  spine?: SpineColors | null;
 }
 
 interface Props<T extends ShelfBookItem> {
   items: readonly T[];
   style: ShelfStyle;
-  /** Screen width (the bookcase goes edge to edge). */
+  /** Width of the bookcase. */
   width: number;
   /** At least this tall (the screen), so the furniture always reaches the bottom. */
   minHeight: number;
@@ -49,8 +71,19 @@ interface Props<T extends ShelfBookItem> {
   bottom: number;
   /** On the brass plaque at the foot of the furniture. */
   name: string;
+  /** The reader's own order (entry ids), for "Do meu jeito". */
+  order?: readonly string[];
+  /** What the reader's objects have earned (the lit candle, the grown plant…). */
+  decorLevels?: DecorLevels;
+  /** How the phone is tilted (-1..1): the shelves shift a little inside the frame. */
+  tilt?: SharedValue<number> | DerivedValue<number>;
   selecting?: boolean;
   selected?: readonly string[];
+  /** "Arrumar com a mão": holding a book lifts it, dropping puts it before the book under it. */
+  arranging?: boolean;
+  onMove?: (key: string, before: string | null) => void;
+  /** A book is in the air (the page stops scrolling meanwhile). */
+  onDragging?: (dragging: boolean) => void;
   onPress: (item: T) => void;
   onLongPress?: (item: T) => void;
   /** Books land on their shelves (first visit, or the arrangement just changed). */
@@ -59,14 +92,42 @@ interface Props<T extends ShelfBookItem> {
   empty?: ReactNode;
 }
 
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A mounted `View` (what a ref to one holds). */
+type ViewRef = ComponentRef<typeof View>;
+
+const measure = (view: ViewRef) =>
+  new Promise<Rect>((resolve) => view.measureInWindow((x, y, w, h) => resolve({ x, y, w, h })));
+
+/** What a book needs to be dragged: where the finger is, and what to do at each end. */
+interface Drag<T> {
+  x: SharedValue<number>;
+  y: SharedValue<number>;
+  begin: (item: T) => void;
+  drop: (key: string, x: number, y: number) => void;
+  cancel: () => void;
+  register: (key: string, view: ViewRef | null) => void;
+}
+
+const GHOST = { width: 70, height: 104 };
+
 /**
  * A reader's shelf as a piece of furniture: the model (classic, floating, arch, nichos,
  * library), painted in the chosen material, books laid out by `layoutBookcase` (`@grimo/core`,
- * the same on the web) with their spines, piles or covers, the objects between them and the
- * light over it all. It fills the screen; the page around it scrolls.
+ * the same on the web) with their spines in the colors of their covers, piles or covers, the
+ * objects between them and the light over it all. The book being read has its ribbon out, one
+ * just read shines. It fills the screen; the page around it scrolls.
  */
 export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
-  const { items, style, width, minHeight, top, bottom, name, empty } = props;
+  const { items, style, width, minHeight, top, bottom, name, empty, order, tilt } = props;
+  const { arranging = false, onMove, onDragging } = props;
+  const theme = useTheme();
   const material = materialOf(style);
   const look = modelLook(style, width, top);
   const layout = useMemo(
@@ -76,18 +137,118 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
           key: item.entry.id,
           title: item.book.title,
           pageCount: item.book.pageCount,
+          color: item.spine?.base,
           item,
         })),
         style,
         width,
+        4,
+        order,
       ),
-    [items, style, width],
+    [items, style, width, order],
   );
   const { geometry, rowHeight } = layout;
-  let order = 0;
+  // Each row's books, left to right: where a dropped book lands.
+  const rowKeys = useMemo(
+    () =>
+      layout.rows.map((row) =>
+        row
+          .flat()
+          .flatMap((piece) =>
+            piece.kind === "stack"
+              ? piece.books.map(({ book }) => book.key)
+              : piece.kind === "decor"
+                ? []
+                : [piece.key],
+          ),
+      ),
+    [layout],
+  );
+
+  const root = useRef<ViewRef>(null);
+  const rowViews = useRef<(ViewRef | null)[]>([]);
+  const slots = useRef(new Map<string, ViewRef>());
+  const [lifted, setLifted] = useState<T | null>(null);
+  const fingerX = useSharedValue(0);
+  const fingerY = useSharedValue(0);
+  const originX = useSharedValue(0);
+  const originY = useSharedValue(0);
+
+  // The latest of what a drag needs, so the gestures stay the same while the screen re-renders.
+  const latest = useRef({ rowKeys, onMove, onDragging });
+  latest.current = { rowKeys, onMove, onDragging };
+
+  const begin = useCallback(
+    (item: T) => {
+      latest.current.onDragging?.(true);
+      // The floating cover shows once we know where the bookcase is on the screen.
+      root.current?.measureInWindow((x, y) => {
+        originX.value = x;
+        originY.value = y;
+        setLifted(item);
+      });
+    },
+    [originX, originY],
+  );
+  const cancel = useCallback(() => {
+    setLifted(null);
+    latest.current.onDragging?.(false);
+  }, []);
+  const drop = useCallback(async (key: string, x: number, y: number) => {
+    const { rowKeys, onMove } = latest.current;
+    const rects = await Promise.all(
+      rowKeys.map((_, r) => {
+        const view = rowViews.current[r];
+        return view ? measure(view) : null;
+      }),
+    );
+    // The shelf under the finger (or the nearest one).
+    let target = -1;
+    let nearest = Number.POSITIVE_INFINITY;
+    rects.forEach((rect, r) => {
+      if (!rect) return;
+      const away = y < rect.y ? rect.y - y : y > rect.y + rect.h ? y - rect.y - rect.h : 0;
+      if (away < nearest) {
+        nearest = away;
+        target = r;
+      }
+    });
+    if (target < 0) return;
+    const placed = await Promise.all(
+      rowKeys[target]!.map(async (id) => {
+        const view = slots.current.get(id);
+        return view ? { id, rect: await measure(view) } : null;
+      }),
+    );
+    // Before the first book to the right of the finger; else before the next shelf's first.
+    let before =
+      placed.find((slot) => slot && slot.id !== key && slot.rect.x + slot.rect.w / 2 > x)?.id ??
+      null;
+    for (let r = target + 1; r < rowKeys.length && before === null; r++) {
+      before = rowKeys[r]!.find((id) => id !== key) ?? null;
+    }
+    onMove?.(key, before);
+  }, []);
+  const register = useCallback((key: string, view: ViewRef | null) => {
+    if (view) slots.current.set(key, view);
+    else slots.current.delete(key);
+  }, []);
+  const drag = useMemo<Drag<T> | null>(
+    () => (arranging ? { x: fingerX, y: fingerY, begin, drop, cancel, register } : null),
+    [arranging, fingerX, fingerY, begin, drop, cancel, register],
+  );
+
+  const shift = useAnimatedStyle(() => ({
+    transform: [{ translateX: (tilt?.value ?? 0) * 4 }],
+  }));
+  const ghost = useAnimatedStyle(() => ({
+    left: fingerX.value - originX.value - GHOST.width / 2,
+    top: fingerY.value - originY.value - GHOST.height * 0.7,
+  }));
+  let index = 0;
 
   return (
-    <View style={[{ minHeight }, look.frame]}>
+    <View ref={root} collapsable={false} style={[{ minHeight }, look.frame]}>
       <View style={look.crown}>
         {style.model === "library" && (
           <View style={[styles.lamp, { left: (width - 120) / 2 }]}>
@@ -95,14 +256,21 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
           </View>
         )}
       </View>
-      <View style={[styles.grow, look.inner]}>
+      <Animated.View style={[styles.grow, look.inner, shift]}>
         {style.model === "arch" && (
           <View style={styles.ivy} pointerEvents="none">
             <ArchIvy width={width - geometry.side * 2} />
           </View>
         )}
         {layout.rows.map((row, r) => (
-          <View key={r} style={[styles.row, { gap: geometry.gap }]}>
+          <View
+            key={r}
+            ref={(view) => {
+              rowViews.current[r] = view;
+            }}
+            collapsable={false}
+            style={[styles.row, { gap: geometry.gap }]}
+          >
             {row.map((cell, c) => (
               <View key={c} style={[styles.grow, look.cell]}>
                 <View
@@ -112,9 +280,11 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
                     <Piece
                       key={piece.key}
                       piece={piece}
-                      order={order++}
+                      index={index++}
                       material={material}
                       finish={style.finish}
+                      drag={drag}
+                      liftedId={lifted?.entry.id ?? null}
                       {...props}
                     />
                   ))}
@@ -143,7 +313,7 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
             <LibraryLadder height={Math.min(560, (rowHeight + 22) * 3)} />
           </View>
         )}
-      </View>
+      </Animated.View>
       <View style={[styles.foot, { height: bottom + 70 }]}>
         <View style={styles.plaque}>
           <Text style={styles.plaqueText} numberOfLines={1}>
@@ -151,112 +321,164 @@ export function Bookcase<T extends ShelfBookItem>(props: Props<T>) {
           </Text>
         </View>
       </View>
+      {look.sides && (
+        <>
+          <View
+            pointerEvents="none"
+            style={[styles.side, { left: 0, width: look.sides.width }, look.sides.left]}
+          />
+          <View
+            pointerEvents="none"
+            style={[styles.side, { right: 0, width: look.sides.width }, look.sides.right]}
+          />
+        </>
+      )}
       {look.light && <View pointerEvents="none" style={[StyleSheet.absoluteFill, look.light]} />}
+      {lifted && (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.ghost, { backgroundColor: lifted.spine?.base ?? theme.accent }, ghost]}
+        >
+          {lifted.book.coverUrl ? (
+            <Image
+              source={coverUrl(lifted.book.coverUrl, "M")}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <Text
+              numberOfLines={4}
+              style={[styles.coverTitle, { color: lifted.spine?.ink ?? theme.accentForeground }]}
+            >
+              {lifted.book.title}
+            </Text>
+          )}
+        </Animated.View>
+      )}
     </View>
   );
 }
 
-type Row<T> = { key: string; title: string; pageCount?: number | null; item: T };
+type Row<T> = {
+  key: string;
+  title: string;
+  pageCount?: number | null;
+  color?: string | null;
+  item: T;
+};
 
 function Piece<T extends ShelfBookItem>({
   piece,
-  order,
+  index,
   material,
   finish,
+  drag,
+  liftedId,
+  decorLevels,
   selecting = false,
   selected = [],
+  arranging = false,
   onPress,
   onLongPress,
   animate = false,
 }: Props<T> & {
   piece: BookcasePiece<Row<T>>;
-  order: number;
+  index: number;
   material: Material;
   finish: SpineFinish;
+  drag: Drag<T> | null;
+  liftedId: string | null;
 }) {
-  const entering = animate ? landAt(order) : undefined;
+  const theme = useTheme();
+  const entering = animate ? landAt(index) : undefined;
   if (piece.kind === "decor") {
     return (
       <Animated.View entering={entering} style={styles.object}>
-        <DecorPiece decor={piece.decor} />
+        <DecorPiece decor={piece.decor} level={decorLevels?.[piece.decor] ?? 0} />
       </Animated.View>
     );
   }
   const touch = (item: T) => ({
     selecting,
     picked: selected.includes(item.entry.id),
-    onPress: () => onPress(item),
-    onLongPress: onLongPress && (() => onLongPress(item)),
+    // While arranging, a book is only held and dragged.
+    onPress: arranging ? () => {} : () => onPress(item),
+    onLongPress: arranging || !onLongPress ? undefined : () => onLongPress(item),
   });
+  const paintOf = (item: T, tone: number) => spinePaint(material, tone, finish, item.spine);
+  const held = (item: T) => (liftedId === item.entry.id ? styles.held : null);
+
   if (piece.kind === "stack") {
     return (
       <Animated.View entering={entering} style={styles.stack}>
-        {piece.books.map(({ book, length, thickness, tone, shift }) => (
-          <Touch key={book.key} label={book.title} {...touch(book.item)}>
-            <View
-              style={[
-                styles.lying,
-                {
-                  width: length,
-                  height: thickness,
-                  backgroundColor: spineColor(material, tone, finish === "cover" ? "tone" : finish),
-                  transform: [{ translateX: shift }],
-                },
-              ]}
-            >
-              <View style={[StyleSheet.absoluteFill, styles.lyingGloss]} />
-              {finish === "linen" && <View style={[StyleSheet.absoluteFill, LINEN]} />}
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.lyingTitle,
-                  { color: spineInk(material, tone, finish === "cover" ? "tone" : finish) },
-                ]}
-              >
-                {book.title}
-              </Text>
-            </View>
-          </Touch>
-        ))}
+        {piece.books.map(({ book, length, thickness, tone, shift }) => {
+          const paint = paintOf(book.item, tone);
+          return (
+            <Draggable key={book.key} item={book.item} drag={drag} style={held(book.item)}>
+              <Touch label={book.title} {...touch(book.item)}>
+                <View
+                  style={[
+                    styles.lying,
+                    {
+                      width: length,
+                      height: thickness,
+                      backgroundColor: paint.base,
+                      transform: [{ translateX: shift }],
+                    },
+                    paint.band ? { borderLeftWidth: 6, borderLeftColor: paint.band } : null,
+                  ]}
+                >
+                  <View style={[StyleSheet.absoluteFill, styles.lyingGloss]} />
+                  {finish === "linen" && <View style={[StyleSheet.absoluteFill, LINEN]} />}
+                  <Text numberOfLines={1} style={[styles.lyingTitle, { color: paint.ink }]}>
+                    {book.title}
+                  </Text>
+                </View>
+              </Touch>
+            </Draggable>
+          );
+        })}
       </Animated.View>
     );
   }
+
   const { book } = piece;
+  const paint = paintOf(book.item, piece.tone);
   if (piece.kind === "cover") {
     return (
       <Animated.View entering={entering} style={styles.coverSlot}>
-        <Touch label={book.title} {...touch(book.item)}>
-          <View
-            style={[
-              styles.cover,
-              {
-                width: piece.width,
-                height: piece.height,
-                backgroundColor: spineColor(material, piece.tone, finish),
-              },
-            ]}
-          >
-            {book.item.book.coverUrl ? (
-              <Image
-                source={coverUrl(book.item.book.coverUrl, "M")}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                accessibilityIgnoresInvertColors
-              />
-            ) : (
-              <Text
-                numberOfLines={4}
-                style={[styles.coverTitle, { color: spineInk(material, piece.tone, finish) }]}
-              >
-                {book.title}
-              </Text>
-            )}
-            <View style={[StyleSheet.absoluteFill, styles.coverEdge]} />
-          </View>
-        </Touch>
+        <Draggable item={book.item} drag={drag} style={held(book.item)}>
+          <Touch label={book.title} {...touch(book.item)}>
+            <View
+              style={[
+                styles.cover,
+                { width: piece.width, height: piece.height, backgroundColor: paint.base },
+              ]}
+            >
+              {book.item.book.coverUrl ? (
+                <Image
+                  source={coverUrl(book.item.book.coverUrl, "M")}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  accessibilityIgnoresInvertColors
+                />
+              ) : (
+                <Text numberOfLines={4} style={[styles.coverTitle, { color: paint.ink }]}>
+                  {book.title}
+                </Text>
+              )}
+              <View style={[StyleSheet.absoluteFill, styles.coverEdge]} />
+            </View>
+          </Touch>
+        </Draggable>
       </Animated.View>
     );
   }
+
+  const { entry } = book.item;
+  const reading = entry.status === "reading";
+  const justRead = entry.status === "read" && isJustRead(entry.finishedAt, Date.now());
   return (
     <Animated.View
       entering={entering}
@@ -269,48 +491,144 @@ function Piece<T extends ShelfBookItem>({
         },
       ]}
     >
-      <Touch label={book.title} {...touch(book.item)}>
-        <Spine
-          title={book.title}
-          cover={book.item.book.coverUrl}
-          width={piece.width}
-          height={piece.height}
-          tone={piece.tone}
-          material={material}
-          finish={finish}
-        />
-      </Touch>
+      <Draggable item={book.item} drag={drag} style={held(book.item)}>
+        <Touch label={reading ? `${book.title}, lendo` : book.title} {...touch(book.item)}>
+          <View
+            style={
+              justRead && {
+                boxShadow: `0 0 0 1.5px ${theme.gold}, 0 0 14px 2px ${theme.gold}99`,
+                borderTopLeftRadius: 2,
+                borderTopRightRadius: 2,
+              }
+            }
+          >
+            <Spine
+              title={book.title}
+              width={piece.width}
+              height={piece.height}
+              paint={paint}
+              finish={finish}
+              lettering={spineLettering(book.title)}
+              // Until the cover's colors are read, "Capa do livro" shows the cover's edge.
+              coverEdge={finish === "cover" && !book.item.spine ? book.item.book.coverUrl : null}
+            />
+          </View>
+        </Touch>
+        {justRead && (
+          <Svg
+            width={14}
+            height={14}
+            viewBox="0 0 14 14"
+            style={[styles.sparkle, { left: piece.width / 2 - 7 }]}
+          >
+            <Path d="M7 0l1.6 5.4L14 7l-5.4 1.6L7 14l-1.6-5.4L0 7l5.4-1.6z" fill={theme.gold} />
+          </Svg>
+        )}
+        {reading && (
+          <Ribbon
+            left={piece.width / 2 - 4}
+            progress={readingProgress(entry.currentPage ?? 0, book.item.book.pageCount)}
+          />
+        )}
+      </Draggable>
     </Animated.View>
   );
 }
 
-/** One spine: the cover's edge ("Capa do livro"), or the shelf's tone, linen or leather. */
+/** The ribbon of the book being read, hanging over the shelf: longer the further you are. */
+function Ribbon({ left, progress }: { left: number; progress: number }) {
+  const theme = useTheme();
+  const length = 12 + Math.round(progress * 26);
+  return (
+    <Svg
+      width={8}
+      height={length}
+      pointerEvents="none"
+      style={[styles.ribbon, { left, bottom: -length }]}
+    >
+      <Defs>
+        <LinearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={theme.accentStart} />
+          <Stop offset="1" stopColor={theme.accent} />
+        </LinearGradient>
+      </Defs>
+      <Path d={`M0 0h8v${length}l-4-4-4 4z`} fill="url(#ribbon)" />
+    </Svg>
+  );
+}
+
+/** A book you can hold and drag to another place while arranging; otherwise just the book. */
+function Draggable<T extends ShelfBookItem>({
+  item,
+  drag,
+  style,
+  children,
+}: {
+  item: T;
+  drag: Drag<T> | null;
+  style?: ViewStyle | null;
+  children: ReactNode;
+}) {
+  const id = item.entry.id;
+  const gesture = useMemo(() => {
+    if (!drag) return null;
+    const { x, y, begin, drop, cancel } = drag;
+    return Gesture.Pan()
+      .activateAfterLongPress(220)
+      .onStart((event) => {
+        x.value = event.absoluteX;
+        y.value = event.absoluteY;
+        runOnJS(begin)(item);
+      })
+      .onUpdate((event) => {
+        x.value = event.absoluteX;
+        y.value = event.absoluteY;
+      })
+      .onEnd((event) => {
+        runOnJS(drop)(id, event.absoluteX, event.absoluteY);
+      })
+      .onFinalize(() => {
+        runOnJS(cancel)();
+      });
+  }, [drag, item, id]);
+  if (!drag || !gesture) return <View style={style}>{children}</View>;
+  return (
+    <GestureDetector gesture={gesture}>
+      <View ref={(view) => drag.register(id, view)} collapsable={false} style={style}>
+        {children}
+      </View>
+    </GestureDetector>
+  );
+}
+
+/**
+ * One spine, painted: in the colors of its cover (a band at the head, the title in the book's
+ * own lettering), or in the shelf's tone, linen or leather.
+ */
 export function Spine({
   title,
-  cover,
   width,
   height,
-  tone,
-  material,
+  paint,
   finish,
+  lettering = "serif",
+  coverEdge = null,
 }: {
   title: string;
-  cover: string | null;
   width: number;
   height: number;
-  tone: number;
-  material: Material;
+  paint: SpinePaint;
   finish: SpineFinish;
+  lettering?: SpineLettering;
+  /** A cover to show the edge of instead of a painted spine. */
+  coverEdge?: string | null;
 }) {
-  const ownColor = finish !== "cover" || !cover;
-  const paint: SpineFinish = finish === "cover" ? "tone" : finish;
+  const size = width < 27 ? 10 : 11.5;
   return (
-    <View
-      style={[styles.spine, { width, height, backgroundColor: spineColor(material, tone, paint) }]}
-    >
-      {!ownColor && cover && (
+    <View style={[styles.spine, { width, height, backgroundColor: paint.base }]}>
+      {coverEdge && (
         <Image
-          source={coverUrl(cover, "M")}
+          source={coverUrl(coverEdge, "M")}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           contentPosition="left"
@@ -319,19 +637,28 @@ export function Spine({
       )}
       {finish === "linen" && <View style={[StyleSheet.absoluteFill, LINEN]} />}
       {finish === "leather" && <GoldBands />}
+      {paint.band && !coverEdge && (
+        <>
+          <View style={[styles.headBand, { backgroundColor: paint.band }]} />
+          <View style={[styles.mark, { left: width / 2 - 3.5, borderColor: paint.ink }]} />
+        </>
+      )}
       <View style={[StyleSheet.absoluteFill, SPINE_GLOSS]} />
-      {ownColor && (
+      {!coverEdge && (
         <View
           style={[
             styles.vertical,
             { width: height, height: width, left: (width - height) / 2, top: (height - width) / 2 },
+            paint.band ? styles.verticalBanded : null,
           ]}
         >
           <Text
             numberOfLines={1}
             style={[
-              styles.spineTitle,
-              { color: spineInk(material, tone, paint), fontSize: width < 27 ? 10 : 11.5 },
+              { color: paint.ink, fontSize: size, fontFamily: Fonts.serif },
+              lettering === "mono" && { fontFamily: Fonts.monoBold, fontSize: size - 1.5 },
+              lettering === "caps" && styles.caps,
+              lettering === "caps" && { fontSize: size - 1.5 },
             ]}
           >
             {title}
@@ -410,7 +737,8 @@ function Touch({
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   row: { flexDirection: "row" },
-  books: { flexDirection: "row", alignItems: "flex-end" },
+  // Above the plank under it, so a ribbon can hang over the shelf.
+  books: { flexDirection: "row", alignItems: "flex-end", zIndex: 2 },
   empty: {
     position: "absolute",
     top: 0,
@@ -431,6 +759,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: "5deg" }],
     transformOrigin: "top",
   },
+  side: { position: "absolute", top: 0, bottom: 0 },
   foot: { alignItems: "center", paddingTop: 14 },
   plaque: {
     height: 20,
@@ -483,6 +812,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     boxShadow: "1px 0 0 rgba(0,0,0,0.14)",
   },
+  headBand: { position: "absolute", left: 0, right: 0, top: 9, height: 8 },
+  mark: {
+    position: "absolute",
+    bottom: 9,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    opacity: 0.7,
+  },
   band: { position: "absolute", left: 0, right: 0, backgroundColor: shelfBrass.base },
   vertical: {
     position: "absolute",
@@ -491,7 +830,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     transform: [{ rotate: "-90deg" }],
   },
-  spineTitle: { fontFamily: Fonts.serif },
+  // Room for the band at the head and the mark at the foot.
+  verticalBanded: { paddingHorizontal: 24 },
+  caps: { fontFamily: Fonts.sansHeavy, textTransform: "uppercase", letterSpacing: 0.8 },
+  ribbon: { position: "absolute", zIndex: 3 },
+  sparkle: { position: "absolute", top: -18 },
+  held: { opacity: 0.25 },
+  ghost: {
+    position: "absolute",
+    zIndex: 50,
+    width: GHOST.width,
+    height: GHOST.height,
+    borderRadius: 4,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+    padding: 8,
+    transform: [{ rotate: "6deg" }],
+    boxShadow: "0 22px 30px rgba(0,0,0,0.35)",
+  },
   check: {
     position: "absolute",
     top: 4,

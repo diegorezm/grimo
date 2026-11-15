@@ -44,9 +44,10 @@ export const bookView = (book: Doc<"books">) => ({
 });
 
 /**
- * `{ entry, book }` rows for these entries (entries whose book is gone are dropped). The book's
- * `pageCount` is the reader's edition, so progress is right wherever the row is shown. With
- * `viewerId` (someone else's shelf), books that viewer can't see are left out.
+ * `{ entry, book, spine }` rows for these entries (entries whose book is gone are dropped). The
+ * book's `pageCount` is the reader's edition, so progress is right wherever the row is shown;
+ * `spine` is the spine in the cover's colors, once read. With `viewerId` (someone else's
+ * shelf), books that viewer can't see are left out.
  */
 export async function withBooks(
   ctx: QueryCtx | MutationCtx,
@@ -59,7 +60,11 @@ export async function withBooks(
       if (!book) return null;
       if (viewerId !== undefined && !isBookVisible(book, viewerId)) return null;
       const pageCount = editionPages(entry.pageCount, book.pageCount);
-      return { entry: entryView(entry), book: { ...bookView(book), pageCount } };
+      return {
+        entry: entryView(entry),
+        book: { ...bookView(book), pageCount },
+        spine: book.spine ?? null,
+      };
     }),
   );
   return rows.filter((row) => row !== null);

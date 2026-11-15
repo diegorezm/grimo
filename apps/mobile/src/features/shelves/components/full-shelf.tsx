@@ -52,6 +52,8 @@ export function FullShelf({ username, shelf }: { username: string; shelf: string
               <Bookcase
                 items={data.runs[0].items}
                 style={data.style}
+                order={data.order}
+                decorLevels={data.decorLevels}
                 width={width - spacing[5] * 2}
                 minHeight={0}
                 top={24}

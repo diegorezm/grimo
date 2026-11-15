@@ -22,6 +22,7 @@ import type * as legal from "../legal.js";
 import type * as migrations from "../migrations.js";
 import type * as model_bookStats from "../model/bookStats.js";
 import type * as model_content from "../model/content.js";
+import type * as model_decor from "../model/decor.js";
 import type * as model_email from "../model/email.js";
 import type * as model_env from "../model/env.js";
 import type * as model_errors from "../model/errors.js";
@@ -71,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   "model/bookStats": typeof model_bookStats;
   "model/content": typeof model_content;
+  "model/decor": typeof model_decor;
   "model/email": typeof model_email;
   "model/env": typeof model_env;
   "model/errors": typeof model_errors;

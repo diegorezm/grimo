@@ -97,7 +97,7 @@ export function useSetShelfStyle() {
     onMutate: ({ id, style }) =>
       patchQueries<MyShelves>(myShelvesKey, (data) =>
         id === undefined
-          ? { ...data, all: { style } }
+          ? { ...data, all: { ...data.all, style } }
           : {
               ...data,
               items: data.items.map((shelf) => (shelf.id === id ? { ...shelf, style } : shelf)),
@@ -105,6 +105,37 @@ export function useSetShelfStyle() {
       ),
     onError: (_error, _input, rollback) => rollback?.(),
   });
+}
+
+/** Your own order of a shelf's books ("Do meu jeito"); no `id`: "Todos os meus livros". */
+export function useSetShelfOrder() {
+  const { convex } = useConvexCache();
+  const patchQueries = usePatchQueries();
+  return useMutation({
+    mutationFn: (input: { id?: string; entryIds: string[] }) =>
+      convex.mutation(api.bookshelves.setOrder, input),
+    onMutate: ({ id, entryIds }) =>
+      patchQueries<MyShelves>(myShelvesKey, (data) =>
+        id === undefined
+          ? { ...data, all: { ...data.all, order: entryIds } }
+          : {
+              ...data,
+              items: data.items.map((shelf) =>
+                shelf.id === id ? { ...shelf, order: entryIds } : shelf,
+              ),
+            },
+      ),
+    onError: (_error, _input, rollback) => rollback?.(),
+  });
+}
+
+/** What the objects on your shelves earn with your reading, and how far each is. */
+export function shelfDecorQuery() {
+  return convexQuery(api.bookshelves.decor, {}, "required");
+}
+
+export function useShelfDecor() {
+  return useQuery(shelfDecorQuery());
 }
 
 export function useRemoveShelf() {

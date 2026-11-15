@@ -1,6 +1,7 @@
 import type { ShelfDecor } from "@grimo/core";
 import { SHELF_DECOR_LABELS } from "@grimo/core";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -14,8 +15,10 @@ import { shelfBrass, shelfDecorColors } from "@/constants/theme";
 
 /**
  * The objects that stand between the books. Drawn here (they are the reader's things, in their
- * own colors), each with a small loop: the plant sways, the candle glows, the star twinkles.
- * `still` draws them without motion (thumbnails, the editor's tiles).
+ * own colors). Each comes alive with reading (`level`, from `decorProgress` in `@grimo/core`):
+ * the candle lights and can be blown out with a tap, the plant grows, the mug steams, the star
+ * twinkles, the globe turns, the frame gets the group's picture. `still` draws them without
+ * motion (thumbnails, the editor's tiles).
  */
 
 const {
@@ -55,10 +58,17 @@ function useLoop(ms: number, still: boolean) {
   return t;
 }
 
-function Plant({ still }: { still: boolean }) {
+function Plant({ still, level }: { still: boolean; level: number }) {
   const t = useLoop(2300, still);
+  // It grows from the pot: a little bigger with each level.
+  const size = 1 + Math.min(level, 3) * 0.14;
   const sway = useAnimatedStyle(() => ({
-    transform: [{ translateY: 24 }, { rotate: `${-3 + t.value * 6}deg` }, { translateY: -24 }],
+    transform: [
+      { translateY: 24 },
+      { rotate: `${-3 + t.value * 6}deg` },
+      { scale: size },
+      { translateY: -24 },
+    ],
   }));
   return (
     <Animated.View style={{ width: 46, height: 78 }}>
@@ -67,6 +77,7 @@ function Plant({ still }: { still: boolean }) {
           <Path d="M23 48C21 34 12 26 4 24c2 10 9 20 19 24z" fill={LEAF} />
           <Path d="M23 48c2-14 11-22 19-24-2 10-9 20-19 24z" fill={LEAF_LIGHT} />
           <Path d="M23 48C22 30 24 14 30 4c4 12 1 30-7 44z" fill={LEAF_DARK} />
+          {level >= 3 && <Circle cx={30} cy={7} r={4} fill={BLOSSOM} />}
         </Svg>
       </Animated.View>
       <Svg width={46} height={78} viewBox="0 0 46 78" style={{ position: "absolute" }}>
@@ -77,26 +88,45 @@ function Plant({ still }: { still: boolean }) {
   );
 }
 
-function Candle({ still }: { still: boolean }) {
-  const t = useLoop(1200, still);
+function Candle({ still, level }: { still: boolean; level: number }) {
+  const earned = level > 0;
+  const [blownOut, setBlownOut] = useState(false);
+  const lit = earned && !blownOut;
+  const t = useLoop(1200, still || !lit);
   const glow = useAnimatedStyle(() => ({ opacity: 0.45 + t.value * 0.45 }));
   const flame = useAnimatedStyle(() => ({
     transform: [{ scaleX: 1 - t.value * 0.12 }, { scaleY: 0.94 + t.value * 0.12 }],
   }));
-  return (
+  const candle = (
     <Animated.View style={{ width: 28, height: 62 }}>
-      <Animated.View style={[{ position: "absolute", left: 2, top: 1 }, glow]}>
-        <Svg width={24} height={24}>
-          <Circle cx={12} cy={12} r={12} fill={GLOW} />
-        </Svg>
-      </Animated.View>
-      <Animated.View style={[{ position: "absolute", left: 9, top: 4 }, flame]}>
-        <Svg width={10} height={15} viewBox="9 4 10 15">
-          <Path d="M14 4c3 4 5 7 5 10a5 5 0 0 1-10 0c0-3 2-6 5-10z" fill={FLAME} />
-          <Path d="M14 10c1.4 2 2 3.4 2 4.6a2 2 0 0 1-4 0c0-1.2.6-2.6 2-4.6z" fill={FLAME_CORE} />
-        </Svg>
-      </Animated.View>
+      {lit && (
+        <>
+          <Animated.View style={[{ position: "absolute", left: 2, top: 1 }, glow]}>
+            <Svg width={24} height={24}>
+              <Circle cx={12} cy={12} r={12} fill={GLOW} />
+            </Svg>
+          </Animated.View>
+          <Animated.View style={[{ position: "absolute", left: 9, top: 4 }, flame]}>
+            <Svg width={10} height={15} viewBox="9 4 10 15">
+              <Path d="M14 4c3 4 5 7 5 10a5 5 0 0 1-10 0c0-3 2-6 5-10z" fill={FLAME} />
+              <Path
+                d="M14 10c1.4 2 2 3.4 2 4.6a2 2 0 0 1-4 0c0-1.2.6-2.6 2-4.6z"
+                fill={FLAME_CORE}
+              />
+            </Svg>
+          </Animated.View>
+        </>
+      )}
       <Svg width={28} height={62} viewBox="0 0 28 62" style={{ position: "absolute" }}>
+        {earned && !lit && (
+          <Path
+            d="M14 16c-3-3 3-5 0-8s2-4 1-6"
+            fill="none"
+            stroke={STEAM}
+            strokeWidth={1.4}
+            strokeLinecap="round"
+          />
+        )}
         <Path d="M14 18v4" stroke={INK} strokeWidth={1.4} />
         <Rect x={7} y={22} width={14} height={36} rx={2} fill={WAX} />
         <Path d="M7 26c3 2 5-1 7 1s4 3 7 0" fill="none" stroke={WAX_DRIP} strokeWidth={1.4} />
@@ -104,39 +134,67 @@ function Candle({ still }: { still: boolean }) {
       </Svg>
     </Animated.View>
   );
+  if (!earned || still) return candle;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={lit ? "Apagar a vela" : "Acender a vela"}
+      hitSlop={10}
+      onPress={() => setBlownOut((off) => !off)}
+    >
+      {candle}
+    </Pressable>
+  );
 }
 
-function Frame() {
+function Frame({ level }: { level: number }) {
   return (
     <Svg width={48} height={60} viewBox="0 0 48 60" style={{ transform: [{ rotate: "-4deg" }] }}>
       <Rect x={2} y={2} width={44} height={56} rx={3} fill={shelfBrass.base} />
       <Rect x={7} y={7} width={34} height={46} rx={1} fill={MIST} />
-      <Circle cx={31} cy={18} r={5} fill={BLUSH} />
-      <Path d="M7 45l10-12 8 8 6-6 10 10v8H7z" fill={LILAC} />
-      <Path d="M7 49l12-9 10 6 12-7v14H7z" fill={POT} />
+      {level > 0 ? (
+        // The group's picture: three readers side by side.
+        <>
+          <Circle cx={16} cy={26} r={5} fill={LILAC} />
+          <Circle cx={24} cy={22} r={5.5} fill={POT} />
+          <Circle cx={32} cy={26} r={5} fill={LEAF} />
+          <Path d="M7 53V42c0-6 4-9 9-9s8 3 8 8v12z" fill={LILAC} />
+          <Path d="M24 53V41c0-5 3-8 8-8s9 3 9 9v11z" fill={LEAF} />
+          <Path d="M15 53V40c0-6 4-10 9-10s9 4 9 10v13z" fill={POT} />
+        </>
+      ) : (
+        <>
+          <Circle cx={31} cy={18} r={5} fill={BLUSH} />
+          <Path d="M7 45l10-12 8 8 6-6 10 10v8H7z" fill={LILAC} />
+          <Path d="M7 49l12-9 10 6 12-7v14H7z" fill={POT} />
+        </>
+      )}
     </Svg>
   );
 }
 
-function Mug({ still }: { still: boolean }) {
-  const t = useLoop(1800, still);
+function Mug({ still, level }: { still: boolean; level: number }) {
+  const hot = level > 0;
+  const t = useLoop(1800, still || !hot);
   const steam = useAnimatedStyle(() => ({
     opacity: 0.3 + (1 - t.value) * 0.6,
     transform: [{ translateY: -t.value * 4 }],
   }));
   return (
     <Animated.View style={{ width: 38, height: 50 }}>
-      <Animated.View style={[{ position: "absolute", left: 0, top: 0 }, steam]}>
-        <Svg width={38} height={16} viewBox="0 0 38 16">
-          <Path
-            d="M12 14c-3-3 3-5 0-9M19 14c-3-3 3-5 0-9"
-            fill="none"
-            stroke={STEAM}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-          />
-        </Svg>
-      </Animated.View>
+      {hot && (
+        <Animated.View style={[{ position: "absolute", left: 0, top: 0 }, steam]}>
+          <Svg width={38} height={16} viewBox="0 0 38 16">
+            <Path
+              d="M12 14c-3-3 3-5 0-9M19 14c-3-3 3-5 0-9"
+              fill="none"
+              stroke={STEAM}
+              strokeWidth={1.6}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </Animated.View>
+      )}
       <Svg width={38} height={50} viewBox="0 0 38 50" style={{ position: "absolute" }}>
         <Path d="M27 24h3a6 6 0 0 1 0 12h-3" fill="none" stroke={LILAC} strokeWidth={3} />
         <Path d="M4 18h24v24a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6z" fill={LILAC} />
@@ -147,9 +205,11 @@ function Mug({ still }: { still: boolean }) {
   );
 }
 
-function Star({ still }: { still: boolean }) {
-  const t = useLoop(1300, still);
+function Star({ still, level }: { still: boolean; level: number }) {
+  const shining = level > 0;
+  const t = useLoop(1300, still || !shining);
   const twinkle = useAnimatedStyle(() => ({
+    opacity: shining ? 1 : 0.6,
     transform: [{ scale: 1 - t.value * 0.22 }, { rotate: `${t.value * 45}deg` }],
   }));
   return (
@@ -158,7 +218,7 @@ function Star({ still }: { still: boolean }) {
         <Svg width={24} height={24} viewBox="3 2 24 24">
           <Path
             d="M15 2l3.2 8.6L27 14l-8.8 3.2L15 26l-3.2-8.8L3 14l8.8-3.4z"
-            fill={shelfBrass.base}
+            fill={shining ? shelfBrass.light : shelfBrass.base}
           />
         </Svg>
       </Animated.View>
@@ -170,28 +230,67 @@ function Star({ still }: { still: boolean }) {
   );
 }
 
-function Globe() {
+function Globe({ still, level }: { still: boolean; level: number }) {
+  const t = useLoop(2600, still || level === 0);
+  // Turning on its stand: the land slides across the sea.
+  const spin = useAnimatedStyle(() => ({ transform: [{ translateX: -6 + t.value * 12 }] }));
   return (
-    <Svg width={44} height={62} viewBox="0 0 44 62">
-      <Circle cx={22} cy={24} r={17} fill={SEA} />
-      <G fill="none" stroke={LEAF} strokeWidth={4} strokeLinecap="round">
-        <Path d="M12 14c6 2 8 8 4 12s2 8 6 10M28 10c-2 6 4 8 8 6M30 30c-4 2-4 6 0 8" />
-      </G>
-      <Path d="M4 24a18 18 0 0 0 36 0" fill="none" stroke={shelfBrass.base} strokeWidth={2.5} />
-      <Path d="M22 42v10M12 56h20" stroke={shelfBrass.base} strokeWidth={3} strokeLinecap="round" />
-    </Svg>
+    <Animated.View style={{ width: 44, height: 62 }}>
+      <Svg width={44} height={62} viewBox="0 0 44 62" style={{ position: "absolute" }}>
+        <Circle cx={22} cy={24} r={17} fill={SEA} />
+      </Svg>
+      <Animated.View style={styles.globe}>
+        <Animated.View style={spin}>
+          <Svg width={34} height={34} viewBox="5 7 34 34">
+            <G fill="none" stroke={LEAF} strokeWidth={4} strokeLinecap="round">
+              <Path d="M12 14c6 2 8 8 4 12s2 8 6 10M28 10c-2 6 4 8 8 6M30 30c-4 2-4 6 0 8" />
+            </G>
+          </Svg>
+        </Animated.View>
+      </Animated.View>
+      <Svg width={44} height={62} viewBox="0 0 44 62" style={{ position: "absolute" }}>
+        <Path d="M4 24a18 18 0 0 0 36 0" fill="none" stroke={shelfBrass.base} strokeWidth={2.5} />
+        <Path
+          d="M22 42v10M12 56h20"
+          stroke={shelfBrass.base}
+          strokeWidth={3}
+          strokeLinecap="round"
+        />
+      </Svg>
+    </Animated.View>
   );
 }
 
-export function DecorPiece({ decor, still = false }: { decor: ShelfDecor; still?: boolean }) {
+const styles = StyleSheet.create({
+  globe: {
+    position: "absolute",
+    left: 5,
+    top: 7,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: "hidden",
+  },
+});
+
+export function DecorPiece({
+  decor,
+  still = false,
+  level = 0,
+}: {
+  decor: ShelfDecor;
+  still?: boolean;
+  /** What the reader's reading has earned for it (0: as it comes). */
+  level?: number;
+}) {
   return (
     <Animated.View accessible accessibilityLabel={SHELF_DECOR_LABELS[decor]}>
-      {decor === "plant" && <Plant still={still} />}
-      {decor === "candle" && <Candle still={still} />}
-      {decor === "frame" && <Frame />}
-      {decor === "mug" && <Mug still={still} />}
-      {decor === "star" && <Star still={still} />}
-      {decor === "globe" && <Globe />}
+      {decor === "plant" && <Plant still={still} level={level} />}
+      {decor === "candle" && <Candle still={still} level={level} />}
+      {decor === "frame" && <Frame level={level} />}
+      {decor === "mug" && <Mug still={still} level={level} />}
+      {decor === "star" && <Star still={still} level={level} />}
+      {decor === "globe" && <Globe still={still} level={level} />}
     </Animated.View>
   );
 }

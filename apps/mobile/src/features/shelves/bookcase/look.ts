@@ -1,4 +1,4 @@
-import { bookcaseGeometry, type ShelfStyle, type SpineFinish } from "@grimo/core";
+import { bookcaseGeometry, type ShelfStyle, type SpineColors, type SpineFinish } from "@grimo/core";
 import type { ViewStyle } from "react-native";
 import { shelfBrass, shelfMaterials } from "@/constants/theme";
 
@@ -41,6 +41,33 @@ export function spineInk(material: Material, tone: number, finish: SpineFinish) 
   return lightness(material.tones[tone % material.tones.length]!) > 0.62
     ? shelfBrass.ink
     : shelfBrass.paper;
+}
+
+/** What a spine is painted with. */
+export interface SpinePaint {
+  base: string;
+  /** The band at the head of the spine (only spines in their cover's colors have one). */
+  band: string | null;
+  ink: string;
+}
+
+/**
+ * A spine's paint: with "Capa do livro" and the cover's colors known, the book's own; else one
+ * of the material's tones (plain, linen or leather).
+ */
+export function spinePaint(
+  material: Material,
+  tone: number,
+  finish: SpineFinish,
+  colors?: SpineColors | null,
+): SpinePaint {
+  if (finish === "cover" && colors) return colors;
+  const paint: SpineFinish = finish === "cover" ? "tone" : finish;
+  return {
+    base: spineColor(material, tone, paint),
+    band: null,
+    ink: spineInk(material, tone, paint),
+  };
 }
 
 /** Light on a round spine: bright on the left edge, shadow on the right. */
@@ -109,6 +136,8 @@ export interface ModelLook {
   light: ViewStyle | null;
   /** Lit from above (luminária): a glow under each plank. */
   rowLight: ViewStyle | null;
+  /** The furniture's sides seen a little from the front (depth); null: no sides. */
+  sides: { width: number; left: ViewStyle; right: ViewStyle } | null;
 }
 
 /** Everything that changes with the model and the light. `top` is the room for the header. */
@@ -138,6 +167,20 @@ export function modelLook(style: ShelfStyle, width: number, top: number): ModelL
     },
     light: null,
     rowLight: null,
+    sides:
+      style.model === "classic" || style.model === "library"
+        ? {
+            width: g.side,
+            left: {
+              backgroundImage:
+                "linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(0,0,0,0.16) 100%)",
+            },
+            right: {
+              backgroundImage:
+                "linear-gradient(270deg, rgba(255,255,255,0.3) 0%, rgba(0,0,0,0.16) 100%)",
+            },
+          }
+        : null,
   };
 
   if (style.model === "floating") {

@@ -10,4 +10,7 @@ crons.daily(
   internal.books.purgeExpiredCaches,
 );
 
+// New books get their spine painted in the colors of their cover.
+crons.interval("paint book spines", { minutes: 3 }, internal.books.paintSpines, {});
+
 export default crons;

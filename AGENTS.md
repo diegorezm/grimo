@@ -21,6 +21,8 @@ Contexto de produto e setup estão no [README.md](README.md).
 | Onboarding (primeiro acesso)             | `apps/web/src/features/onboarding/` (`/onboarding` + checklist), `useOnboardingChecklist` no client |
 | Juntos (ler em grupo)                    | `convex/groups.ts` + `model/groups.ts`, `@grimo/core` `groups/`, web `features/groups` (`/juntos`, convite público `/j/<código>`), mobile aba `juntos` + `group/[id]` |
 | Visual da estante (modelos, cores, enfeites, estilos prontos) | `@grimo/core` `shelves/style.ts` (opções, presets, `layoutBookcase`), tokens `shelfMaterials`, mobile `features/shelves/bookcase/` + `customize-sheet.tsx`; salvo por `bookshelves.setStyle` |
+| Lombada na cor da capa                   | `@grimo/core` `shelves/palette.ts` (`spinePalette`), cron `books.paintSpines` (lê a capa uma vez, grava `books.spine`), sai em `withBooks` como `spine` |
+| Ordem "Do meu jeito", enfeites conquistados, shelfie | `bookshelves.setOrder` / `bookshelves.decor` + `model/decor.ts`, `@grimo/core` `shelves/decor.ts` (`decorProgress`), mobile `bookcase.tsx` (arrastar), `shelfie-sheet.tsx` |
 | Importar estantes (Goodreads)            | `@grimo/core` `imports/` (lê o CSV), `convex/imports.ts` (Open Library em lotes, `importToShelf` sem feed), web `/importar` |
 | Moderação (denúncias, livros cadastrados) | `convex/moderation.ts` (`queue`, `act`, `decideBook`, `log`; convites de moderador em `convex/moderators.ts` (24 h, só admin convida); papéis também via `npx convex run moderation:setAdmin` / `setModerator`; suspensão com prazo e motivo; limites em `canModerate`), web `/admin` |
 | Variável do deployment (SITE_URL…)       | `packages/backend/convex/model/env.ts` + `npx convex env set` |

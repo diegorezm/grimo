@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hueOf, type SpineLettering } from "./palette";
 import { titleHash } from "./spine";
 
 /**
@@ -47,18 +48,20 @@ export const SPINE_FINISH_LABELS: Record<SpineFinish, { name: string; hint: stri
   leather: { name: "Couro e ouro", hint: "Filetes dourados" },
 };
 
-export const SHELF_LAYOUTS = ["standing", "stacks", "covers"] as const;
+export const SHELF_LAYOUTS = ["standing", "stacks", "mixed", "covers"] as const;
 export type ShelfLayout = (typeof SHELF_LAYOUTS)[number];
 export const SHELF_LAYOUT_LABELS: Record<ShelfLayout, string> = {
   standing: "Em pé",
   stacks: "Com pilhas",
+  mixed: "Misturado",
   covers: "Capas",
 };
 
-export const SHELF_SORTS = ["added", "rainbow", "height"] as const;
+export const SHELF_SORTS = ["added", "manual", "rainbow", "height"] as const;
 export type ShelfSort = (typeof SHELF_SORTS)[number];
 export const SHELF_SORT_LABELS: Record<ShelfSort, string> = {
   added: "Como coloquei",
+  manual: "Do meu jeito",
   rainbow: "Arco-íris",
   height: "Altura",
 };
@@ -122,7 +125,7 @@ export const SHELF_PRESETS: readonly ShelfPreset[] = [
       model: "classic",
       material: "paper",
       finish: "cover",
-      layout: "stacks",
+      layout: "mixed",
       sort: "added",
       decor: ["plant", "star"],
       light: "day",
@@ -251,15 +254,9 @@ export function sameStyle(a: ShelfStyle, b: ShelfStyle) {
   );
 }
 
-/**
- * One choice applied to a style. The rainbow follows the spines' colors, which only the
- * shelf's own tones have (a cover's colors aren't known), so they go together.
- */
+/** One choice applied to a style. */
 export function applyShelfChoice(style: ShelfStyle, patch: Partial<ShelfStyle>): ShelfStyle {
-  const next = { ...style, ...patch };
-  if (patch.sort === "rainbow" && next.finish === "cover") next.finish = "tone";
-  if (patch.finish === "cover" && next.sort === "rainbow") next.sort = "added";
-  return next;
+  return { ...style, ...patch };
 }
 
 /** Turns one object on or off. */
@@ -307,6 +304,13 @@ export function spineSize(title: string, pageCount: number | null | undefined): 
   };
 }
 
+/** How a spine's title is set: the same book, the same lettering. */
+export function spineLettering(title: string): SpineLettering {
+  return (["serif", "serif", "caps", "mono", "serif", "caps"] as const)[
+    (titleHash(title) >> 5) % 6
+  ]!;
+}
+
 /**
  * The furniture's measures for a screen `width` (points), shared by web and mobile so the same
  * shelf holds the same books: `side` is the frame on each side, `pad` the room inside a
@@ -330,6 +334,8 @@ export interface BookcaseBook {
   key: string;
   title: string;
   pageCount?: number | null;
+  /** The spine's own color (from the cover), when known: the rainbow follows it. */
+  color?: string | null;
 }
 
 export type BookcasePiece<T> =
@@ -365,6 +371,8 @@ const GAP_OBJECT = 12;
 /** Every third book after the sixth of each nine lies down in a pile ("Com pilhas"). */
 const STACK_EVERY = 9;
 const STACK_AT = 6;
+/** "Misturado": the third book of each nine faces out, like in a bookshop. */
+const FACE_OUT_AT = 2;
 
 function widthOf(piece: { kind: BookcasePiece<unknown>["kind"]; width: number }) {
   return (
@@ -373,15 +381,55 @@ function widthOf(piece: { kind: BookcasePiece<unknown>["kind"]; width: number })
   );
 }
 
-function sortBooks<T extends BookcaseBook>(books: readonly T[], sort: ShelfSort) {
+/**
+ * The reader's own order ("Do meu jeito"): the books in `order` first, as arranged; books not in
+ * it yet (just added) go in front, as they came.
+ */
+export function applyManualOrder<T extends { key: string }>(
+  books: readonly T[],
+  order: readonly string[],
+): T[] {
+  const place = new Map(order.map((key, index) => [key, index]));
+  const placed = books.filter((book) => place.has(book.key));
+  placed.sort((a, b) => place.get(a.key)! - place.get(b.key)!);
+  return [...books.filter((book) => !place.has(book.key)), ...placed];
+}
+
+/** `keys` with `key` taken out and put back before `before` (null: at the end). */
+export function moveInOrder(keys: readonly string[], key: string, before: string | null) {
+  if (key === before) return [...keys];
+  const rest = keys.filter((item) => item !== key);
+  const at = before === null ? -1 : rest.indexOf(before);
+  if (at < 0) return [...rest, key];
+  return [...rest.slice(0, at), key, ...rest.slice(at)];
+}
+
+function sortBooks<T extends BookcaseBook>(
+  books: readonly T[],
+  sort: ShelfSort,
+  order: readonly string[],
+) {
   if (sort === "added") return [...books];
+  if (sort === "manual") return applyManualOrder(books, order);
   const sized = books.map((book) => ({ book, size: spineSize(book.title, book.pageCount) }));
+  // Rainbow: by the cover's own hue when known, else by the shelf's tone.
+  const hue = (item: (typeof sized)[number]) =>
+    item.book.color ? hueOf(item.book.color) : (item.size.tone * 360) / SPINE_TONES;
   sized.sort((a, b) =>
     sort === "rainbow"
-      ? a.size.tone - b.size.tone || a.book.title.localeCompare(b.book.title)
+      ? hue(a) - hue(b) || a.book.title.localeCompare(b.book.title)
       : b.size.height - a.size.height || b.size.width - a.size.width,
   );
   return sized.map(({ book }) => book);
+}
+
+/** The books' keys in the order this style shows them (where "Do meu jeito" starts from). */
+export function shelfOrderOf<T extends BookcaseBook>(
+  books: readonly T[],
+  style: ShelfStyle,
+  order: readonly string[] = [],
+) {
+  return sortBooks(books, style.sort, order).map((book) => book.key);
 }
 
 /**
@@ -394,16 +442,20 @@ export function layoutBookcase<T extends BookcaseBook>(
   style: ShelfStyle,
   width: number,
   minRows = 4,
+  /** The reader's own order (entry keys), for "Do meu jeito". */
+  order: readonly string[] = [],
 ): Bookcase<T> {
   const geometry = bookcaseGeometry(style.model, width);
   const cap = geometry.capacity;
   const small = geometry.cells > 1;
   const covers = style.layout === "covers";
-  const ordered = sortBooks(books, style.sort);
+  const mixed = style.layout === "mixed";
+  const piles = style.layout === "stacks" || mixed;
+  const ordered = sortBooks(books, style.sort, order);
 
   const pieces: BookcasePiece<T>[] = [];
   for (let i = 0; i < ordered.length; ) {
-    if (style.layout === "stacks" && i % STACK_EVERY === STACK_AT && i + 2 < ordered.length) {
+    if (piles && i % STACK_EVERY === STACK_AT && i + 2 < ordered.length) {
       const pile = ordered.slice(i, i + 3).map((book, k) => {
         const size = spineSize(book.title, book.pageCount);
         return {
@@ -427,7 +479,7 @@ export function layoutBookcase<T extends BookcaseBook>(
     const book = ordered[i]!;
     const size = spineSize(book.title, book.pageCount);
     pieces.push(
-      covers
+      covers || (mixed && i % STACK_EVERY === FACE_OUT_AT)
         ? {
             kind: "cover",
             key: book.key,
@@ -487,8 +539,8 @@ export function layoutBookcase<T extends BookcaseBook>(
     cell.used += widthOf(piece);
   });
 
-  // "Com pilhas": the last book of a shelf with room to spare leans on its neighbor.
-  if (style.layout === "stacks") {
+  // With piles: the last book of a shelf with room to spare leans on its neighbor.
+  if (piles) {
     for (const cell of cells) {
       const last = cell.pieces[cell.pieces.length - 1];
       if (last?.kind === "book" && cap - cell.used > 24) last.lean = true;
