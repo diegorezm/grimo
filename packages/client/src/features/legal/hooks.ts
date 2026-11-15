@@ -53,7 +53,7 @@ export type DataExport = FunctionReturnType<typeof api.account.exportData>;
 export function useExportData() {
   const { convex } = useConvexCache();
   return useMutation({
-    mutationFn: (): Promise<DataExport> => convex.query(api.account.exportData, {}),
+    mutationFn: (): Promise<DataExport> => convex.action(api.account.exportData, {}),
   });
 }
 

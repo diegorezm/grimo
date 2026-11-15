@@ -99,7 +99,7 @@ describe("imports", () => {
     const again = (await rafa.as.query(api.shelves.list, {})).items;
     expect(again.find((item) => item.book.title === "Torto Arado")?.entry.status).toBe("read");
 
-    const data = await rafa.as.query(api.account.exportData, {});
+    const data = await rafa.as.action(api.account.exportData, {});
     expect(data.imports).toHaveLength(2);
   });
 

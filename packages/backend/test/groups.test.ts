@@ -159,7 +159,7 @@ describe("juntos", () => {
     const { t, rafa, bia, id, inviteCode } = await setup();
     await bia.as.mutation(api.groups.join, { code: inviteCode });
     await bia.as.mutation(api.groups.send, { id, body: "oi" });
-    const data = await bia.as.query(api.account.exportData, {});
+    const data = await bia.as.action(api.account.exportData, {});
     expect(data.readingGroups).toMatchObject([{ book: "Torto Arado" }]);
     expect(data.groupMessages).toMatchObject([{ body: "oi", atPercent: 0 }]);
 

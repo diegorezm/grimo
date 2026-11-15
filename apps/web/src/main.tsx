@@ -2,6 +2,7 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { cache, queryClient } from "@/lib/api";
+import { initSentry } from "@/lib/sentry";
 import { AppProviders } from "@/providers/app-providers";
 import { routeTree } from "./routeTree.gen";
 // Fonts are bundled (no Google Fonts): no visitor IP goes to a third party (docs/legal).
@@ -24,6 +25,8 @@ const router = createRouter({
   defaultPreloadStaleTime: 0,
   scrollRestoration: true,
 });
+
+initSentry(router);
 
 declare module "@tanstack/react-router" {
   interface Register {

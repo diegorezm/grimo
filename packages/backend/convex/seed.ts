@@ -126,6 +126,7 @@ export const populate = internalMutation({
         favoriteGenres: reader.genres,
         yearlyGoal: reader.goal,
       });
+      if (reader.isPrivate) await ctx.db.patch(user._id, { isPrivate: true });
 
       const bookIds = new Map<BookKey, Id<"books">>();
       for (const shelf of reader.shelves) {

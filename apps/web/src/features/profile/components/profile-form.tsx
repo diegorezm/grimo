@@ -1,12 +1,41 @@
-import { type Profile, updateMeMutationKey, useUpdateMe } from "@grimo/client";
-import { GENRE_LABELS, GENRES, type Genre } from "@grimo/core";
+import {
+  errorMessage,
+  type Profile,
+  type SongPreview,
+  toast,
+  updateMeMutationKey,
+  useMyQuotes,
+  useSongPreview,
+  useUpdateMe,
+} from "@grimo/client";
+import {
+  firstIssue,
+  GENRE_LABELS,
+  GENRES,
+  type Genre,
+  musicService,
+  PROFILE_COLOR_LABELS,
+  PROFILE_COLORS,
+  type ProfileColor,
+  type ProfileShows,
+  updateProfileSchema,
+} from "@grimo/core";
+import { profileCovers } from "@grimo/tokens";
 import { useIsMutating } from "@tanstack/react-query";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkle } from "@/components/ui/sparkle";
+import { useColorScheme } from "@/lib/theme";
 import { cn } from "@/utils/cn";
 import { AvatarUpload } from "./avatar-upload";
+import { SongCard } from "./song-card";
+
+const SHOWS: { key: keyof ProfileShows; label: string }[] = [
+  { key: "reading", label: "Lendo agora" },
+  { key: "goal", label: "Meta do ano" },
+  { key: "streak", label: "Ofensiva de leitura" },
+];
 
 const MAX_GENRES = 5;
 const MAX_BIO = 280;
@@ -23,7 +52,58 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
   const [bio, setBio] = useState(profile.bio ?? "");
   const [goal, setGoal] = useState<number | null>(profile.yearlyGoal);
   const [genres, setGenres] = useState<string[]>(profile.favoriteGenres);
+  const [color, setColor] = useState<ProfileColor>(profile.profileColor);
+  const [pronouns, setPronouns] = useState(profile.pronouns ?? "");
+  const [song, setSong] = useState({
+    title: profile.profileSong?.title ?? "",
+    artist: profile.profileSong?.artist ?? "",
+    url: profile.profileSong?.url ?? "",
+  });
+  const [quoteId, setQuoteId] = useState(profile.featuredQuote?.id ?? null);
+  const [shows, setShows] = useState(profile.profileShows);
+  const [error, setError] = useState<string | null>(null);
+  const quotes = useMyQuotes().data?.items ?? [];
+  const scheme = useColorScheme();
   const year = new Date().getFullYear();
+
+  const songTouched = song.url.trim() !== "";
+  const service = musicService(song.url.trim());
+  const songPreview = useSongPreview();
+  // What the saved song looks like until a new link is read: its stored cover and color.
+  const [looks, setLooks] = useState<Pick<SongPreview, "cover" | "color"> | null>(
+    profile.profileSong
+      ? { cover: profile.profileSong.coverUrl, color: profile.profileSong.color }
+      : null,
+  );
+  const lastRead = useRef(profile.profileSong?.url ?? "");
+
+  // A pasted link is read (name, artist, cover) once the reader stops typing.
+  useEffect(() => {
+    const url = song.url.trim();
+    if (!service || url === lastRead.current) return;
+    const timer = setTimeout(() => {
+      lastRead.current = url;
+      setLooks(null);
+      setSong((current) => ({ url: current.url, title: "", artist: "" }));
+      songPreview.mutate(url, {
+        onSuccess: (preview) => {
+          setSong((current) => ({
+            url: current.url,
+            title: preview.title ?? "",
+            artist: preview.artist ?? "",
+          }));
+          setLooks({ cover: preview.cover, color: preview.color });
+        },
+      });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [song.url, service, songPreview.mutate]);
+
+  function removeSong() {
+    lastRead.current = "";
+    setLooks(null);
+    setSong({ title: "", artist: "", url: "" });
+  }
 
   function toggle(genre: string) {
     setGenres((current) =>
@@ -37,15 +117,34 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    update.mutate(
-      {
-        name: name.trim() || undefined,
-        bio: bio.trim() || null,
-        yearlyGoal: goal && goal > 0 ? goal : null,
-        favoriteGenres: genres as Genre[],
+    // The name and artist come from the link: one that couldn't be read can't be saved yet.
+    if (songTouched && (song.title.trim() === "" || song.artist.trim() === "")) {
+      return setError(
+        songPreview.isPending
+          ? "Espere a música carregar para salvar."
+          : "Não conseguimos ler esse link de música. Tente outro ou tire a música.",
+      );
+    }
+    const input = updateProfileSchema.safeParse({
+      name: name.trim() || undefined,
+      bio: bio.trim() || null,
+      yearlyGoal: goal && goal > 0 ? goal : null,
+      favoriteGenres: genres as Genre[],
+      pronouns,
+      profileColor: color,
+      profileSong: songTouched ? song : null,
+      featuredQuoteId: quoteId,
+      profileShows: shows,
+    });
+    if (!input.success) return setError(firstIssue(input.error));
+    setError(null);
+    update.mutate(input.data, {
+      onSuccess: () => {
+        toast.saved("Perfil salvo");
+        onDone();
       },
-      { onSuccess: onDone },
-    );
+      onError: (failure) => setError(errorMessage(failure)),
+    });
   }
 
   return (
@@ -55,7 +154,31 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
         <p className="mt-1 text-text-muted">Como os outros leitores veem você.</p>
       </header>
 
-      <AvatarUpload image={profile.image} name={profile.name} />
+      <div className="flex flex-wrap items-center gap-6">
+        <AvatarUpload image={profile.image} name={profile.name} />
+        <div className="flex flex-col gap-2">
+          <span className="font-mono text-[11px] tracking-wider text-text-muted uppercase">
+            Cor do aro
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {PROFILE_COLORS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={option === color}
+                aria-label={`Aro ${PROFILE_COLOR_LABELS[option]}`}
+                title={PROFILE_COLOR_LABELS[option]}
+                onClick={() => setColor(option)}
+                className={cn(
+                  "size-9 rounded-full transition",
+                  option === color ? "border-[3px] border-text" : "border border-border",
+                )}
+                style={{ background: profileCovers[scheme][option].bg }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
 
       <Section number="01" title="Sobre você" hint="Seu nome e uma frase sobre o que você lê.">
         <Field label="Nome">
@@ -65,6 +188,16 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
             required
+          />
+        </Field>
+        <Field label={`Pronomes (opcional) · @${profile.username}`}>
+          <Input
+            name="pronouns"
+            value={pronouns}
+            onChange={(e) => setPronouns(e.target.value)}
+            maxLength={24}
+            placeholder="ela/dela, ele/dele, elu/delu…"
+            autoCapitalize="none"
           />
         </Field>
         <Field
@@ -186,7 +319,95 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
         </div>
       </Section>
 
-      {update.error && <p className="text-sm text-danger">{update.error.message}</p>}
+      <Section
+        number="04"
+        title="Trilha da leitura"
+        hint="Cole o link de uma música do Spotify, Apple Music, YouTube ou Deezer: o Grimo busca a capa, o nome e o artista. No perfil, ela abre no app de música."
+      >
+        <Input
+          type="url"
+          value={song.url}
+          onChange={(e) => setSong({ ...song, url: e.target.value })}
+          placeholder="https://open.spotify.com/track/…"
+          autoCapitalize="none"
+          aria-label="Link da música"
+        />
+        {song.url.trim() !== "" && !service && (
+          <p className="text-sm text-danger">Esse link não é de um app de música aceito.</p>
+        )}
+        {songPreview.isPending && <p className="text-sm text-text-muted">Buscando a música…</p>}
+        {songPreview.isError && (
+          <p className="text-sm text-danger">{errorMessage(songPreview.error)}</p>
+        )}
+        {service &&
+          song.title.trim() !== "" &&
+          song.artist.trim() !== "" &&
+          !songPreview.isPending && (
+            <SongCard
+              onRemove={removeSong}
+              song={{
+                title: song.title,
+                artist: song.artist,
+                url: song.url,
+                service,
+                coverUrl: looks?.cover ?? null,
+                color: looks?.color ?? null,
+              }}
+            />
+          )}
+        {songTouched && !songPreview.isPending && song.title.trim() === "" && (
+          <Button variant="ghost" onClick={removeSong} className="self-start">
+            Tirar a música
+          </Button>
+        )}
+      </Section>
+
+      <Section number="05" title="Frase marcada" hint="Uma das suas citações, no topo do perfil.">
+        {quotes.length === 0 ? (
+          <p className="text-sm text-text-muted">
+            Guarde uma citação na página de um livro para destacar aqui.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Choice selected={quoteId === null} onClick={() => setQuoteId(null)}>
+              Nenhuma
+            </Choice>
+            {quotes.map((quote) => (
+              <Choice
+                key={quote.id}
+                selected={quoteId === quote.id}
+                onClick={() => setQuoteId(quote.id)}
+              >
+                <span className="line-clamp-3 font-serif italic">“{quote.body}”</span>
+                {quote.bookTitle && (
+                  <span className="text-xs text-text-muted">
+                    {quote.bookTitle}
+                    {quote.page ? `, pág. ${quote.page}` : ""}
+                  </span>
+                )}
+              </Choice>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section number="06" title="Mostrar no perfil" hint="O que os outros leitores veem.">
+        <div className="flex flex-col divide-y divide-edge border-y border-edge">
+          {SHOWS.map(({ key, label }) => (
+            <label key={key} className="flex min-h-12 items-center gap-3">
+              <span className="flex-1 text-sm">{label}</span>
+              <input
+                type="checkbox"
+                checked={shows[key]}
+                onChange={(e) => setShows({ ...shows, [key]: e.target.checked })}
+                className="size-5 accent-accent"
+              />
+            </label>
+          ))}
+        </div>
+      </Section>
+
+      {error && <p className="text-sm text-danger">{error}</p>}
     </form>
   );
 }
@@ -267,6 +488,30 @@ function StepButton({
       aria-label={label}
       onClick={onClick}
       className="grid size-10 place-items-center rounded-full text-lg text-text-muted transition hover:bg-surface-muted hover:text-text"
+    >
+      {children}
+    </button>
+  );
+}
+
+function Choice({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "flex flex-col gap-1 rounded-md border px-3.5 py-3 text-left text-sm transition",
+        selected ? "border-accent bg-note" : "border-border bg-surface hover:border-accent/50",
+      )}
     >
       {children}
     </button>

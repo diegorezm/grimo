@@ -112,7 +112,7 @@ export function ReaderTile({
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-3 border-t border-border pt-4">
           <dl className="flex gap-5">
             <Stat value={reader.bookCount} label={reader.bookCount === 1 ? "livro" : "livros"} />
             <Stat
@@ -120,7 +120,9 @@ export function ReaderTile({
               label={reader.followers === 1 ? "seguidor" : "seguidores"}
             />
           </dl>
-          {canFollow && <FollowButton reader={reader} size="sm" className="relative z-10" />}
+          {canFollow && (
+            <FollowButton reader={reader} size="sm" className="relative z-10 ml-auto" />
+          )}
         </div>
       </div>
     </li>

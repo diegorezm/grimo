@@ -30,5 +30,6 @@ catalog:
 
 # Packages allowed to run install scripts.
 allowBuilds:
+  "@sentry/cli": true
   esbuild: true
   workerd: true

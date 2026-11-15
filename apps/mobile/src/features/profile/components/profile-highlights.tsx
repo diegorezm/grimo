@@ -55,7 +55,7 @@ export function ProfileFeatured({
 }) {
   const _theme = useTheme();
   const { profile, stats } = page;
-  const goal = profile.profileShows.goal ? stats.goal : null;
+  const goal = profile.profileShows.goal ? (stats?.goal ?? null) : null;
   const showStreak = profile.profileShows.streak && !!streak && streak > 0;
   const empty = !goal && !showStreak;
   if (empty) return <Text color="textMuted">Nada em destaque ainda.</Text>;
@@ -68,7 +68,7 @@ export function ProfileFeatured({
             <>
               <View style={styles.between}>
                 <Text variant="label" color="textMuted">
-                  Meta de {stats.year}
+                  Meta de {stats?.year}
                 </Text>
                 <Text variant="number">
                   {goal.done} / {goal.target}

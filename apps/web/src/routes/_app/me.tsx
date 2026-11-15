@@ -1,113 +1,76 @@
 import {
   meQuery,
   monthlySummaryQuery,
-  shelfQuery,
+  profileShelvesQuery,
+  readerQuery,
+  readerShelvesQuery,
+  streakQuery,
   useMe,
-  useShelf,
-  yearOverviewQuery,
+  useReader,
+  useStreak,
 } from "@grimo/client";
-import { finishedPerMonth, genreBreakdown } from "@grimo/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/feedback/spinner";
-import { Screen } from "@/components/layout/screen";
 import { PencilIcon } from "@/components/ui/icons";
-import { BookRow, ProfileHeader } from "@/features/profile";
-import { ShareProfileButton } from "@/features/readers";
-import { GenreBreakdown, MonthlyCard, ReadingRhythm, YearStats } from "@/features/stats";
+import { ProfileView } from "@/features/profile";
+import { ReaderActivity, ShareProfileButton } from "@/features/readers";
+import { MonthlyCard, YearStats } from "@/features/stats";
 
 export const Route = createFileRoute("/_app/me")({
-  loader: ({ context: { queryClient } }) => {
-    void queryClient.prefetchQuery(meQuery());
-    void queryClient.prefetchQuery(shelfQuery());
-    void queryClient.prefetchQuery(yearOverviewQuery());
+  loader: async ({ context: { queryClient } }) => {
     void queryClient.prefetchQuery(monthlySummaryQuery());
+    void queryClient.prefetchQuery(streakQuery());
+    const me = queryClient.getQueryData(meQuery().queryKey);
+    if (me) {
+      void queryClient.prefetchQuery(readerQuery(me.username));
+      void queryClient.prefetchQuery(readerShelvesQuery(me.username));
+      void queryClient.prefetchQuery(profileShelvesQuery(me.username));
+    }
   },
   component: MePage,
 });
 
-const YEAR = new Date().getFullYear();
-
+/**
+ * Your profile, as others see it, with "Editar perfil" (side peek), share and, in the year tab,
+ * the monthly card.
+ */
 function MePage() {
-  const me = useMe();
-  const shelf = useShelf();
-
-  if (!me.data || !shelf.data) return <Spinner />;
-  const items = shelf.data.items;
-  const read = items.filter(({ entry }) => entry.status === "read");
-  const reading = items.filter(({ entry }) => entry.status === "reading");
-  const favorites = [...read]
-    .filter(({ entry }) => entry.rating)
-    .sort((a, b) => (b.entry.rating ?? 0) - (a.entry.rating ?? 0))
-    .slice(0, 10);
-  const covers = [...reading, ...read].flatMap(({ book }) =>
-    book.coverUrl ? [book.coverUrl] : [],
-  );
+  const me = useMe().data;
+  const page = useReader(me?.username ?? "").data;
+  const streak = useStreak().data;
+  if (!me || !page) return <Spinner />;
 
   return (
-    <Screen>
-      <ProfileHeader
-        profile={me.data}
-        covers={covers}
-        bookCount={items.length}
-        linkCounts
-        actions={
-          <>
-            {me.data.username && (
-              <ShareProfileButton username={me.data.username} name={me.data.name} own />
-            )}
-            <Link
-              to="."
-              search={(prev) => ({ ...prev, panel: "profile" as const })}
-              resetScroll={false}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-border bg-surface py-2.5 pr-5 pl-4 font-mono text-xs font-medium uppercase tracking-wider shadow-sm shadow-shadow transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent hover:shadow-md"
-            >
-              <PencilIcon className="size-4" />
-              Editar perfil
-            </Link>
-          </>
-        }
-      />
-
-      <div className="grid grid-cols-1 gap-10 @5xl/main:grid-cols-[minmax(0,1fr)_22rem] @5xl/main:gap-8">
-        <div className="flex min-w-0 flex-col gap-10">
-          <YearStats />
-          <BookRow
-            title="Lendo agora"
-            items={reading}
-            empty="Nenhum livro aberto agora. Que tal começar um?"
-            shelfLink
-          />
-          <BookRow
-            title="Favoritos"
-            items={favorites}
-            empty="Avalie os livros que terminar e os melhores aparecem aqui."
-            shelfLink
-          />
-          <div className="grid grid-cols-1 gap-6 @4xl/main:grid-cols-2">
-            <ReadingRhythm
-              counts={finishedPerMonth(
-                items.map(({ entry }) => entry),
-                YEAR,
-              )}
-              year={YEAR}
-            />
-            <GenreBreakdown genres={genreBreakdown(read.map(({ book }) => book))} />
-          </div>
-        </div>
-
-        <aside
-          aria-labelledby="monthly-title"
-          className="flex flex-col items-center gap-4 rounded-xl bg-surface-muted/70 p-5 @5xl/main:sticky @5xl/main:top-6 @5xl/main:self-start"
-        >
-          <div className="w-full">
-            <h2 id="monthly-title" className="text-xl font-medium italic">
-              Card do mês
-            </h2>
+    <ProfileView
+      page={page}
+      username={me.username}
+      streak={streak?.days ?? null}
+      actions={
+        <>
+          <ShareProfileButton username={me.username} name={me.name} own />
+          <Link
+            to="."
+            search={(prev) => ({ ...prev, panel: "profile" as const })}
+            resetScroll={false}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-surface py-2.5 pr-5 pl-4 font-mono text-xs font-medium tracking-wider uppercase shadow-sm shadow-shadow transition hover:border-accent/50 hover:text-accent"
+          >
+            <PencilIcon className="size-4" />
+            Editar perfil
+          </Link>
+        </>
+      }
+      activity={<ReaderActivity username={me.username} interactive />}
+      isMe
+      year={<YearStats stats={page.stats ?? undefined} />}
+      aside={
+        <section className="flex flex-col items-start gap-3 rounded-2xl bg-surface-muted/70 p-5">
+          <div>
+            <h3 className="text-xl font-medium italic">Card do mês</h3>
             <p className="text-sm text-text-muted">Seu mês pronto para os Stories.</p>
           </div>
           <MonthlyCard />
-        </aside>
-      </div>
-    </Screen>
+        </section>
+      }
+    />
   );
 }

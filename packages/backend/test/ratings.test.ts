@@ -235,7 +235,7 @@ describe("feelings and personal data", () => {
 
     const data = await t
       .withIdentity({ subject: "auth-rafa", email: "rafa@grimo.test" })
-      .query(api.account.exportData, {});
+      .action(api.account.exportData, {});
     expect(data.shelf).toMatchObject([
       { book: "Duna", rating: 5, feelings: ["alegria", "conforto"] },
     ]);

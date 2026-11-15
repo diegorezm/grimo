@@ -1,14 +1,21 @@
 import { createCommentSchema, createPostSchema, editionPages } from "@grimo/core";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { type MutationCtx, mutation, query } from "./_generated/server";
+import { internalMutation, type MutationCtx, mutation, query } from "./_generated/server";
 import { bookSummary, postView, recordActivity, updatePostFor } from "./model/content";
 import { appError, notFound, parse } from "./model/errors";
-import { deleteComment, deletePost } from "./model/moderation";
+import { deleteComment, deletePost, deletePostChildren } from "./model/moderation";
 import { notify, notifyMentions, unnotify } from "./model/notifications";
 import { enforceRateLimit } from "./model/rateLimit";
 import { authorOf, getViewer, requireVerifiedViewer, requireViewer } from "./model/readers";
-import { blockedIds, isBlockedBetween, isBookVisible, isHidden } from "./model/safety";
+import {
+  blockedIds,
+  canSeeReader,
+  isBlockedBetween,
+  isBookVisible,
+  isHidden,
+} from "./model/safety";
 import { updateShelfEntry } from "./model/shelves";
 import { postKind } from "./schema";
 
@@ -125,7 +132,10 @@ export const create = mutation({
   },
 });
 
-/** A post with its author, book and comments (oldest first). Public. */
+/** Comments shown on a post: the most recent ones (`olderComments` says some were left out). */
+const COMMENT_LIMIT = 200;
+
+/** A post with its author, book and latest comments (oldest first). Public. */
 export const get = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
@@ -141,9 +151,13 @@ export const get = query({
       ctx.db
         .query("postComments")
         .withIndex("by_post", (q) => q.eq("postId", post._id))
-        .collect(),
+        .order("desc")
+        .take(COMMENT_LIMIT + 1),
     ]);
+    const olderComments = comments.length > COMMENT_LIMIT;
+    const latest = comments.slice(0, COMMENT_LIMIT).reverse();
     if (!author || isHidden(author) || blocked.has(author._id)) throw notFound("Post");
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, author))) throw notFound("Post");
     // An update shows what happened ("está lendo · p. 120 de 300") above the note.
     const activity =
       post.kind === "update"
@@ -160,7 +174,7 @@ export const get = query({
             .unique()
         : null;
     const commentViews = await Promise.all(
-      comments.map(async (comment) => {
+      latest.map(async (comment) => {
         const commenter = await ctx.db.get(comment.authorId);
         return commenter && !isHidden(commenter) && !blocked.has(commenter._id)
           ? {
@@ -182,6 +196,7 @@ export const get = query({
           }
         : null,
       comments: commentViews.filter((comment) => comment !== null),
+      olderComments,
     };
   },
 });
@@ -193,6 +208,17 @@ export const remove = mutation({
     const post = await ctx.db.get(id);
     if (!post || post.authorId !== viewer._id) return null;
     await deletePost(ctx, post);
+    return null;
+  },
+});
+
+/** Erases a deleted post's likes, comments and notifications, a batch per run. */
+export const purgeChildren = internalMutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    if (await deletePostChildren(ctx, postId)) {
+      await ctx.scheduler.runAfter(0, internal.posts.purgeChildren, { postId });
+    }
     return null;
   },
 });

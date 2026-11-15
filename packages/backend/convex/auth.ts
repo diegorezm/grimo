@@ -193,6 +193,10 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
       ...(google ? { google } : {}),
       ...(apple ? { apple } : {}),
     },
+    // Google/Apple only join an existing email account once its email is confirmed: otherwise
+    // whoever created it with a password (maybe not the owner) would keep that way in. Until
+    // then the sign-in comes back with `error=account_not_linked` (`socialSignInError`).
+    account: { accountLinking: { enabled: true, requireLocalEmailVerified: true } },
     // "Excluir conta" (LGPD art. 18 / App Store 5.1.1(v)): the password, or a session from the
     // last day, confirms it. The `onDelete` trigger above erases the reader's data.
     user: { deleteUser: { enabled: true } },

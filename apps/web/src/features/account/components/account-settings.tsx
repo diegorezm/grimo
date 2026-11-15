@@ -6,6 +6,7 @@ import {
   useBlockedReaders,
   useExportData,
   useSetBlocked,
+  useSetPrivate,
 } from "@grimo/client";
 import { deleteConfirmationMatches } from "@grimo/core";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +46,12 @@ export function AccountSettings({ me }: { me: Me }) {
         <Link to="/importar" className="w-fit font-semibold text-accent hover:underline">
           Importar do Goodreads
         </Link>
+      </Block>
+      <Block
+        title="Perfil privado"
+        text="Só quem você aprova vê suas estantes, leituras, resenhas e listas. Quem quiser seguir você pede, e você aceita ou recusa nas notificações."
+      >
+        <PrivateToggle isPrivate={me.isPrivate} />
       </Block>
       <Block title="Leitores bloqueados" text="Quem você bloqueia não vê nem interage com você.">
         <BlockedList />
@@ -94,6 +101,26 @@ function Block({
       </div>
       {children}
     </section>
+  );
+}
+
+function PrivateToggle({ isPrivate }: { isPrivate: boolean }) {
+  const setPrivate = useSetPrivate();
+  return (
+    <label className="flex w-fit cursor-pointer items-center gap-3">
+      <input
+        type="checkbox"
+        checked={isPrivate}
+        onChange={(event) => setPrivate.mutate(event.target.checked)}
+        className="size-4 accent-accent"
+      />
+      <span className="font-mono text-xs uppercase tracking-wider">
+        {isPrivate ? "Perfil privado" : "Perfil público"}
+      </span>
+      {setPrivate.error && (
+        <span className="text-sm text-danger">{errorMessage(setPrivate.error)}</span>
+      )}
+    </label>
   );
 }
 

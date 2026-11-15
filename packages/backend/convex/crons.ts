@@ -12,5 +12,11 @@ crons.daily(
 
 // New books get their spine painted in the colors of their cover.
 crons.interval("paint book spines", { minutes: 3 }, internal.books.paintSpines, {});
+// Closed reports keep the reported text for 180 days (docs/legal/ropa.md).
+crons.daily(
+  "erase old report text",
+  { hourUTC: 6, minuteUTC: 30 },
+  internal.moderation.eraseOldReportText,
+);
 
 export default crons;

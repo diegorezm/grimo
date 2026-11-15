@@ -22,8 +22,18 @@ async function finishedBooks(ctx: QueryCtx, userId: Id<"users">, range: Range) {
         .lt("finishedAt", range.end.getTime()),
     )
     .collect();
+  // Earlier readings of books being reread count in the year they were finished.
+  const past = await ctx.db
+    .query("pastReadings")
+    .withIndex("by_user_finished", (q) =>
+      q
+        .eq("userId", userId)
+        .gte("finishedAt", range.start.getTime())
+        .lt("finishedAt", range.end.getTime()),
+    )
+    .collect();
   const rows = await Promise.all(
-    entries.map(async (entry) => {
+    [...entries, ...past].map(async (entry) => {
       const book = await ctx.db.get(entry.bookId);
       if (!book) return null;
       return {

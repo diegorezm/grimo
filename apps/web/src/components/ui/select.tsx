@@ -238,11 +238,16 @@ export function Select<T extends string>({
           className,
         )}
       >
-        <span className={cn("truncate", !current && "text-text-muted")}>
+        {/* On the accent pill the placeholder is the call to action: it keeps the pill's ink. */}
+        <span className={cn("truncate", !current && variant !== "accent" && "text-text-muted")}>
           {current?.label ?? placeholder}
         </span>
         <ChevronDownIcon
-          className={cn("size-4 shrink-0 text-text-muted transition", open && "rotate-180")}
+          className={cn(
+            "size-4 shrink-0 transition",
+            variant === "accent" ? "opacity-80" : "text-text-muted",
+            open && "rotate-180",
+          )}
         />
       </button>
       {open &&

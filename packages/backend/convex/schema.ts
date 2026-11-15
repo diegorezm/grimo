@@ -141,6 +141,11 @@ export default defineSchema({
     shelfStyle: v.optional(shelfStyle),
     /** The reader's own order of "Todos os meus livros" ("Do meu jeito"). */
     shelfOrder: v.optional(v.array(v.id("shelfEntries"))),
+    /**
+     * Private profile: only approved followers see the reader's shelf, stats, activity, posts
+     * and lists (`canSeeReader`); following them is a request (`followRequests`).
+     */
+    isPrivate: v.optional(v.boolean()),
     /** Denormalized counters, kept by the follow/shelf mutations. */
     followers: v.number(),
     following: v.number(),
@@ -244,6 +249,8 @@ export default defineSchema({
     feelings: v.optional(v.array(feeling)),
     startedAt: v.union(v.number(), v.null()),
     finishedAt: v.union(v.number(), v.null()),
+    /** Earlier readings of this book (rereads), kept in `pastReadings`. */
+    pastReads: v.optional(v.number()),
     updatedAt: v.number(),
     /** The reader's own tags on this book ("Tenho", "Kindle"): filters of the shelf. */
     tagIds: v.optional(v.array(v.id("shelfTags"))),
@@ -286,6 +293,21 @@ export default defineSchema({
     isPublic: v.boolean(),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  /**
+   * A finished reading of a book the reader is reading again (moved from "Lido" back to
+   * "Lendo"): its dates and rating, so the year it was read keeps counting it.
+   */
+  pastReadings: defineTable({
+    userId: v.id("users"),
+    shelfEntryId: v.id("shelfEntries"),
+    bookId: v.id("books"),
+    startedAt: v.union(v.number(), v.null()),
+    finishedAt: v.number(),
+    rating: v.union(v.number(), v.null()),
+  })
+    .index("by_user_finished", ["userId", "finishedAt"])
+    .index("by_entry", ["shelfEntryId"]),
 
   /** Append-only progress log: source of truth for "pages read". */
   readingLogs: defineTable({
@@ -347,6 +369,15 @@ export default defineSchema({
     .index("by_follower", ["followerId"])
     .index("by_follower_following", ["followerId", "followingId"])
     .index("by_following", ["followingId"]),
+
+  /** Someone asking to follow a private reader; becomes a `follows` row when accepted. */
+  followRequests: defineTable({
+    requesterId: v.id("users"),
+    targetId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_requester_target", ["requesterId", "targetId"])
+    .index("by_target_created", ["targetId", "createdAt"]),
 
   /** Reviews (book + rating) and free-form reading notes. */
   posts: defineTable({

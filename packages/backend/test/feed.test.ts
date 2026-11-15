@@ -98,3 +98,27 @@ describe("feed cards", () => {
     expect(all.hasMore).toBe(false);
   });
 });
+
+describe("progress lines", () => {
+  it("move to the new page when marked again within 24 h, and start a new line after", async () => {
+    vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
+    const t = newTest();
+    const rafa = await reader(t, "rafa");
+    const bia = await reader(t, "bia");
+    await bia.as.mutation(api.users.setFollowing, { userId: rafa.id, follow: true });
+    const { entry } = await rafa.as.mutation(api.shelves.add, { book, status: "reading" });
+    const progressPages = async () =>
+      (await bia.as.query(api.feed.list, { limit: 20 })).items
+        .filter((item) => item.kind === "progress")
+        .map((item) => item.data?.page);
+
+    await rafa.as.mutation(api.shelves.update, { id: entry.id, currentPage: 50 });
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    await rafa.as.mutation(api.shelves.update, { id: entry.id, currentPage: 80 });
+    expect(await progressPages()).toEqual([80]);
+
+    vi.advanceTimersByTime(25 * 60 * 60 * 1000);
+    await rafa.as.mutation(api.shelves.update, { id: entry.id, currentPage: 120 });
+    expect(await progressPages()).toEqual([120, 80]);
+  });
+});

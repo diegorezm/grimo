@@ -19,6 +19,11 @@ export interface ShelfTransition {
   maxPage: number;
   /** Feed activity to emit, if any. */
   activity: ActivityKind | null;
+  /**
+   * A read book going back to "Lendo": a reread. The finished reading is kept apart (dates and
+   * rating) and this one starts over from page 0.
+   */
+  reread: boolean;
 }
 
 /** Pages of the reader's edition when they set one, else the book's. */
@@ -46,7 +51,13 @@ export function planShelfTransition(
   }
   const status = patch.status ?? prev.status;
   const statusChanged = patch.status !== undefined && patch.status !== prev.status;
-  const keepsStartDate = prev.startedAt !== null || patch.startedAt !== undefined;
+  const reread = statusChanged && prev.status === "read" && patch.status === "reading";
+  if (reread) {
+    if (patch.startedAt === undefined) set.startedAt = now;
+    if (patch.finishedAt === undefined) set.finishedAt = null;
+    if (set.currentPage === undefined) set.currentPage = 0;
+  }
+  const keepsStartDate = reread || prev.startedAt !== null || patch.startedAt !== undefined;
 
   if ((status === "reading" || status === "read") && !keepsStartDate) set.startedAt = now;
 
@@ -55,7 +66,8 @@ export function planShelfTransition(
     if (patch.currentPage === undefined && pageCount) set.currentPage = pageCount;
   }
 
-  const before = Math.max(prev.maxPage ?? 0, prev.currentPage);
+  // A reread counts its pages again.
+  const before = reread ? 0 : Math.max(prev.maxPage ?? 0, prev.currentPage);
   const after = set.currentPage ?? prev.currentPage;
   const pagesRead = Math.max(0, after - before);
   const maxPage = Math.max(before, after);
@@ -64,5 +76,5 @@ export function planShelfTransition(
   if (statusChanged) activity = patch.status === "read" ? "finished" : "shelved";
   else if (pagesRead > 0) activity = "progress";
 
-  return { set, pagesRead, maxPage, activity };
+  return { set, pagesRead, maxPage, activity, reread };
 }

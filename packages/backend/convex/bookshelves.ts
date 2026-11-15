@@ -20,7 +20,7 @@ import { type MutationCtx, mutation, type QueryCtx, query } from "./_generated/s
 import { decorFactsOf } from "./model/decor";
 import { appError, notFound, parse } from "./model/errors";
 import { getViewer, readerByUsername, requireViewer, timeZoneOf } from "./model/readers";
-import { hasBlocked } from "./model/safety";
+import { canSeeReader, hasBlocked } from "./model/safety";
 import { withBooks } from "./model/shelves";
 import { shelfStyle } from "./schema";
 
@@ -331,6 +331,8 @@ export const profile = query({
   handler: async (ctx, { username }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
     if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
+    // Private reader: their shelves are only for their followers.
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, reader))) return { items: [] };
     const isOwner = viewer?._id === reader._id;
     const shelves = (await shelvesOf(ctx, reader._id)).filter((shelf) => isOwner || shelf.isPublic);
     if (shelves.length === 0) return { items: [] };
@@ -376,6 +378,7 @@ export const profileShelf = query({
   handler: async (ctx, { username, shelf }) => {
     const [reader, viewer] = await Promise.all([readerByUsername(ctx, username), getViewer(ctx)]);
     if (viewer && (await hasBlocked(ctx, reader._id, viewer._id))) throw notFound("Leitor");
+    if (!(await canSeeReader(ctx, viewer?._id ?? null, reader))) throw notFound("Estante");
     const isOwner = viewer?._id === reader._id;
     const entries = await entriesOf(ctx, reader._id);
 

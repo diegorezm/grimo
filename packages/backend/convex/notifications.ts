@@ -4,7 +4,7 @@ import { mutation, type QueryCtx, query } from "./_generated/server";
 import { bookSummary } from "./model/content";
 import { listLimit } from "./model/limits";
 import { authorOf, isFollowing, requireViewer } from "./model/readers";
-import { blockedIds, isHidden } from "./model/safety";
+import { blockedIds, followRequest, isHidden } from "./model/safety";
 
 /** Unread rows counted for the badge; past this it shows "99+". */
 const UNREAD_CAP = 100;
@@ -32,6 +32,11 @@ async function view(ctx: QueryCtx, row: Doc<"notifications">, viewer: Doc<"users
     actor: authorOf(actor),
     /** For "Seguir de volta" on follow notifications. */
     followingActor: row.kind === "follow" ? await isFollowing(ctx, viewer._id, actor._id) : null,
+    /** A request to follow you still waiting for "Aceitar" / "Recusar". */
+    requestPending:
+      row.kind === "follow_request"
+        ? (await followRequest(ctx, actor._id, viewer._id)) !== null
+        : null,
     post: post
       ? {
           id: post._id,

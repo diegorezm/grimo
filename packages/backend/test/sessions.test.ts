@@ -64,7 +64,7 @@ describe("reading sessions", () => {
     const { items } = await rafa.as.query(api.shelves.list, {});
     expect(items[0]?.entry.currentPage).toBe(40);
 
-    const data = await rafa.as.query(api.account.exportData, {});
+    const data = await rafa.as.action(api.account.exportData, {});
     expect(data.readingSessions).toMatchObject([{ book: "Duna", startPage: 0, endPage: 40 }]);
   });
 

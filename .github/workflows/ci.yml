@@ -17,3 +17,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      # The web bundle must build (types alone don't catch Vite/Tailwind errors).
+      - run: pnpm --filter @grimo/web build
+        env:
+          VITE_CONVEX_URL: https://ci.convex.cloud
+      # Native config and dependency versions must match the Expo SDK.
+      - run: npx expo-doctor
+        working-directory: apps/mobile

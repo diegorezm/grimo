@@ -138,7 +138,7 @@ describe("shelves the reader makes", () => {
 
     const data = await t
       .withIdentity({ subject: "auth-rafa", email: "rafa@grimo.test" })
-      .query(api.account.exportData, {});
+      .action(api.account.exportData, {});
     expect(data.myShelves).toEqual([
       { name: "Kindle", isPublic: false, style: null, arrangedBooks: 0 },
     ]);
