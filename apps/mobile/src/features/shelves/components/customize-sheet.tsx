@@ -50,14 +50,14 @@ type Tab = (typeof TABS)[number];
 const MOTION = { duration: 280, easing: Easing.out(Easing.cubic) };
 
 /**
- * The sheet's two heights: half the screen (the bookcase stays in view above it) and tall, for
+ * The sheet's two heights: under half the screen (most of the bookcase stays in view) and tall, for
  * picking with room. The bookcase keeps its size and scrolls above the sheet.
  */
 export function useCustomizeSheetHeights() {
   const window = useWindowDimensions();
   const insets = useSafeAreaInsets();
   return {
-    compact: Math.max(420, Math.round(window.height * 0.52)),
+    compact: Math.max(340, Math.round(window.height * 0.42)),
     tall: Math.round(window.height - insets.top - 56),
   };
 }
@@ -145,6 +145,7 @@ export function CustomizeSheet({
         </GestureDetector>
         <ScrollView
           horizontal
+          style={styles.tabRow}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabs}
         >
@@ -156,6 +157,7 @@ export function CustomizeSheet({
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 onPress={() => setTab(name)}
+                hitSlop={{ top: 5, bottom: 5 }}
                 style={[
                   styles.tab,
                   {
@@ -509,8 +511,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[5],
   },
   tabs: { gap: spacing[2], paddingHorizontal: spacing[5] },
+  tabRow: { flexGrow: 0, flexShrink: 0 },
   tab: {
-    minHeight: 44,
+    height: 34,
     justifyContent: "center",
     paddingHorizontal: spacing[4],
     borderRadius: radius.full,
