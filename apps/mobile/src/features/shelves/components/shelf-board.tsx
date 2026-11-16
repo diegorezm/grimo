@@ -64,7 +64,7 @@ import { Bookcase } from "../bookcase/bookcase";
 import { materialOf } from "../bookcase/look";
 import { BookcaseThumb } from "../bookcase/thumb";
 import { BookPeek } from "./book-peek";
-import { CUSTOMIZE_SHEET_HEIGHT, CustomizeSheet } from "./customize-sheet";
+import { CustomizeSheet, useCustomizeSheetHeights } from "./customize-sheet";
 import { ShelfieSheet } from "./shelfie-sheet";
 
 /** One page of the pager: "Todos os meus livros" (no id) or a shelf you made. */
@@ -203,22 +203,15 @@ export function ShelfBoard() {
     setEditing(page.style);
   }, [customizeNext, page]);
 
-  // The bookcase shrinks into the room above the editor.
+  // While editing the bookcase stays still and full size; it scrolls in the room above the
+  // sheet, and only the header fades away.
   const top = insets.top + HEADER;
-  const sheetHeight = CUSTOMIZE_SHEET_HEIGHT + insets.bottom;
-  const shrunk = Math.min(0.62, (height - sheetHeight - insets.top - 16) / height);
-  const shrink = useSharedValue(0);
+  const sheetHeights = useCustomizeSheetHeights();
+  const fade = useSharedValue(0);
   useEffect(() => {
-    shrink.value = withTiming(editing ? 1 : 0, { duration: 420 });
-  }, [editing, shrink]);
-  const pagerMotion = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: shrink.value * (insets.top + 8) },
-      { scale: 1 - shrink.value * (1 - shrunk) },
-    ],
-    borderRadius: shrink.value * 28,
-  }));
-  const chrome = useAnimatedStyle(() => ({ opacity: 1 - shrink.value }));
+    fade.value = withTiming(editing ? 1 : 0, { duration: 200 });
+  }, [editing, fade]);
+  const chrome = useAnimatedStyle(() => ({ opacity: 1 - fade.value }));
 
   function changeStyle(next: ShelfStyle) {
     if (
@@ -307,7 +300,7 @@ export function ShelfBoard() {
     <View style={[styles.root, { backgroundColor: materialOf(editing ?? page.style).room }]}>
       {focused && !reduceMotion && <Tilt value={tilt} />}
       <GestureDetector gesture={pinch}>
-        <Animated.View style={[styles.root, styles.clip, pagerMotion]}>
+        <Animated.View style={[styles.root, styles.clip]}>
           <FlatList
             ref={pager}
             data={pages}
@@ -338,9 +331,15 @@ export function ShelfBoard() {
                   showsVerticalScrollIndicator={false}
                   contentInsetAdjustmentBehavior="never"
                   scrollEnabled={!dragging}
+                  contentContainerStyle={
+                    active && editing
+                      ? { paddingBottom: sheetHeights.compact - insets.bottom }
+                      : undefined
+                  }
                 >
                   {/* From afar the bookcase is drawn wider and scaled down to the page. */}
                   <View
+                    pointerEvents={active && editing ? "none" : "auto"}
                     style={
                       scaled
                         ? { height: (tall[key] ?? height / zoom) * zoom, overflow: "hidden" }
@@ -400,14 +399,6 @@ export function ShelfBoard() {
               );
             }}
           />
-          {editing && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Pronto"
-              onPress={doneEditing}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
         </Animated.View>
       </GestureDetector>
 

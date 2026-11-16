@@ -23,9 +23,17 @@ import {
   spineSize,
   toggleDecor,
 } from "@grimo/core";
-import { type ReactNode, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
+import { type ReactNode, useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  Easing,
+  FadeIn,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, Text } from "@/components/ui";
 import { radius, shelfBrass, shelfMaterials, spacing } from "@/constants/theme";
@@ -38,8 +46,21 @@ import { BookcaseThumb } from "../bookcase/thumb";
 const TABS = ["Prontos", "Modelo", "Cores", "Lombadas", "Arrumar", "Enfeites", "Luz"] as const;
 type Tab = (typeof TABS)[number];
 
-/** Height of the sheet; the bookcase shrinks into the space above it. */
-export const CUSTOMIZE_SHEET_HEIGHT = 450;
+/** How the sheet moves: one smooth ease, no bounce. */
+const MOTION = { duration: 280, easing: Easing.out(Easing.cubic) };
+
+/**
+ * The sheet's two heights: half the screen (the bookcase stays in view above it) and tall, for
+ * picking with room. The bookcase keeps its size and scrolls above the sheet.
+ */
+export function useCustomizeSheetHeights() {
+  const window = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  return {
+    compact: Math.max(420, Math.round(window.height * 0.52)),
+    tall: Math.round(window.height - insets.top - 56),
+  };
+}
 
 /**
  * "Do seu jeito": every layer of the shelf, changed live on the bookcase above (it shrinks to
@@ -63,6 +84,36 @@ export function CustomizeSheet({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("Prontos");
+  const heights = useCustomizeSheetHeights();
+  const [tall, setTall] = useState(false);
+
+  // In from below once, then up and down between the two heights by the handle.
+  const height = useSharedValue(heights.compact);
+  const offset = useSharedValue(heights.compact);
+  useEffect(() => {
+    offset.value = withTiming(0, MOTION);
+  }, [offset]);
+  useEffect(() => {
+    height.value = withTiming(tall ? heights.tall : heights.compact, MOTION);
+  }, [tall, heights.tall, heights.compact, height]);
+  const dock = useAnimatedStyle(() => ({
+    height: height.value,
+    transform: [{ translateY: offset.value }],
+  }));
+
+  const drag = Gesture.Pan()
+    .onChange((event) => {
+      height.value = Math.min(
+        heights.tall,
+        Math.max(heights.compact - 80, height.value - event.changeY),
+      );
+    })
+    .onEnd((event) => {
+      const middle = (heights.compact + heights.tall) / 2;
+      const up = event.velocityY < -400 || (event.velocityY < 400 && height.value > middle);
+      height.value = withTiming(up ? heights.tall : heights.compact, MOTION);
+      runOnJS(setTall)(up);
+    });
   const set = (patch: Partial<ShelfStyle>) => onChange(applyShelfChoice(style, patch));
   const lights = {
     day: `linear-gradient(180deg, ${theme.surface} 0%, ${theme.surfaceMuted} 100%)`,
@@ -72,18 +123,26 @@ export function CustomizeSheet({
   const current = presetOf(style);
 
   return (
-    <Animated.View
-      entering={SlideInDown.springify().damping(18)}
-      style={[styles.dock, { height: CUSTOMIZE_SHEET_HEIGHT + insets.bottom }]}
-    >
+    <Animated.View style={[styles.dock, dock]}>
       <Glass style={[styles.sheet, { paddingBottom: insets.bottom + spacing[3] }]}>
-        <View style={[styles.grabber, { backgroundColor: theme.border }]} />
-        <View style={styles.head}>
-          <Text variant="heading">Do seu jeito</Text>
-          <Text variant="label" color="textMuted">
-            {current ? current.name : `${SHELF_COMBINATIONS.toLocaleString("pt-BR")} combinações`}
-          </Text>
-        </View>
+        <GestureDetector gesture={drag}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={tall ? "Diminuir o painel" : "Aumentar o painel"}
+            onPress={() => setTall(!tall)}
+            style={styles.handle}
+          >
+            <View style={[styles.grabber, { backgroundColor: theme.border }]} />
+            <View style={styles.head}>
+              <Text variant="heading">Do seu jeito</Text>
+              <Text variant="label" color="textMuted">
+                {current
+                  ? current.name
+                  : `${SHELF_COMBINATIONS.toLocaleString("pt-BR")} combinações`}
+              </Text>
+            </View>
+          </Pressable>
+        </GestureDetector>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -147,7 +206,7 @@ export function CustomizeSheet({
                 return (
                   <Option
                     key={material}
-                    third
+                    half
                     active={style.material === material}
                     title={SHELF_MATERIAL_LABELS[material].name}
                     hint={SHELF_MATERIAL_LABELS[material].hint}
@@ -200,7 +259,7 @@ export function CustomizeSheet({
                 {SHELF_LAYOUTS.map((layout) => (
                   <Option
                     key={layout}
-                    third
+                    half
                     boxed
                     active={style.layout === layout}
                     title={SHELF_LAYOUT_LABELS[layout]}
@@ -213,7 +272,7 @@ export function CustomizeSheet({
                 {SHELF_SORTS.map((sort) => (
                   <Option
                     key={sort}
-                    third
+                    half
                     boxed
                     active={style.sort === sort}
                     title={SHELF_SORT_LABELS[sort]}
@@ -273,7 +332,7 @@ export function CustomizeSheet({
               SHELF_LIGHTS.map((light) => (
                 <Option
                   key={light}
-                  third
+                  half
                   boxed
                   active={style.light === light}
                   title={SHELF_LIGHT_LABELS[light].name}
@@ -322,7 +381,6 @@ function Option({
   hint,
   active,
   half,
-  third,
   boxed,
   checkbox,
   onPress,
@@ -332,7 +390,6 @@ function Option({
   hint?: string;
   active: boolean;
   half?: boolean;
-  third?: boolean;
   /** On a card (spines, objects): the ring goes around the card. */
   boxed?: boolean;
   checkbox?: boolean;
@@ -347,7 +404,7 @@ function Option({
       accessibilityLabel={hint ? `${title}. ${hint}` : title}
       onPress={onPress}
       style={({ pressed }) => [
-        half ? styles.half : third ? styles.third : styles.full,
+        half ? styles.half : styles.full,
         boxed && [
           styles.boxed,
           {
@@ -435,13 +492,13 @@ function LayoutDrawing({ layout }: { layout: (typeof SHELF_LAYOUTS)[number] }) {
 
 const styles = StyleSheet.create({
   dock: { position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 20 },
+  handle: { gap: spacing[3], paddingTop: spacing[2], paddingBottom: spacing[1] },
   sheet: {
     flex: 1,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    paddingTop: spacing[2],
     gap: spacing[3],
   },
   grabber: { width: 40, height: 5, borderRadius: 3, alignSelf: "center" },
@@ -453,7 +510,7 @@ const styles = StyleSheet.create({
   },
   tabs: { gap: spacing[2], paddingHorizontal: spacing[5] },
   tab: {
-    minHeight: 38,
+    minHeight: 44,
     justifyContent: "center",
     paddingHorizontal: spacing[4],
     borderRadius: radius.full,
@@ -461,19 +518,18 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1 },
   bodyContent: { paddingHorizontal: spacing[5], paddingBottom: spacing[3] },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing[3] },
+  grid: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing[3], rowGap: spacing[4] },
   half: { width: "47.5%", gap: 2 },
-  third: { width: "30.5%", gap: 2 },
   full: { width: "100%", gap: 2 },
   boxed: { borderRadius: radius.md, padding: spacing[3], alignItems: "center" },
-  optionTitle: { fontWeight: "700", marginTop: spacing[1] },
+  optionTitle: { fontWeight: "700", fontSize: 16, marginTop: spacing[1] },
   section: { width: "100%" },
-  swatch: { height: 70, flexDirection: "row" },
+  swatch: { height: 88, flexDirection: "row" },
   grow: { flex: 1 },
   spines: { height: 66, flexDirection: "row", alignItems: "flex-end", gap: 2 },
   object: { height: 64, justifyContent: "flex-end", transform: [{ scale: 0.8 }] },
   track: { width: 96, height: 4, borderRadius: 2, marginTop: 6, overflow: "hidden" },
-  light: { width: "100%", height: 52, borderRadius: 10 },
+  light: { width: "100%", height: 72, borderRadius: 10 },
   drawing: {
     height: 44,
     flexDirection: "row",
