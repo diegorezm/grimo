@@ -242,7 +242,7 @@ export function ShelfScreen() {
             aria-label={`Estante ${page.name}. Trocar de estante`}
             onClick={toggle}
             className={cn(
-              "flex min-h-[52px] max-w-[28rem] items-center gap-3 rounded-[18px] border px-4 py-1.5 text-left backdrop-blur-xl transition",
+              "flex min-h-[52px] min-w-0 max-w-full sm:max-w-[28rem] items-center gap-3 rounded-[18px] border px-4 py-1.5 text-left backdrop-blur-xl transition",
               glass,
               ink,
             )}

@@ -1,5 +1,5 @@
 import { ratingStars } from "@grimo/core";
-import { CardFooter, CardSparkle, Delta } from "../parts";
+import { CardFooter, Delta } from "../parts";
 import type { CardProps } from "../types";
 
 /** Spine heights/widths cycle so the shelf looks hand-arranged. */
@@ -23,11 +23,6 @@ export function EstanteCard({ data, palette, showDeltas }: CardProps) {
       className="relative flex h-full w-full flex-col overflow-hidden"
       style={{ background: palette.bg, color: palette.ink, padding: "120px 90px 90px" }}
     >
-      <CardSparkle
-        size={70}
-        color={palette.accent2}
-        style={{ position: "absolute", top: 120, right: 100 }}
-      />
       <p
         className="font-mono"
         style={{ fontSize: 34, letterSpacing: "0.25em", color: palette.muted }}

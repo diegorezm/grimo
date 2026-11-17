@@ -30,6 +30,7 @@ const SHOWS: { key: keyof ProfileShows; label: string }[] = [
   { key: "reading", label: "Lendo agora" },
   { key: "goal", label: "Meta do ano" },
   { key: "streak", label: "Ofensiva de leitura" },
+  { key: "bookcase", label: "Visual das estantes" },
 ];
 
 /**

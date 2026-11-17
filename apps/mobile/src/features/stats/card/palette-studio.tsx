@@ -9,18 +9,22 @@ import { useTheme } from "@/hooks/use-theme";
 import { type CanvasRef, StoryCanvas, shareCard } from "./story-canvas";
 
 /**
- * A one-template Stories card (group, finished book, quote): the preview, share, and the colors
- * (shared with the monthly card). `children` is null while the data loads.
+ * A Stories card studio (group, finished book, quote): the preview, share, optional layout/detail
+ * controls, and the colors (shared with the monthly card). `children` is null while data loads.
  */
 export function PaletteStudio({
   title,
   note,
   shareTitle,
+  beforeColors,
+  afterColors,
   children,
 }: {
   title: string;
   note?: string;
   shareTitle: string;
+  beforeColors?: (palette: CardPalette) => ReactNode;
+  afterColors?: ReactNode;
   children: ((palette: CardPalette) => ReactNode) | null;
 }) {
   const theme = useTheme();
@@ -28,7 +32,7 @@ export function PaletteStudio({
   const studio = useCardStudioStore();
   const canvas = useRef<CanvasRef>(null);
   const [busy, setBusy] = useState(false);
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.noite;
   // Full width (≈1080 real pixels on a 3× iPhone), so the shared image stays sharp.
   const scale = Math.min(width - spacing[4] * 2, 420) / storyCard.width;
 
@@ -72,6 +76,8 @@ export function PaletteStudio({
         onPress={share}
       />
 
+      {beforeColors?.(palette)}
+
       <Text variant="label" color="textMuted">
         Cores
       </Text>
@@ -99,6 +105,8 @@ export function PaletteStudio({
           );
         })}
       </View>
+
+      {afterColors}
     </Screen>
   );
 }

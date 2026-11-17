@@ -11,7 +11,7 @@ export function MonthlyCard() {
   const data = useCardData({ kind: "month", month: toMonthKey(new Date()) });
   if (!data) return null;
   const Card = CARD_COMPONENTS[studio.template];
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.noite;
 
   return (
     <div className="flex flex-col items-center gap-4">

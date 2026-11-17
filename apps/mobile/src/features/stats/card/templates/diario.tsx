@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
-import { CardCover, CardFooter, CardSparkle, Delta, T } from "../parts";
+import { CardCover, CardFooter, Delta, T } from "../parts";
 import type { CardProps } from "../types";
 
-/** Soft journal page: glows, sparkles, serif italics and the favorite cover. */
+/** Soft journal page: glows, serif italics and the favorite cover. */
 export function DiarioCard({ data, palette, showCover, showDeltas }: CardProps) {
   return (
     <View style={[styles.root, { backgroundColor: palette.bg }]}>
@@ -37,9 +37,6 @@ export function DiarioCard({ data, palette, showCover, showDeltas }: CardProps) 
         <Rect width={1080} height={1920} fill="url(#glow-top)" />
         <Rect width={1080} height={1920} fill="url(#glow-bottom)" />
       </Svg>
-      <CardSparkle size={110} color={palette.accent2} style={{ top: 130, right: 110 }} />
-      <CardSparkle size={50} color={palette.accent} style={{ top: 330, right: 260 }} />
-      <CardSparkle size={40} color={palette.accent2} style={{ bottom: 420, left: 70 }} />
 
       <T face="mono" size={34} color={palette.muted} style={{ letterSpacing: 8.5 }}>
         MEU {data.unit.toUpperCase()} DE LEITURA

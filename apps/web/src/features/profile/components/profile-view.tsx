@@ -1,4 +1,5 @@
 import type { ReaderPage } from "@grimo/client";
+import { DEFAULT_PROFILE_SHOWS } from "@grimo/core";
 import type { ReactNode } from "react";
 import { ProfileHeader } from "./profile-header";
 import { ProfileFeatured, ProfileReadingNow, ProfileTabs } from "./profile-tabs";
@@ -42,7 +43,13 @@ export function ProfileView({
             {aside}
           </aside>
           <div className="min-w-0 @5xl/main:order-1">
-            <ProfileTabs username={username} isMe={isMe} activity={activity} year={year} />
+            <ProfileTabs
+              username={username}
+              isMe={isMe}
+              showBookcase={(page.profile.profileShows ?? DEFAULT_PROFILE_SHOWS).bookcase ?? true}
+              activity={activity}
+              year={year}
+            />
           </div>
         </div>
       )}

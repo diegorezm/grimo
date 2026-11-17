@@ -1,10 +1,17 @@
 import { type ReaderPage, useProfileShelves, useReaderShelves } from "@grimo/client";
-import { coverUrl, DEFAULT_PROFILE_SHOWS, editionPages, readingPercent } from "@grimo/core";
+import {
+  coverUrl,
+  DEFAULT_PROFILE_SHOWS,
+  editionPages,
+  readingPercent,
+  type ShelfStyle,
+} from "@grimo/core";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { BookCover, BookPeekLink } from "@/features/books";
+import { Bookcase } from "@/features/shelves";
 import { cn } from "@/utils/cn";
 
 const TABS = [
@@ -23,12 +30,14 @@ type Tab = (typeof TABS)[number]["id"];
 export function ProfileTabs({
   username,
   isMe,
+  showBookcase = true,
   activity,
   year,
 }: {
   username: string;
   /** Your own profile: an empty shelf invites you to make one. */
   isMe: boolean;
+  showBookcase?: boolean;
   activity: ReactNode;
   year: ReactNode;
 }) {
@@ -67,7 +76,9 @@ export function ProfileTabs({
           );
         })}
       </div>
-      {tab === "shelves" && <ProfileShelves username={username} isMe={isMe} />}
+      {tab === "shelves" && (
+        <ProfileShelves username={username} isMe={isMe} showBookcase={showBookcase} />
+      )}
       {tab === "activity" && activity}
       {tab === "year" && year}
     </section>
@@ -81,14 +92,42 @@ const PREVIEW_BOOKS = 10;
  * Lendo, Lidos and the shelves the reader made, each a preview of covers with its count; the
  * title opens the whole shelf (in the owner's style).
  */
-function ProfileShelves({ username, isMe }: { username: string; isMe: boolean }) {
+function ProfileShelves({
+  username,
+  isMe,
+  showBookcase,
+}: {
+  username: string;
+  isMe: boolean;
+  showBookcase: boolean;
+}) {
   const shelves = useReaderShelves(username).data;
   const made = useProfileShelves(username).data?.items ?? [];
   if (!shelves) return null;
   const { reading, read } = shelves;
-  const previews = [
+  const previews: {
+    key: string;
+    name: string;
+    count: number;
+    style: ShelfStyle;
+    books: {
+      entryId: string;
+      openLibraryId: string;
+      title: string;
+      coverUrl: string | null;
+      pageCount?: number | null;
+    }[];
+  }[] = [
     ...(reading.count > 0
-      ? [{ key: "reading", name: "Lendo", count: reading.count, books: reading.items }]
+      ? [
+          {
+            key: "reading",
+            name: "Lendo",
+            count: reading.count,
+            style: shelves.style,
+            books: reading.items,
+          },
+        ]
       : []),
     ...(read.count > 0
       ? [
@@ -96,6 +135,7 @@ function ProfileShelves({ username, isMe }: { username: string; isMe: boolean })
             key: "read",
             name: "Lidos",
             count: read.count,
+            style: shelves.style,
             books: read.runs.flatMap((run) => run.items),
           },
         ]
@@ -104,6 +144,7 @@ function ProfileShelves({ username, isMe }: { username: string; isMe: boolean })
       key: shelf.id,
       name: shelf.isPublic ? shelf.name : `${shelf.name} · só você`,
       count: shelf.count,
+      style: shelf.style,
       books: shelf.covers,
     })),
   ];
@@ -160,6 +201,22 @@ function ProfileShelves({ username, isMe }: { username: string; isMe: boolean })
           </Link>
           {preview.books.length === 0 ? (
             <p className="text-sm text-text-muted">Nenhum livro nesta estante ainda.</p>
+          ) : showBookcase ? (
+            <div className="overflow-hidden rounded-3xl">
+              <Bookcase
+                items={preview.books.slice(0, PREVIEW_BOOKS).map((book) => ({
+                  entry: { id: book.entryId },
+                  book: {
+                    title: book.title,
+                    coverUrl: book.coverUrl,
+                    openLibraryId: book.openLibraryId,
+                    pageCount: book.pageCount,
+                  },
+                }))}
+                style={preview.style}
+                name={preview.name}
+              />
+            </div>
           ) : (
             <div>
               <ul className="flex gap-3 overflow-hidden pb-0.5">

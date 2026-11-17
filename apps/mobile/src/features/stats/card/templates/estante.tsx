@@ -1,6 +1,6 @@
 import { ratingStars } from "@grimo/core";
 import { StyleSheet, View } from "react-native";
-import { CardFooter, CardSparkle, Delta, T } from "../parts";
+import { CardFooter, Delta, T } from "../parts";
 import type { CardProps } from "../types";
 
 /** Spine heights/widths cycle so the shelf looks hand-arranged. */
@@ -21,7 +21,6 @@ export function EstanteCard({ data, palette, showDeltas }: CardProps) {
 
   return (
     <View style={[styles.root, { backgroundColor: palette.bg }]}>
-      <CardSparkle size={70} color={palette.accent2} style={{ top: 120, right: 100 }} />
       <T face="mono" size={34} color={palette.muted} style={{ letterSpacing: 8.5 }}>
         {data.kind === "year" ? "MINHA ESTANTE DE" : "NA ESTANTE EM"}
       </T>

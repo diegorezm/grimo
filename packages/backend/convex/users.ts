@@ -1,8 +1,10 @@
 import {
   avatarProblem,
+  DEFAULT_SHELF_STYLE,
   editionPages,
   groupByYearRead,
   setupProfileSchema,
+  shelfStyleOf,
   timeZoneSchema,
   USERNAME_REGEX,
   updateProfileSchema,
@@ -208,7 +210,12 @@ export const updateMe = mutation({
     favoriteBookIds: v.optional(v.array(v.string())),
     featuredQuoteId: v.optional(v.union(v.string(), v.null())),
     profileShows: v.optional(
-      v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
+      v.object({
+        goal: v.boolean(),
+        reading: v.boolean(),
+        streak: v.boolean(),
+        bookcase: v.optional(v.boolean()),
+      }),
     ),
   },
   handler: async (ctx, args) => {
@@ -663,6 +670,7 @@ export const shelves = query({
     // A private reader's shelves are only for their followers (the page shows the lock).
     if (!(await canSeeReader(ctx, viewer?._id ?? null, reader))) {
       return {
+        style: DEFAULT_SHELF_STYLE,
         reading: { count: 0, items: [] },
         read: { count: 0, pages: 0, runs: [] },
       };
@@ -687,11 +695,13 @@ export const shelves = query({
       openLibraryId: book.openLibraryId,
       title: book.title,
       coverUrl: book.coverUrl,
+      pageCount: book.pageCount,
       rating: entry.rating,
       finishedAt: entry.finishedAt,
     });
     const timeZone = timeZoneOf(reader);
     return {
+      style: shelfStyleOf(reader.shelfStyle),
       reading: { count: reading.length, items: readingRows.map(cover) },
       read: {
         count: read.length,

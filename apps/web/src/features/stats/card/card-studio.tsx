@@ -43,7 +43,7 @@ export function CardStudio({ year }: { year?: number }) {
   const preview = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
 
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.noite;
   const Card = CARD_COMPONENTS[studio.template];
   const fileName = `grimo-${periodKey(period)}-${studio.template}.png`;
 

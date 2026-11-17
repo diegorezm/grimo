@@ -169,7 +169,7 @@ const ME: Me = {
   profileSong: null,
   favoriteBooks: [],
   featuredQuote: null,
-  profileShows: { goal: true, reading: true, streak: false },
+  profileShows: { goal: true, reading: true, streak: false, bookcase: true },
   isPrivate: false,
   timeZone: "America/Sao_Paulo",
   needsEmailVerification: false,

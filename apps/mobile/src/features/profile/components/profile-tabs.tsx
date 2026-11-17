@@ -4,6 +4,7 @@ import {
   useReaderActivity,
   useReaderShelves,
 } from "@grimo/client";
+import { DEFAULT_PROFILE_SHOWS } from "@grimo/core";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "@/components/ui";
@@ -81,7 +82,12 @@ export function ProfileTabs({
         })}
       </ScrollView>
       {tab === "activity" && <Activity username={username} />}
-      {tab === "shelves" && <ProfileShelves username={username} />}
+      {tab === "shelves" && (
+        <ProfileShelves
+          username={username}
+          showBookcase={(page.profile.profileShows ?? DEFAULT_PROFILE_SHOWS).bookcase ?? true}
+        />
+      )}
       {tab === "featured" && <ProfileFeatured page={page} streak={streak} />}
       {tab === "year" && (
         <>

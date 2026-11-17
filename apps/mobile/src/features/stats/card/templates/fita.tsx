@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { CardCover, CardFooter, CardSparkle, Delta, T } from "../parts";
+import { CardCover, CardFooter, Delta, T } from "../parts";
 import type { CardProps } from "../types";
 
 const RIBBON = "M -120 520 C 260 260 820 160 960 470 S 520 900 760 1080 S 1240 1180 1200 1400";
@@ -82,7 +82,6 @@ export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
             </T>
           </View>
         )}
-        <CardSparkle size={90} color={palette.accent2} style={{ top: 40, right: 60 }} />
       </View>
 
       <View style={styles.stats}>

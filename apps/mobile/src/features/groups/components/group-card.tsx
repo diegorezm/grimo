@@ -1,7 +1,7 @@
 import type { GroupCardData } from "@grimo/core";
 import type { CardPalette } from "@grimo/tokens";
 import { StyleSheet, View } from "react-native";
-import { CardCover, CardFooter, CardSparkle, T } from "@/features/stats";
+import { CardCover, CardFooter, T } from "@/features/stats";
 
 /**
  * The Juntos story card (1080×1920, same layout as the web): the book, then each reader's bar.
@@ -10,9 +10,6 @@ import { CardCover, CardFooter, CardSparkle, T } from "@/features/stats";
 export function GroupCard({ data, palette }: { data: GroupCardData; palette: CardPalette }) {
   return (
     <View style={[styles.root, { backgroundColor: palette.bg }]}>
-      <CardSparkle size={110} color={palette.accent2} style={{ top: 120, right: 110 }} />
-      <CardSparkle size={60} color={palette.accent} style={{ bottom: 330, right: 90 }} />
-
       <T face="mono" size={34} color={palette.muted} style={{ letterSpacing: 10 }}>
         GRIMO · JUNTOS
       </T>

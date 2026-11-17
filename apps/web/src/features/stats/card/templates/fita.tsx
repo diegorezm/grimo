@@ -1,4 +1,4 @@
-import { CardCover, CardFooter, CardSparkle, Delta } from "../parts";
+import { CardCover, CardFooter, Delta } from "../parts";
 import type { CardProps } from "../types";
 
 /** Bold "year in sport" style: a thick ribbon swooping behind the cover, big stats. */
@@ -101,11 +101,6 @@ export function FitaCard({ data, palette, showCover, showDeltas }: CardProps) {
             </span>
           </div>
         )}
-        <CardSparkle
-          size={90}
-          color={palette.accent2}
-          style={{ position: "absolute", top: 40, right: 60 }}
-        />
       </div>
 
       <div

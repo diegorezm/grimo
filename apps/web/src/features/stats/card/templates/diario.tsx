@@ -1,7 +1,7 @@
-import { CardCover, CardFooter, CardSparkle, Delta } from "../parts";
+import { CardCover, CardFooter, Delta } from "../parts";
 import type { CardProps } from "../types";
 
-/** Soft journal page: glows, sparkles, serif italics and the favorite cover. */
+/** Soft journal page: glows, serif italics and the favorite cover. */
 export function DiarioCard({ data, palette, showCover, showDeltas }: CardProps) {
   return (
     <div
@@ -12,22 +12,6 @@ export function DiarioCard({ data, palette, showCover, showDeltas }: CardProps) 
         background: `radial-gradient(900px 700px at 100% 0%, ${palette.accent2}55, transparent 70%), radial-gradient(900px 700px at 0% 100%, ${palette.accent}55, transparent 70%), ${palette.bg}`,
       }}
     >
-      <CardSparkle
-        size={110}
-        color={palette.accent2}
-        style={{ position: "absolute", top: 130, right: 110 }}
-      />
-      <CardSparkle
-        size={50}
-        color={palette.accent}
-        style={{ position: "absolute", top: 330, right: 260 }}
-      />
-      <CardSparkle
-        size={40}
-        color={palette.accent2}
-        style={{ position: "absolute", bottom: 420, left: 70 }}
-      />
-
       <p
         className="font-mono"
         style={{ fontSize: 34, letterSpacing: "0.25em", color: palette.muted }}

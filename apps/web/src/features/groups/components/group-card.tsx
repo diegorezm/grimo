@@ -1,6 +1,6 @@
 import type { GroupCardData } from "@grimo/core";
 import type { CardPalette } from "@grimo/tokens";
-import { CardCover, CardFooter, CardSparkle } from "@/features/stats";
+import { CardCover, CardFooter } from "@/features/stats";
 
 /**
  * The Juntos story card (1080×1920): the book, then each reader's bar. When everyone finished it
@@ -13,17 +13,6 @@ export function GroupCard({ data, palette }: { data: GroupCardData; palette: Car
       className="relative flex h-full w-full flex-col overflow-hidden"
       style={{ background: palette.bg, color: palette.ink, padding: "110px 90px 90px" }}
     >
-      <CardSparkle
-        size={110}
-        color={palette.accent2}
-        style={{ position: "absolute", top: 120, right: 110 }}
-      />
-      <CardSparkle
-        size={60}
-        color={palette.accent}
-        style={{ position: "absolute", bottom: 330, right: 90 }}
-      />
-
       <p
         className="font-mono"
         style={{ fontSize: 34, letterSpacing: "0.3em", color: palette.muted }}

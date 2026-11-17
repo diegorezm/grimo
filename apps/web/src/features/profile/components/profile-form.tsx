@@ -35,6 +35,7 @@ const SHOWS: { key: keyof ProfileShows; label: string }[] = [
   { key: "reading", label: "Lendo agora" },
   { key: "goal", label: "Meta do ano" },
   { key: "streak", label: "Ofensiva de leitura" },
+  { key: "bookcase", label: "Visual das estantes" },
 ];
 
 const MAX_GENRES = 5;
@@ -148,13 +149,13 @@ export function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () 
   }
 
   return (
-    <form id={FORM_ID} onSubmit={submit} className="flex flex-col gap-8">
+    <form id={FORM_ID} onSubmit={submit} className="flex min-w-0 flex-col gap-8">
       <header>
         <h1 className="text-3xl font-medium italic sm:text-4xl">Editar perfil</h1>
         <p className="mt-1 text-text-muted">Como os outros leitores veem você.</p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-6">
+      <div className="flex flex-wrap items-start gap-6">
         <AvatarUpload image={profile.image} name={profile.name} />
         <div className="flex flex-col gap-2">
           <span className="font-mono text-[11px] tracking-wider text-text-muted uppercase">

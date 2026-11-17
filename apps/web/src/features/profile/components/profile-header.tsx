@@ -45,8 +45,10 @@ export function ProfileHeader({
             className="bg-glow-a text-3xl text-text"
           />
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="text-4xl font-medium italic lg:text-5xl">{profile.name}</h1>
+        <div className="flex min-w-44 flex-1 flex-col gap-1">
+          <h1 className="break-words text-3xl font-medium italic @xl/main:text-4xl @4xl/main:text-5xl">
+            {profile.name}
+          </h1>
           {handle && (
             <p className="font-mono text-xs tracking-[0.12em] text-text-muted uppercase">
               {handle}

@@ -55,7 +55,7 @@ export function CardStudio({ year }: { year?: number }) {
   const canvas = useRef<CanvasRef>(null);
   const [busy, setBusy] = useState(false);
 
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.noite;
   const Card = CARD_COMPONENTS[studio.template];
   // Full width (≈1080 real pixels on a 3× iPhone), so the shared image stays sharp.
   const scale = Math.min(width - spacing[4] * 2, 420) / storyCard.width;

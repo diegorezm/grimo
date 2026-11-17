@@ -152,7 +152,7 @@ function TopBar({ actions }: { actions?: ReactNode }) {
         <span className="font-serif text-2xl font-bold">Grimo</span>
       </Link>
 
-      <search className="hidden max-w-xl flex-1 lg:block">
+      <search className="hidden min-w-0 max-w-xl flex-1 lg:block">
         <form
           onSubmit={submit}
           className="flex items-center gap-2 rounded-full bg-surface-muted p-1.5 pl-5"
@@ -174,7 +174,7 @@ function TopBar({ actions }: { actions?: ReactNode }) {
         </form>
       </search>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-4">
         <ThemeCycleButton className="lg:hidden" />
         {actions}
         {me?.isStaff && (

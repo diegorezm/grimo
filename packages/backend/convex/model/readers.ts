@@ -183,7 +183,7 @@ export async function profileOf(ctx: Ctx, user: Doc<"users">) {
       : null,
     favoriteBooks,
     featuredQuote,
-    profileShows: user.profileShows ?? DEFAULT_PROFILE_SHOWS,
+    profileShows: { ...DEFAULT_PROFILE_SHOWS, ...user.profileShows },
     /** Only followers see the reading (the page shows a lock to everyone else). */
     isPrivate: user.isPrivate ?? false,
   };

@@ -311,6 +311,7 @@ export const profile = query({
             openLibraryId: book.openLibraryId,
             title: book.title,
             coverUrl: book.coverUrl,
+            pageCount: book.pageCount,
           })),
         };
       }),

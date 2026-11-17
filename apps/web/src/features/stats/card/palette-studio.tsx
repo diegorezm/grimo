@@ -6,24 +6,28 @@ import { cn } from "@/utils/cn";
 import { downloadCard, StoryCanvas, shareCard } from "./story-canvas";
 
 /**
- * A one-template Stories card (group, finished book, quote): the preview, share / download, and
- * the colors (shared with the monthly card). `note` explains the card under the colors.
+ * A Stories card studio (group, finished book, quote): the preview, share / download, optional
+ * layout/detail controls, and the colors (shared with the monthly card).
  */
 export function PaletteStudio({
   fileName,
   shareTitle,
   note,
+  beforeColors,
+  afterColors,
   children,
 }: {
   fileName: string;
   shareTitle: string;
   note?: ReactNode;
+  beforeColors?: (palette: CardPalette) => ReactNode;
+  afterColors?: ReactNode;
   children: (palette: CardPalette) => ReactNode;
 }) {
   const studio = useCardStudioStore();
   const preview = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
-  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.brasa;
+  const palette = cardPalettes[studio.palette as CardPaletteKey] ?? cardPalettes.noite;
 
   async function run(action: "share" | "download") {
     if (!preview.current) return;
@@ -52,38 +56,46 @@ export function PaletteStudio({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-4">
-        <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted">Cores</h2>
-        <div className="flex flex-wrap gap-3">
-          {Object.entries(cardPalettes).map(([key, option]) => {
-            const active = key === studio.palette;
-            return (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={active}
-                onClick={() => studio.set({ palette: key })}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-1.5 transition",
-                  active
-                    ? "border-accent bg-surface-muted"
-                    : "border-border hover:bg-surface-muted/60",
-                )}
-              >
-                {/* Swatch: fixed card colors, not theme tokens. */}
-                <span
-                  aria-hidden="true"
-                  className="size-8 rounded-full border border-border"
-                  style={{
-                    background: `linear-gradient(135deg, ${option.bg} 50%, ${option.accent} 50%)`,
-                  }}
-                />
-                <span className="text-sm">{option.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        {note && <p className="max-w-md text-sm text-text-muted">{note}</p>}
+      <div className="flex min-w-0 flex-col gap-9">
+        {beforeColors?.(palette)}
+
+        <section className="flex flex-col gap-3">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.2em] text-text-muted">
+            Cores
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {Object.entries(cardPalettes).map(([key, option]) => {
+              const active = key === studio.palette;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => studio.set({ palette: key })}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-full border py-1.5 pr-4 pl-1.5 transition",
+                    active
+                      ? "border-accent bg-surface-muted"
+                      : "border-border hover:bg-surface-muted/60",
+                  )}
+                >
+                  {/* Swatch: fixed card colors, not theme tokens. */}
+                  <span
+                    aria-hidden="true"
+                    className="size-8 rounded-full border border-border"
+                    style={{
+                      background: `linear-gradient(135deg, ${option.bg} 50%, ${option.accent} 50%)`,
+                    }}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          {note && <p className="max-w-md text-sm text-text-muted">{note}</p>}
+        </section>
+
+        {afterColors}
       </div>
     </div>
   );

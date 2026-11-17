@@ -51,9 +51,9 @@ export function UserMenu({ me }: { me: Me }) {
         aria-controls={panelId}
         aria-label="Menu da conta"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-3 rounded-full p-1 transition hover:bg-surface-muted/60 lg:pl-4"
+        className="flex items-center gap-3 rounded-full p-1 transition hover:bg-surface-muted/60 @3xl/main:pl-4"
       >
-        <span className="hidden text-right text-sm leading-tight lg:block">
+        <span className="hidden whitespace-nowrap text-right text-sm leading-tight @3xl/main:block">
           <span className="block text-text-muted">{greetingFor(new Date())},</span>
           <strong className="font-semibold">{me.name}</strong>
         </span>
@@ -64,7 +64,10 @@ export function UserMenu({ me }: { me: Me }) {
           className="bg-accent-gradient font-semibold text-accent-foreground shadow-md shadow-accent/30"
         />
         <ChevronDownIcon
-          className={cn("hidden size-4 text-text-muted transition lg:block", open && "rotate-180")}
+          className={cn(
+            "hidden size-4 text-text-muted transition @3xl/main:block",
+            open && "rotate-180",
+          )}
         />
       </button>
 

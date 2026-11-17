@@ -53,7 +53,7 @@ function SessionCard({
         <CardCover
           book={{ ...recap, rating: null }}
           width={story ? 360 : 200}
-          palette={cardPalettes.brasa}
+          palette={cardPalettes.noite}
         />
         <p
           className="font-serif font-medium"

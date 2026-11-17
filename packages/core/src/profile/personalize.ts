@@ -62,14 +62,20 @@ export const profileSongSchema = z.object({
 });
 export type ProfileSong = z.infer<typeof profileSongSchema>;
 
-/** The reading cards a profile shows; each can be hidden. */
+/** The reading cards and shelf look a profile shows; each can be hidden. */
 export const profileShowsSchema = z.object({
   goal: z.boolean(),
   reading: z.boolean(),
   streak: z.boolean(),
+  bookcase: z.boolean().default(true),
 });
 export type ProfileShows = z.infer<typeof profileShowsSchema>;
-export const DEFAULT_PROFILE_SHOWS: ProfileShows = { goal: true, reading: true, streak: false };
+export const DEFAULT_PROFILE_SHOWS: ProfileShows = {
+  goal: true,
+  reading: true,
+  streak: false,
+  bookcase: true,
+};
 
 export const pronounsSchema = z
   .string()

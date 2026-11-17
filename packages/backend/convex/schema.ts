@@ -132,7 +132,12 @@ export default defineSchema({
     featuredQuoteId: v.optional(v.id("posts")),
     /** Which reading cards the profile shows (absent: `DEFAULT_PROFILE_SHOWS`). */
     profileShows: v.optional(
-      v.object({ goal: v.boolean(), reading: v.boolean(), streak: v.boolean() }),
+      v.object({
+        goal: v.boolean(),
+        reading: v.boolean(),
+        streak: v.boolean(),
+        bookcase: v.optional(v.boolean()),
+      }),
     ),
     /** How "Todos os meus livros" looks (absent: the default style). */
     shelfStyle: v.optional(shelfStyle),

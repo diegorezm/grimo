@@ -8,7 +8,7 @@ import type { CardData } from "./types";
 export function CardPreview({
   data,
   template = "fita",
-  palette = "brasa",
+  palette = "noite",
   scale,
   className,
 }: {
