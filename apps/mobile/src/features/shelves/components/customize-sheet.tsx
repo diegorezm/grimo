@@ -134,12 +134,32 @@ export function CustomizeSheet({
           >
             <View style={[styles.grabber, { backgroundColor: theme.border }]} />
             <View style={styles.head}>
-              <Text variant="heading">Do seu jeito</Text>
-              <Text variant="label" color="textMuted">
-                {current
-                  ? current.name
-                  : `${SHELF_COMBINATIONS.toLocaleString("pt-BR")} combinações`}
-              </Text>
+              <View style={styles.heading}>
+                <Text variant="heading">Do seu jeito</Text>
+                <Text variant="label" color="textMuted" numberOfLines={1}>
+                  {current
+                    ? current.name
+                    : `${SHELF_COMBINATIONS.toLocaleString("pt-BR")} combinações`}
+                </Text>
+              </View>
+              {/* Small, beside the title: the room below stays for the options. */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Pronto, ficou a minha cara"
+                onPress={onDone}
+                hitSlop={{ top: 4, bottom: 4 }}
+                style={({ pressed }) => [
+                  styles.done,
+                  {
+                    backgroundImage: `linear-gradient(135deg, ${theme.accentStart} 0%, ${theme.accent} 100%)`,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Text variant="label" color="accentForeground">
+                  ✓ Pronto
+                </Text>
+              </Pressable>
             </View>
           </Pressable>
         </GestureDetector>
@@ -346,22 +366,6 @@ export function CustomizeSheet({
               ))}
           </Animated.View>
         </ScrollView>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={onDone}
-          style={({ pressed }) => [
-            styles.done,
-            {
-              backgroundImage: `linear-gradient(135deg, ${theme.accentStart} 0%, ${theme.accent} 100%)`,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Text variant="label" color="accentForeground">
-            Ficou a minha cara
-          </Text>
-        </Pressable>
       </Glass>
     </Animated.View>
   );
@@ -506,10 +510,12 @@ const styles = StyleSheet.create({
   grabber: { width: 40, height: 5, borderRadius: 3, alignSelf: "center" },
   head: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing[3],
     paddingHorizontal: spacing[5],
   },
+  heading: { flex: 1, minWidth: 0, gap: 2 },
   tabs: { gap: spacing[2], paddingHorizontal: spacing[5] },
   tabRow: { flexGrow: 0, flexShrink: 0 },
   tab: {
@@ -542,8 +548,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   done: {
-    marginHorizontal: spacing[5],
-    minHeight: 54,
+    height: 40,
+    paddingHorizontal: spacing[4],
     borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",

@@ -70,11 +70,48 @@ export function spinePaint(
   };
 }
 
-/** Light on a round spine: bright on the left edge, shadow on the right. */
-export const SPINE_GLOSS: ViewStyle = {
+/**
+ * Light on a round spine: dark at both edges where it turns away, a bright line a third of the
+ * way in, a little light from above and shade at the foot. Paperbacks shine more.
+ */
+export function spineShade(hard: boolean): ViewStyle {
+  const shine = hard ? 0.16 : 0.3;
+  return {
+    backgroundImage: [
+      `linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 15%, rgba(255,255,255,${shine}) 34%, rgba(255,255,255,0.04) 52%, rgba(0,0,0,0.1) 74%, rgba(0,0,0,0.55) 100%)`,
+      "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 20%, rgba(0,0,0,0) 82%, rgba(0,0,0,0.2) 100%)",
+    ].join(", "),
+  };
+}
+
+/** The two grooves where a hardcover's boards fold, near each edge of the spine. */
+export const SPINE_JOINTS: ViewStyle = {
   backgroundImage:
-    "linear-gradient(90deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0) 66%, rgba(0,0,0,0.24) 100%)",
+    "linear-gradient(90deg, rgba(0,0,0,0) 8%, rgba(0,0,0,0.34) 8%, rgba(0,0,0,0.34) 9.5%, rgba(255,255,255,0.2) 9.5%, rgba(255,255,255,0.2) 11%, rgba(0,0,0,0) 11%, rgba(0,0,0,0) 89%, rgba(255,255,255,0.2) 89%, rgba(255,255,255,0.2) 90.5%, rgba(0,0,0,0.34) 90.5%, rgba(0,0,0,0.34) 92%, rgba(0,0,0,0) 92%)",
 };
+
+/** The striped cloth headband at the top of a hardcover. */
+export const HEADBAND: ViewStyle = {
+  backgroundImage: "linear-gradient(90deg, #a8323a 0%, #a8323a 50%, #f1e6d0 50%, #f1e6d0 100%)",
+  backgroundSize: "4px 4px",
+  backgroundRepeat: "repeat",
+};
+
+/** Page edges: lines front to back (seen from above a spine) or across (above a cover). */
+export const pagesSeen = (across: boolean): ViewStyle => ({
+  backgroundColor: "#ece0c8",
+  backgroundImage: `linear-gradient(${across ? 180 : 90}deg, #f7efdf 0%, #f7efdf 50%, #dccdb0 50%, #dccdb0 100%)`,
+  backgroundSize: "2px 2px",
+  backgroundRepeat: "repeat",
+});
+
+/** The far end of the top of a book sits in the shelf's shadow. */
+export const TOP_SHADE: ViewStyle = {
+  backgroundImage: "linear-gradient(180deg, rgba(40,20,50,0.35) 0%, rgba(40,20,50,0) 85%)",
+};
+
+/** A book's own shadow: in the gap beside it and up on the back of the shelf. */
+export const BOOK_SHADOW = "3px 0 3px -1px rgba(35,15,50,0.45), 12px -3px 16px rgba(30,15,50,0.22)";
 
 /** Linen weave: a tiny diagonal tile, repeated. */
 export const LINEN: ViewStyle = {
@@ -154,14 +191,18 @@ export function modelLook(style: ShelfStyle, width: number, top: number): ModelL
     inner: { marginHorizontal: g.side, ...panel },
     cell: {},
     row: { paddingHorizontal: g.pad, boxShadow: "inset 0 -20px 22px -18px rgba(0,0,0,0.24)" },
+    // The plank's top recedes into the shade at the back; its front edge catches the light.
     plankTop: {
-      height: 8,
+      height: 10,
       backgroundColor: m.plankTop,
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.45)",
+      backgroundImage:
+        "linear-gradient(180deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0) 60%, rgba(255,255,255,0.18) 100%)",
     },
     plank: {
       height: 14,
       backgroundColor: m.plank,
+      backgroundImage:
+        "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 25%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.12) 100%)",
       boxShadow: "0 8px 12px -6px rgba(0,0,0,0.35)",
       zIndex: 1,
     },

@@ -29,15 +29,23 @@ import { useTheme } from "@/hooks/use-theme";
 import { landAt } from "@/lib/motion";
 import { ArchIvy, Bracket, DecorPiece, LibraryLadder, LibraryLamp } from "./decor";
 import {
+  BOOK_SHADOW,
   darken,
+  HEADBAND,
   LINEN,
   type Material,
   materialOf,
   modelLook,
-  SPINE_GLOSS,
+  pagesSeen,
+  SPINE_JOINTS,
   type SpinePaint,
   spinePaint,
+  spineShade,
+  TOP_SHADE,
 } from "./look";
+
+/** How much of a book's top shows: its pages, seen from a little above the shelf. */
+const BOOK_TOP = 5;
 
 /** What a book on the bookcase needs: your own shelf rows and a profile's shelf both fit. */
 export interface ShelfBookItem {
@@ -450,10 +458,18 @@ function Piece<T extends ShelfBookItem>({
       <Animated.View entering={entering} style={styles.coverSlot}>
         <Draggable item={book.item} drag={drag} style={held(book.item)}>
           <Touch label={book.title} {...touch(book.item)}>
+            <View style={[styles.coverTop, pagesSeen(true)]}>
+              <View style={[StyleSheet.absoluteFill, TOP_SHADE]} />
+            </View>
+            <View style={[styles.foreEdge, pagesSeen(false)]} />
             <View
               style={[
                 styles.cover,
-                { width: piece.width, height: piece.height, backgroundColor: paint.base },
+                {
+                  width: piece.width,
+                  height: piece.height - BOOK_TOP,
+                  backgroundColor: paint.base,
+                },
               ]}
             >
               {book.item.book.coverUrl ? (
@@ -624,47 +640,71 @@ export function Spine({
   coverEdge?: string | null;
 }) {
   const size = width < 27 ? 10 : 11.5;
+  // Cloth and leather are hardcovers, and so are the thick books; the rest are paperbacks.
+  const hard = finish === "linen" || finish === "leather" || width >= 34;
+  const board = Math.max(1, Math.round(width * (hard ? 0.1 : 0.05)));
   return (
-    <View style={[styles.spine, { width, height, backgroundColor: paint.base }]}>
-      {coverEdge && (
-        <Image
-          source={coverUrl(coverEdge, "M")}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          contentPosition="left"
-          accessibilityIgnoresInvertColors
-        />
-      )}
-      {finish === "linen" && <View style={[StyleSheet.absoluteFill, LINEN]} />}
-      {finish === "leather" && <GoldBands />}
-      {paint.band && !coverEdge && (
-        <>
-          <View style={[styles.headBand, { backgroundColor: paint.band }]} />
-          <View style={[styles.mark, { left: width / 2 - 3.5, borderColor: paint.ink }]} />
-        </>
-      )}
-      <View style={[StyleSheet.absoluteFill, SPINE_GLOSS]} />
-      {!coverEdge && (
-        <View
-          style={[
-            styles.vertical,
-            { width: height, height: width, left: (width - height) / 2, top: (height - width) / 2 },
-            paint.band ? styles.verticalBanded : null,
-          ]}
-        >
-          <Text
-            numberOfLines={1}
+    <View style={[styles.book, { width, height }]}>
+      {/* The top of the book, seen from a little above: the boards and the pages between. */}
+      <View style={[styles.top, { backgroundColor: paint.base }]}>
+        <View style={[styles.pages, pagesSeen(false), { left: board, right: board }]} />
+        <View style={[StyleSheet.absoluteFill, TOP_SHADE]} />
+      </View>
+      <View
+        style={[
+          styles.spine,
+          hard ? styles.hard : null,
+          { height: height - BOOK_TOP, backgroundColor: paint.base },
+        ]}
+      >
+        {coverEdge && (
+          <Image
+            source={coverUrl(coverEdge, "M")}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            contentPosition="left"
+            accessibilityIgnoresInvertColors
+          />
+        )}
+        {finish === "linen" && <View style={[StyleSheet.absoluteFill, LINEN]} />}
+        {finish === "leather" && <GoldBands />}
+        {paint.band && !coverEdge && (
+          <>
+            <View style={[styles.headBand, { backgroundColor: paint.band }]} />
+            <View style={[styles.mark, { left: width / 2 - 3.5, borderColor: paint.ink }]} />
+          </>
+        )}
+        {!coverEdge && (
+          <View
             style={[
-              { color: paint.ink, fontSize: size, fontFamily: Fonts.serif },
-              lettering === "mono" && { fontFamily: Fonts.monoBold, fontSize: size - 1.5 },
-              lettering === "caps" && styles.caps,
-              lettering === "caps" && { fontSize: size - 1.5 },
+              styles.vertical,
+              {
+                width: height - BOOK_TOP,
+                height: width,
+                left: (width - height + BOOK_TOP) / 2,
+                top: (height - BOOK_TOP - width) / 2,
+              },
+              paint.band ? styles.verticalBanded : null,
             ]}
           >
-            {title}
-          </Text>
-        </View>
-      )}
+            <Text
+              numberOfLines={1}
+              style={[
+                { color: paint.ink, fontSize: size, fontFamily: Fonts.serif },
+                finish === "leather" ? styles.gilt : styles.printed,
+                lettering === "mono" && { fontFamily: Fonts.monoBold, fontSize: size - 1.5 },
+                lettering === "caps" && styles.caps,
+                lettering === "caps" && { fontSize: size - 1.5 },
+              ]}
+            >
+              {title}
+            </Text>
+          </View>
+        )}
+        <View style={[StyleSheet.absoluteFill, spineShade(hard)]} />
+        {hard && <View style={[StyleSheet.absoluteFill, SPINE_JOINTS]} />}
+        <View style={[styles.cap, hard ? HEADBAND : styles.softCap]} />
+      </View>
     </View>
   );
 }
@@ -738,7 +778,8 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   row: { flexDirection: "row" },
   // Above the plank under it, so a ribbon can hang over the shelf.
-  books: { flexDirection: "row", alignItems: "flex-end", zIndex: 2 },
+  // The books stand a little into the plank's top, not on its back edge.
+  books: { flexDirection: "row", alignItems: "flex-end", zIndex: 2, marginBottom: -3 },
   empty: {
     position: "absolute",
     top: 0,
@@ -781,36 +822,72 @@ const styles = StyleSheet.create({
   object: { marginHorizontal: 6 },
   stack: { marginHorizontal: 6, alignItems: "center" },
   lying: {
-    borderRadius: 1,
+    borderRadius: 2,
     justifyContent: "center",
     paddingHorizontal: 8,
     overflow: "hidden",
-    boxShadow: "0 1px 0 rgba(0,0,0,0.18)",
+    boxShadow: "0 2px 3px rgba(35,15,50,0.35), 10px -2px 14px rgba(30,15,50,0.16)",
   },
+  // A spine lying down: round from top to bottom.
   lyingGloss: {
     backgroundImage:
-      "linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0) 65%, rgba(0,0,0,0.22) 100%)",
+      "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 35%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0.42) 100%)",
   },
   lyingTitle: { fontFamily: Fonts.serif, fontSize: 9.5 },
-  coverSlot: { marginHorizontal: 4 },
+  coverSlot: { marginLeft: 4, marginRight: 7 },
+  coverTop: { height: BOOK_TOP, marginLeft: 3, marginRight: 1, overflow: "hidden" },
   cover: {
-    borderTopLeftRadius: 2,
-    borderBottomLeftRadius: 2,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
+    borderTopLeftRadius: 1,
+    borderBottomLeftRadius: 1,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
     overflow: "hidden",
     justifyContent: "flex-end",
     padding: 8,
-    boxShadow: "0 6px 12px rgba(0,0,0,0.18)",
+    boxShadow: "2px 0 2px rgba(35,15,50,0.35), 16px -4px 22px rgba(30,15,50,0.26)",
   },
-  coverEdge: { boxShadow: "inset 5px 0 0 rgba(0,0,0,0.14)" },
+  // The pages' side, peeking out past the front cover.
+  foreEdge: {
+    position: "absolute",
+    right: -3,
+    top: BOOK_TOP + 3,
+    bottom: 1,
+    width: 3,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+  // The fold where the cover meets the spine, and a soft reflection across the front.
+  coverEdge: {
+    backgroundImage: [
+      "linear-gradient(90deg, rgba(0,0,0,0.38) 0px, rgba(255,255,255,0.28) 4px, rgba(0,0,0,0.2) 7px, rgba(0,0,0,0) 13px)",
+      "linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.22) 42%, rgba(255,255,255,0) 56%)",
+    ].join(", "),
+  },
   coverTitle: { fontFamily: Fonts.serif, fontSize: 12, lineHeight: 13 },
-  spineSlot: { marginHorizontal: 1 },
-  spine: {
+  spineSlot: { marginHorizontal: 1.5 },
+  book: { boxShadow: BOOK_SHADOW, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  top: {
+    height: BOOK_TOP,
+    marginHorizontal: 0.5,
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
     overflow: "hidden",
-    boxShadow: "1px 0 0 rgba(0,0,0,0.14)",
+  },
+  pages: { position: "absolute", top: 1, bottom: 0 },
+  spine: { borderRadius: 2, overflow: "hidden" },
+  hard: { borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  cap: { position: "absolute", left: 0, right: 0, top: 0, height: 3 },
+  softCap: { height: 1.5, backgroundColor: "rgba(255,255,255,0.28)" },
+  // Gilt pressed into leather; ink printed on paper.
+  gilt: {
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 0.5,
+  },
+  printed: {
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 0, height: 0.5 },
+    textShadowRadius: 1,
   },
   headBand: { position: "absolute", left: 0, right: 0, top: 9, height: 8 },
   mark: {
@@ -828,7 +905,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
-    transform: [{ rotate: "-90deg" }],
+    // Read from top to bottom, like spines in Brazilian bookshops.
+    transform: [{ rotate: "90deg" }],
   },
   // Room for the band at the head and the mark at the foot.
   verticalBanded: { paddingHorizontal: 24 },
